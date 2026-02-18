@@ -20,31 +20,21 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
-    // Register with Supabase Auth
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    // Register with Supabase Auth — pass username/display_name as metadata
+    // so the database trigger creates the profile row automatically.
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          username: username.toLowerCase().trim(),
+          display_name: displayName.trim() || username.trim(),
+        },
+      },
     });
 
-    if (signUpError || !data.user) {
-      setError(signUpError?.message || "Registration failed");
-      setLoading(false);
-      return;
-    }
-
-    // Create profile record
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      username: username.toLowerCase().trim(),
-      display_name: displayName.trim() || username.trim(),
-    });
-
-    if (profileError) {
-      setError(
-        profileError.message.includes("unique")
-          ? "Username already taken"
-          : profileError.message
-      );
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
       return;
     }
