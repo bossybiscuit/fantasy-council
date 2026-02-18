@@ -3,25 +3,131 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-base: #0f0f0f;
+  --bg-surface: #1a1a1a;
+  --bg-card: #222222;
+  --accent-orange: #ff6a00;
+  --accent-gold: #c9a84c;
+  --text-primary: #f5f0e8;
+  --text-muted: #888888;
+  --border: #333333;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-base);
+  font-family: Inter, system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+@layer components {
+  .torch-divider {
+    @apply h-px w-full my-4;
+    background: linear-gradient(90deg, transparent 0%, #ff6a00 50%, transparent 100%);
+  }
+
+  .ember-glow {
+    box-shadow: 0 0 20px rgba(255, 106, 0, 0.3);
+  }
+
+  .ember-glow:hover {
+    box-shadow: 0 0 30px rgba(255, 106, 0, 0.5);
+  }
+
+  .card {
+    @apply bg-bg-card border border-border rounded-lg p-4;
+  }
+
+  .btn-primary {
+    @apply bg-accent-orange text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+    box-shadow: 0 0 10px rgba(255, 106, 0, 0.2);
+  }
+
+  .btn-primary:hover {
+    @apply bg-orange-500;
+    box-shadow: 0 0 20px rgba(255, 106, 0, 0.4);
+  }
+
+  .btn-secondary {
+    @apply bg-bg-surface border border-border text-text-primary font-semibold py-2 px-4 rounded-lg transition-all duration-200 hover:border-accent-orange;
+  }
+
+  .btn-gold {
+    @apply font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+    background: linear-gradient(135deg, #c9a84c, #e8c56a);
+    color: #0f0f0f;
+    box-shadow: 0 0 10px rgba(201, 168, 76, 0.2);
+  }
+
+  .btn-gold:hover {
+    box-shadow: 0 0 20px rgba(201, 168, 76, 0.4);
+  }
+
+  .input {
+    @apply w-full bg-bg-surface border border-border rounded-lg px-3 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-orange transition-colors;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-text-muted mb-1;
+  }
+
+  .badge-tier-s {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold;
+    background: linear-gradient(135deg, #ff6a00, #c9a84c);
+    color: white;
+  }
+
+  .badge-tier-a {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-700 text-white;
+  }
+
+  .badge-tier-b {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-blue-700 text-white;
+  }
+
+  .badge-tier-c {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-green-700 text-white;
+  }
+
+  .badge-tier-d {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-bg-surface text-text-muted border border-border;
+  }
+
+  .table-row-hover {
+    @apply transition-colors hover:bg-bg-surface;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-text-primary;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold text-text-primary;
+  }
+
+  .text-gradient-fire {
+    background: linear-gradient(135deg, #ff6a00, #c9a84c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

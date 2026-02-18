@@ -1,0 +1,232 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import StandingsTable from "@/components/ui/StandingsTable";
+import PageHeader from "@/components/ui/PageHeader";
+import EmptyState from "@/components/ui/EmptyState";
+import Link from "next/link";
+
+export default async function LeagueHomePage({
+  params,
+}: {
+  params: Promise<{ leagueId: string }>;
+}) {
+  const { leagueId } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("*, seasons(*)")
+    .eq("id", leagueId)
+    .single();
+
+  if (!league) redirect("/dashboard");
+
+  const { data: myTeam } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("league_id", leagueId)
+    .eq("user_id", user.id)
+    .single();
+
+  // All teams with profiles
+  const { data: teams } = await supabase
+    .from("teams")
+    .select("*, profiles(*)")
+    .eq("league_id", leagueId)
+    .order("created_at");
+
+  const season = league.seasons as any;
+
+  // Latest scored episode
+  const { data: latestEpisodeArr } = await supabase
+    .from("episodes")
+    .select("*")
+    .eq("season_id", season?.id)
+    .eq("is_scored", true)
+    .order("episode_number", { ascending: false })
+    .limit(1);
+
+  const latestEpisode = latestEpisodeArr?.[0] || null;
+
+  // Previous scored episode
+  const { data: previousEpisodeArr } = latestEpisode
+    ? await supabase
+        .from("episodes")
+        .select("*")
+        .eq("season_id", season?.id)
+        .eq("is_scored", true)
+        .lt("episode_number", latestEpisode.episode_number)
+        .order("episode_number", { ascending: false })
+        .limit(1)
+    : { data: [] };
+
+  const previousEpisode = (previousEpisodeArr as any[])?.[0] || null;
+
+  let standingsRows: any[] = [];
+
+  if (latestEpisode && teams) {
+    const { data: currentScores } = await supabase
+      .from("episode_team_scores")
+      .select("*")
+      .eq("league_id", leagueId)
+      .eq("episode_id", latestEpisode.id);
+
+    const { data: previousScores } = previousEpisode
+      ? await supabase
+          .from("episode_team_scores")
+          .select("*")
+          .eq("league_id", leagueId)
+          .eq("episode_id", previousEpisode.id)
+      : { data: [] };
+
+    const { data: allPredictions } = await supabase
+      .from("predictions")
+      .select("team_id, points_allocated, points_earned")
+      .eq("league_id", leagueId);
+
+    standingsRows = teams
+      .map((team) => {
+        const currentScore =
+          currentScores?.find((s) => s.team_id === team.id) || null;
+        const previousScore =
+          (previousScores as any[])?.find((s) => s.team_id === team.id) ||
+          null;
+        const teamPreds = (allPredictions || []).filter(
+          (p) => p.team_id === team.id
+        );
+        const totalAllocated = teamPreds.reduce(
+          (sum, p) => sum + (p.points_allocated || 0),
+          0
+        );
+        const totalEarned = teamPreds.reduce(
+          (sum, p) => sum + (p.points_earned || 0),
+          0
+        );
+        const predictionAccuracy =
+          totalAllocated > 0
+            ? Math.round((totalEarned / totalAllocated) * 100)
+            : 0;
+
+        return {
+          team,
+          profile: (team as any).profiles,
+          currentScore,
+          previousScore,
+          predictionAccuracy,
+          totalPoints: currentScore?.cumulative_total || 0,
+          rank: currentScore?.rank || 999,
+        };
+      })
+      .sort((a, b) => a.rank - b.rank);
+  }
+
+  const isCommissioner = league.commissioner_id === user.id;
+
+  return (
+    <div>
+      <PageHeader
+        title={league.name}
+        subtitle={(league.seasons as any)?.name}
+        action={
+          isCommissioner && league.status === "setup" ? (
+            <Link href={`/leagues/${league.id}/draft`} className="btn-primary">
+              Go to Draft
+            </Link>
+          ) : isCommissioner && league.status === "active" ? (
+            <Link
+              href={`/leagues/${league.id}/admin/scoring`}
+              className="btn-primary"
+            >
+              Score Episode
+            </Link>
+          ) : undefined
+        }
+      />
+
+      {/* Invite Code for commissioner in setup */}
+      {isCommissioner && league.status === "setup" && (
+        <div className="card mb-6 border-accent-orange/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-text-muted mb-1">
+                Invite Code — Share with your league
+              </p>
+              <p className="text-3xl font-mono font-bold text-gradient-fire tracking-widest">
+                {league.invite_code}
+              </p>
+            </div>
+            <div className="text-right text-sm text-text-muted">
+              <p>
+                {teams?.length || 0} / {league.num_teams} teams joined
+              </p>
+              <Link
+                href={`/leagues/${league.id}/draft`}
+                className="text-accent-orange text-xs hover:underline mt-1 block"
+              >
+                Go to draft room →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Standings */}
+      <div className="card mb-6">
+        <h2 className="section-title mb-4">
+          Standings
+          {latestEpisode && (
+            <span className="text-text-muted font-normal text-sm ml-2">
+              through E{latestEpisode.episode_number}
+            </span>
+          )}
+        </h2>
+        {standingsRows.length > 0 ? (
+          <StandingsTable
+            rows={standingsRows}
+            leagueId={leagueId}
+            myTeamId={myTeam?.id}
+          />
+        ) : (
+          <EmptyState
+            icon="🏆"
+            title="No scores yet"
+            description={
+              league.draft_status !== "completed"
+                ? "Complete the draft, then the commissioner will score each episode."
+                : "Waiting for the commissioner to score the first episode."
+            }
+          />
+        )}
+      </div>
+
+      {/* Teams Grid */}
+      <div>
+        <h2 className="section-title mb-3">Teams</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {teams?.map((team) => (
+            <Link
+              key={team.id}
+              href={`/leagues/${leagueId}/team/${team.id}`}
+              className="card hover:border-accent-orange/30 transition-all"
+            >
+              <p className="font-semibold text-text-primary">{team.name}</p>
+              <p className="text-sm text-text-muted mt-0.5">
+                {(team as any).profiles?.display_name ||
+                  (team as any).profiles?.username ||
+                  "Unknown"}
+              </p>
+              {team.id === myTeam?.id && (
+                <p className="text-xs text-accent-orange mt-1">Your team</p>
+              )}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
