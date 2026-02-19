@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LeagueSidebar from "@/components/layout/LeagueSidebar";
+import MobileLeagueNav from "@/components/layout/MobileLeagueNav";
 
 export default async function LeagueLayout({
   children,
@@ -47,11 +48,14 @@ export default async function LeagueLayout({
     league.commissioner_id === user.id || profile?.is_super_admin === true;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex gap-6">
-        <LeagueSidebar league={league} isCommissioner={isCommissioner} teamId={team?.id} />
-        <div className="flex-1 min-w-0">{children}</div>
+    <>
+      <MobileLeagueNav league={league} isCommissioner={isCommissioner} teamId={team?.id} />
+      <div className="max-w-7xl mx-auto px-4 pt-[72px] pb-20 md:pt-6 md:pb-6">
+        <div className="flex gap-6">
+          <LeagueSidebar league={league} isCommissioner={isCommissioner} teamId={team?.id} />
+          <div className="flex-1 min-w-0">{children}</div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -118,22 +118,24 @@ See you at Tribal.
         <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">
           Pass the Torch — share this code
         </p>
-        <div className="flex items-center gap-3 mb-3">
-          <p className="text-4xl font-mono font-bold text-gradient-fire tracking-widest flex-1">
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <p className="text-4xl font-mono font-bold text-gradient-fire tracking-widest">
             {league.invite_code}
           </p>
-          <button
-            onClick={() => copyText(league.invite_code, "code")}
-            className="btn-secondary text-sm px-3 py-1.5 shrink-0"
-          >
-            {copied === "code" ? "Copied!" : "Copy Code"}
-          </button>
-          <button
-            onClick={handleShare}
-            className="btn-secondary text-sm px-3 py-1.5 shrink-0"
-          >
-            {copied === "url" ? "Copied!" : "Share Link"}
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => copyText(league.invite_code, "code")}
+              className="btn-secondary text-sm px-3 py-1.5 shrink-0"
+            >
+              {copied === "code" ? "Copied!" : "Copy Code"}
+            </button>
+            <button
+              onClick={handleShare}
+              className="btn-secondary text-sm px-3 py-1.5 shrink-0"
+            >
+              {copied === "url" ? "Copied!" : "Share Link"}
+            </button>
+          </div>
         </div>
         <p className="text-xs text-text-muted">
           Join at:{" "}

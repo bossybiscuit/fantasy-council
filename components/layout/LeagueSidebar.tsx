@@ -47,7 +47,7 @@ export default function LeagueSidebar({
   }
 
   return (
-    <aside className="w-56 shrink-0">
+    <aside className="w-56 shrink-0 hidden md:block">
       <div className="card sticky top-20">
         <div className="mb-3">
           <p className="text-xs text-text-muted uppercase tracking-wider mb-1">

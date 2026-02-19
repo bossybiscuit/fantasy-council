@@ -44,7 +44,98 @@ export default function StandingsTable({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div>
+      {/* ── Mobile card list ── */}
+      <div className="md:hidden space-y-2">
+        {rows.map((row) => {
+          const indicator = getRankIndicator(row.rank, row.previousScore?.rank ?? null);
+          const isMe = row.team.id === myTeamId;
+          const isExpanded = expandedTeamId === row.team.id;
+          const hasPicks = row.picks && row.picks.length > 0;
+
+          return (
+            <div
+              key={row.team.id}
+              className={`rounded-xl border ${isMe ? "border-accent-orange/30 bg-accent-orange/5" : "border-border bg-bg-card"}`}
+            >
+              <div className="flex items-center gap-3 p-3">
+                {/* Rank */}
+                <div className="flex items-center gap-1 w-10 shrink-0">
+                  <span
+                    className={`font-bold text-base ${
+                      row.rank === 1
+                        ? "text-accent-gold"
+                        : row.rank === 2
+                        ? "text-gray-300"
+                        : row.rank === 3
+                        ? "text-orange-600"
+                        : "text-text-primary"
+                    }`}
+                  >
+                    #{row.rank}
+                  </span>
+                  <RankIndicator indicator={indicator} />
+                </div>
+
+                {/* Team info */}
+                <div className="flex-1 min-w-0">
+                  <Link
+                    href={`/leagues/${leagueId}/team/${row.team.id}`}
+                    className="hover:text-accent-orange transition-colors"
+                  >
+                    <p className="font-medium text-text-primary text-sm truncate">
+                      {row.team.name}
+                      {isMe && (
+                        <span className="ml-1 text-xs text-accent-orange">(You)</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-text-muted truncate">
+                      {row.profile?.display_name || row.profile?.username || "—"}
+                    </p>
+                  </Link>
+                </div>
+
+                {/* Points */}
+                <div className="text-right shrink-0">
+                  <p className="text-accent-gold font-bold">{row.totalPoints}</p>
+                  <p className="text-xs text-text-muted">{row.currentScore?.total_points ?? 0} this wk</p>
+                </div>
+
+                {/* Chevron */}
+                {hasPicks && (
+                  <button
+                    onClick={() => toggleExpand(row.team.id)}
+                    className="text-text-muted hover:text-accent-orange transition-colors p-1 shrink-0"
+                  >
+                    <span
+                      className={`inline-block text-[10px] transition-transform duration-150 ${
+                        isExpanded ? "rotate-90" : ""
+                      }`}
+                    >
+                      ▶
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Expanded roster chips */}
+              {isExpanded && hasPicks && (
+                <div className="px-3 pb-3 pt-1 border-t border-border/50">
+                  <RosterChips picks={row.picks} leagueId={leagueId} compact />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {rows.length === 0 && (
+          <div className="text-center py-12 text-text-muted">
+            No standings yet. Draft must complete first.
+          </div>
+        )}
+      </div>
+
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border">
@@ -209,11 +300,12 @@ export default function StandingsTable({
           })}
         </tbody>
       </table>
-      {rows.length === 0 && (
-        <div className="text-center py-12 text-text-muted">
-          No standings yet. Draft must complete first.
-        </div>
-      )}
+        {rows.length === 0 && (
+          <div className="text-center py-12 text-text-muted">
+            No standings yet. Draft must complete first.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -38,7 +38,7 @@ export default async function DashboardPage() {
         title={`Welcome back, ${profile?.display_name || profile?.username || "Survivor"}`}
         subtitle="Your alliances"
         action={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <Link href="/leagues/join" className="btn-secondary">
               Join an Alliance
             </Link>

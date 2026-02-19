@@ -450,9 +450,9 @@ export default function AdminTeamsPage({
           Loading players…
         </div>
       ) : (
-        <div className="flex gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
           {/* Left: Unassigned players */}
-          <div className="w-64 shrink-0">
+          <div className="w-full md:w-64 md:shrink-0">
             <div className="card">
               <h3 className="text-sm font-semibold text-text-primary mb-3">
                 Available Players ({undraftedPlayers.length})

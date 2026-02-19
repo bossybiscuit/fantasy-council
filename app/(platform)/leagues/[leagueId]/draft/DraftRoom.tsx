@@ -268,9 +268,9 @@ export default function DraftRoom({
         </div>
       )}
 
-      <div className="flex gap-4">
+      <div className="flex flex-col md:flex-row gap-4">
         {/* Player Pool */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 order-2 md:order-1">
           <div className="card">
             <div className="flex gap-2 mb-4 flex-wrap">
               <input
@@ -404,7 +404,7 @@ export default function DraftRoom({
         </div>
 
         {/* Rosters Sidebar */}
-        <div className="w-64 shrink-0 space-y-3 max-h-[80vh] overflow-y-auto scrollbar-hide">
+        <div className="order-1 md:order-2 md:w-64 md:shrink-0 flex gap-2 overflow-x-auto pb-1 md:flex-col md:space-y-3 md:gap-0 md:pb-0 md:max-h-[80vh] md:overflow-y-auto scrollbar-hide">
           {teams.map((team, idx) => {
             const roster = teamRosters.get(team.id) || [];
             const budgetLeft = team.budget_remaining ?? league.budget;
@@ -416,7 +416,7 @@ export default function DraftRoom({
             return (
               <div
                 key={team.id}
-                className={`card text-sm ${
+                className={`card text-sm shrink-0 min-w-[160px] md:min-w-0 ${
                   isCurrentPick ? "border-accent-orange ember-glow" : ""
                 } ${team.id === myTeam?.id ? "border-accent-gold/30" : ""}`}
               >
