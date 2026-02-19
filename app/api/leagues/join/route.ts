@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const code = request.nextUrl.searchParams.get("code")?.toUpperCase();
+  const code = request.nextUrl.searchParams.get("code")?.trim().toUpperCase();
   if (!code) {
     return NextResponse.json({ error: "Code required" }, { status: 400 });
   }
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const { data: league } = await db
     .from("leagues")
     .select("*, seasons(*)")
-    .eq("invite_code", code)
+    .ilike("invite_code", code)
     .single();
 
   if (!league) {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
   const { data: league } = await db
     .from("leagues")
     .select("*")
-    .eq("invite_code", invite_code.toUpperCase())
+    .ilike("invite_code", invite_code.trim().toUpperCase())
     .single();
 
   if (!league) {

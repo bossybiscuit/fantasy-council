@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   const { rosterSize } = calculateRosterSize(count || 0, num_teams);
 
   // Generate unique invite code
-  let invite_code = generateInviteCode();
+  let invite_code = generateInviteCode().trim().toUpperCase();
   let attempts = 0;
   while (attempts < 10) {
     const { data: existing } = await supabase
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       .eq("invite_code", invite_code)
       .single();
     if (!existing) break;
-    invite_code = generateInviteCode();
+    invite_code = generateInviteCode().trim().toUpperCase();
     attempts++;
   }
 

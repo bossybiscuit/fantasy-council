@@ -59,66 +59,86 @@ export default function AdminTeamsPage({
     if (!newTeamName.trim()) return;
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/leagues/${leagueId}/teams`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newTeamName }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error); return; }
-    setNewTeamName("");
-    flash("Team added");
-    loadTeams();
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/teams`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newTeamName }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) { setError(data.error || `Error ${res.status}`); return; }
+      setNewTeamName("");
+      flash("Team added");
+      loadTeams();
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to add team — check your connection and try again");
+    }
   }
 
   async function handleRename(teamId: string) {
     if (!editingName.trim()) return;
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/leagues/${leagueId}/teams`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamId, name: editingName }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error); return; }
-    setEditingId(null);
-    setEditingName("");
-    flash("Team renamed");
-    loadTeams();
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/teams`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, name: editingName }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) { setError(data.error || `Error ${res.status}`); return; }
+      setEditingId(null);
+      setEditingName("");
+      flash("Team renamed");
+      loadTeams();
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to rename team — check your connection and try again");
+    }
   }
 
   async function handleClaimSeat(teamId: string) {
     if (!currentUserId) return;
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/leagues/${leagueId}/teams`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamId, userId: currentUserId }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error); return; }
-    flash("Seat claimed!");
-    loadTeams();
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/teams`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, userId: currentUserId }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) { setError(data.error || `Error ${res.status}`); return; }
+      flash("Seat claimed!");
+      loadTeams();
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to claim seat — check your connection and try again");
+    }
   }
 
   async function handleDelete(teamId: string) {
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/leagues/${leagueId}/teams`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamId }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error); return; }
-    flash("Team removed");
-    loadTeams();
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}/teams`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) { setError(data.error || `Error ${res.status}`); return; }
+      flash("Team removed");
+      loadTeams();
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to remove team — check your connection and try again");
+    }
   }
 
   const claimed = teams.filter((t) => t.user_id);
