@@ -61,12 +61,31 @@ export default async function LeagueHomePage({
 
   // ── Pre-draft lobby ──────────────────────────────────────────────────
   if (league.draft_status === "pending") {
+    // DEBUG — remove after diagnosing lobby issue
+    const { data: teamsRaw, error: teamsError } = await supabase
+      .from("teams")
+      .select("id, name, user_id")
+      .eq("league_id", leagueId);
+
     return (
       <div>
         <PageHeader
           title={league.name}
           subtitle={season?.name}
         />
+
+        {/* TEMP DEBUG */}
+        <pre className="bg-black text-green-400 text-xs p-4 rounded mb-4 overflow-x-auto">
+          {JSON.stringify({
+            user_id: user.id,
+            is_commissioner: isCommissioner,
+            my_team_id: myTeam?.id ?? null,
+            teams_query_error: teamsError?.message ?? null,
+            teams_count: teamsRaw?.length ?? null,
+            teams: (teamsRaw || []).map(t => ({ id: t.id.slice(0,8), name: t.name, user_id: t.user_id ? t.user_id.slice(0,8) : null })),
+          }, null, 2)}
+        </pre>
+
         <LobbyView
           league={league}
           teams={(teams || []).map((t) => ({
