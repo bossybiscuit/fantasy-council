@@ -82,7 +82,13 @@ export default async function LeagueHomePage({
             my_team_id: myTeam?.id ?? null,
             teams_query_error: teamsError?.message ?? null,
             teams_count: teamsRaw?.length ?? null,
-            teams: (teamsRaw || []).map(t => ({ id: t.id.slice(0,8), name: t.name, user_id: t.user_id ? t.user_id.slice(0,8) : null })),
+            teams_simple: (teamsRaw || []).map(t => ({ id: t.id.slice(0,8), name: t.name, user_id: t.user_id ? t.user_id.slice(0,8) : null })),
+            teams_with_profiles: (teams || []).map(t => ({
+              id: t.id.slice(0,8),
+              name: t.name,
+              user_id_raw: JSON.stringify((t as any).user_id),
+              user_id_keys: Object.keys(t as any),
+            })),
           }, null, 2)}
         </pre>
 
