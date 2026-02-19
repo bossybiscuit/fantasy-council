@@ -178,7 +178,7 @@ export type Database = {
         Row: {
           id: string;
           league_id: string;
-          user_id: string;
+          user_id: string | null;
           name: string;
           draft_order: number | null;
           budget_remaining: number | null;
@@ -187,13 +187,14 @@ export type Database = {
         Insert: {
           id?: string;
           league_id: string;
-          user_id: string;
+          user_id?: string | null;
           name?: string;
           draft_order?: number | null;
           budget_remaining?: number | null;
           created_at?: string;
         };
         Update: {
+          user_id?: string | null;
           name?: string;
           draft_order?: number | null;
           budget_remaining?: number | null;

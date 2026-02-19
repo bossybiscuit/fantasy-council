@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
+type AvailableTeam = { id: string; name: string };
+
 type LeaguePreview = {
   league_id: string;
   league_name: string;
@@ -13,6 +15,7 @@ type LeaguePreview = {
   draft_type: string;
   already_joined: boolean;
   already_joined_league_id: string | null;
+  available_teams: AvailableTeam[];
 };
 
 function JoinLeagueContent() {
@@ -21,10 +24,13 @@ function JoinLeagueContent() {
 
   const [code, setCode] = useState(searchParams.get("code")?.toUpperCase() || "");
   const [teamName, setTeamName] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [preview, setPreview] = useState<LeaguePreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [joining, setJoining] = useState(false);
+
+  const hasPreCreatedTeams = (preview?.available_teams.length ?? 0) > 0;
 
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +52,7 @@ function JoinLeagueContent() {
     }
 
     setPreview(data);
+    setSelectedTeamId(null);
     setLookingUp(false);
   }
 
@@ -54,10 +61,14 @@ function JoinLeagueContent() {
     setJoining(true);
     setError(null);
 
+    const body = hasPreCreatedTeams
+      ? { invite_code: code, team_id: selectedTeamId }
+      : { invite_code: code, team_name: teamName };
+
     const res = await fetch("/api/leagues/join", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ invite_code: code, team_name: teamName }),
+      body: JSON.stringify(body),
     });
 
     const data = await res.json();
@@ -73,6 +84,8 @@ function JoinLeagueContent() {
       router.push(`/leagues/${data.league_id}`);
     }
   }
+
+  const canSubmit = hasPreCreatedTeams ? !!selectedTeamId : !!teamName.trim();
 
   return (
     <div className="max-w-md mx-auto px-4 py-10">
@@ -158,8 +171,9 @@ function JoinLeagueContent() {
               <div>
                 <p className="text-text-muted text-xs uppercase tracking-wider mb-0.5">Open</p>
                 <p className="font-semibold text-accent-orange">
-                  {preview.num_teams - preview.team_count} seat
-                  {preview.num_teams - preview.team_count !== 1 ? "s" : ""}
+                  {hasPreCreatedTeams
+                    ? `${preview.available_teams.length} seat${preview.available_teams.length !== 1 ? "s" : ""}`
+                    : `${preview.num_teams - preview.team_count} seat${preview.num_teams - preview.team_count !== 1 ? "s" : ""}`}
                 </p>
               </div>
             </div>
@@ -172,21 +186,48 @@ function JoinLeagueContent() {
           )}
 
           <form onSubmit={handleJoin} className="space-y-4">
-            <div>
-              <label className="label">Your Tribe Name</label>
-              <input
-                type="text"
-                className="input"
-                placeholder="e.g. Fire Walkers"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                autoFocus
-                required
-              />
-              <p className="text-xs text-text-muted mt-1">
-                This is how your alliance will know you.
-              </p>
-            </div>
+            {/* Team picker (pre-created teams) */}
+            {hasPreCreatedTeams ? (
+              <div>
+                <label className="label">Choose Your Seat</label>
+                <div className="space-y-2 mt-2">
+                  {preview.available_teams.map((team) => (
+                    <button
+                      key={team.id}
+                      type="button"
+                      onClick={() => setSelectedTeamId(team.id)}
+                      className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-all ${
+                        selectedTeamId === team.id
+                          ? "border-accent-orange bg-accent-orange/10 text-text-primary"
+                          : "border-border hover:border-accent-orange/40 text-text-muted"
+                      }`}
+                    >
+                      <span className="font-medium">{team.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-text-muted mt-2">
+                  Pick the seat your commissioner assigned to you.
+                </p>
+              </div>
+            ) : (
+              /* No pre-created teams — let user enter their own name */
+              <div>
+                <label className="label">Your Tribe Name</label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="e.g. Fire Walkers"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  autoFocus
+                  required
+                />
+                <p className="text-xs text-text-muted mt-1">
+                  This is how your alliance will know you.
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
@@ -198,7 +239,7 @@ function JoinLeagueContent() {
               </button>
               <button
                 type="submit"
-                disabled={joining || !teamName.trim()}
+                disabled={joining || !canSubmit}
                 className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {joining ? "Joining…" : "Claim My Seat 🔥"}

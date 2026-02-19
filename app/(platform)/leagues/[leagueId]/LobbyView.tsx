@@ -5,6 +5,7 @@ import Link from "next/link";
 type Team = {
   id: string;
   name: string;
+  user_id: string | null;
   profiles: { display_name: string | null; username: string } | null;
 };
 
@@ -47,9 +48,15 @@ export default function LobbyView({
   isCommissioner,
   myTeamId,
 }: LobbyViewProps) {
-  const filledSeats = teams.length;
+  const claimedTeams = teams.filter((t) => t.user_id);
+  const unclaimedTeams = teams.filter((t) => !t.user_id);
+  const filledSeats = claimedTeams.length;
   const totalSeats = league.num_teams;
-  const emptyCount = Math.max(0, totalSeats - filledSeats);
+  // Only add blank placeholder slots if admin hasn't pre-created any teams
+  const hasPreCreatedSlots = unclaimedTeams.length > 0;
+  const blankEmptyCount = hasPreCreatedSlots
+    ? 0
+    : Math.max(0, totalSeats - teams.length);
 
   return (
     <div>
@@ -73,7 +80,8 @@ export default function LobbyView({
             : "grid-cols-2 sm:grid-cols-4 md:grid-cols-5"
         }`}
       >
-        {teams.map((team) => {
+        {/* Claimed seats */}
+        {claimedTeams.map((team) => {
           const isMe = team.id === myTeamId;
           const displayName =
             team.profiles?.display_name || team.profiles?.username || "Survivor";
@@ -99,8 +107,24 @@ export default function LobbyView({
           );
         })}
 
-        {/* Empty seats */}
-        {Array.from({ length: emptyCount }).map((_, i) => (
+        {/* Unclaimed pre-created seats — show admin team name */}
+        {unclaimedTeams.map((team) => (
+          <div
+            key={team.id}
+            className="rounded-lg border-2 border-dashed border-border p-3 text-center"
+          >
+            <div className="w-10 h-10 rounded-full border border-dashed border-border mx-auto mb-2 flex items-center justify-center text-text-muted text-sm">
+              ?
+            </div>
+            <p className="text-xs font-semibold text-text-muted leading-tight truncate">
+              {team.name}
+            </p>
+            <p className="text-xs text-text-muted/50 mt-1">Open seat</p>
+          </div>
+        ))}
+
+        {/* Blank placeholder slots (only if no pre-created teams) */}
+        {Array.from({ length: blankEmptyCount }).map((_, i) => (
           <div
             key={`empty-${i}`}
             className="rounded-lg border-2 border-dashed border-border p-3 text-center"
@@ -126,14 +150,22 @@ export default function LobbyView({
           <p className="text-xs text-text-muted mb-4">
             Anyone who enters this code becomes part of your alliance.
           </p>
-          {filledSeats >= 2 && (
+          <div className="flex flex-wrap gap-2">
             <Link
-              href={`/leagues/${league.id}/draft`}
-              className="btn-primary inline-block"
+              href={`/leagues/${league.id}/admin/teams`}
+              className="btn-secondary text-sm"
             >
-              Head to the Draft Room →
+              Manage Teams
             </Link>
-          )}
+            {filledSeats >= 2 && (
+              <Link
+                href={`/leagues/${league.id}/draft`}
+                className="btn-primary"
+              >
+                Head to the Draft Room →
+              </Link>
+            )}
+          </div>
         </div>
       ) : (
         <div className="card text-center text-text-muted text-sm py-6">

@@ -63,7 +63,8 @@ export default async function LeagueHomePage({
           teams={(teams || []).map((t) => ({
             id: t.id,
             name: t.name,
-            profiles: (t as any).profiles,
+            user_id: (t as any).user_id ?? null,
+            profiles: (t as any).profiles ?? null,
           }))}
           isCommissioner={isCommissioner}
           myTeamId={myTeam?.id}
@@ -159,13 +160,23 @@ export default async function LeagueHomePage({
         title={league.name}
         subtitle={season?.name}
         action={
-          isCommissioner && league.status === "active" ? (
-            <Link
-              href={`/leagues/${league.id}/admin/scoring`}
-              className="btn-primary"
-            >
-              Score Episode
-            </Link>
+          isCommissioner ? (
+            <div className="flex gap-2 flex-wrap justify-end">
+              <Link
+                href={`/leagues/${league.id}/admin/teams`}
+                className="btn-secondary text-sm"
+              >
+                Manage Teams
+              </Link>
+              {league.status === "active" && (
+                <Link
+                  href={`/leagues/${league.id}/admin/scoring`}
+                  className="btn-primary"
+                >
+                  Score Episode
+                </Link>
+              )}
+            </div>
           ) : undefined
         }
       />
