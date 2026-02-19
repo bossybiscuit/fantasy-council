@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
 
 type Team = {
@@ -134,15 +135,24 @@ export default function AdminTeamsPage({
           </div>
         </div>
 
-        {draftReady ? (
-          <div className="p-3 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 text-sm">
-            All seats claimed. You&apos;re ready to open the draft. 🔥
-          </div>
-        ) : (
-          <p className="text-text-muted text-sm">
-            The draft cannot begin until all {league?.num_teams ?? "—"} seats are claimed.
-          </p>
-        )}
+        <div className="flex items-center justify-between gap-4">
+          {isFull ? (
+            <p className="text-green-400 text-sm">
+              All seats claimed — you&apos;re ready to open the draft. 🔥
+            </p>
+          ) : (
+            <p className="text-text-muted text-sm">
+              {unclaimed.length} seat{unclaimed.length !== 1 ? "s" : ""} still open.
+              You can assign players above or start the draft now — the commissioner can pick for empty seats.
+            </p>
+          )}
+          <Link
+            href={`/leagues/${leagueId}/draft`}
+            className="btn-primary text-sm shrink-0"
+          >
+            Draft Room →
+          </Link>
+        </div>
       </div>
 
       {error && (

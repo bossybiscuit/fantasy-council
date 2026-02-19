@@ -62,7 +62,7 @@ export default function LeagueSettingsPage({
         setDeleteLoading(false);
         return;
       }
-      router.push("/leagues");
+      router.push("/dashboard");
     } catch {
       setDeleteError("Failed to delete league — check your connection and try again");
       setDeleteLoading(false);
