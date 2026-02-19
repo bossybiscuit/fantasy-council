@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/ui/PageHeader";
 import { DEFAULT_SCORING } from "@/lib/scoring";
@@ -11,11 +12,15 @@ export default function LeagueSettingsPage({
   params: Promise<{ leagueId: string }>;
 }) {
   const { leagueId } = use(params);
+  const router = useRouter();
   const supabase = createClient();
   const [league, setLeague] = useState<any>(null);
   const [config, setConfig] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -43,6 +48,24 @@ export default function LeagueSettingsPage({
     if (!error) {
       setSuccess("Settings saved");
       setTimeout(() => setSuccess(null), 3000);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/leagues/${leagueId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error || `Error ${res.status}`);
+        setDeleteLoading(false);
+        return;
+      }
+      router.push("/leagues");
+    } catch {
+      setDeleteError("Failed to delete league — check your connection and try again");
+      setDeleteLoading(false);
     }
   }
 
@@ -126,6 +149,40 @@ export default function LeagueSettingsPage({
         >
           {loading ? "Saving..." : "Save Settings"}
         </button>
+
+        {/* Danger Zone */}
+        <div className="card border-red-700/40">
+          <h3 className="section-title text-red-400 mb-1">Danger Zone</h3>
+          <p className="text-text-muted text-sm mb-4">
+            Permanently delete this league and all its teams, picks, and scores. This cannot be undone.
+          </p>
+
+          {deleteError && (
+            <div className="mb-3 p-3 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 text-sm">
+              {deleteError}
+            </div>
+          )}
+
+          <p className="text-text-muted text-sm mb-2">
+            Type <span className="font-mono text-text-primary">{league.name}</span> to confirm:
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              className="input flex-1"
+              placeholder={league.name}
+              value={deleteConfirm}
+              onChange={(e) => setDeleteConfirm(e.target.value)}
+            />
+            <button
+              onClick={handleDelete}
+              disabled={deleteConfirm !== league.name || deleteLoading}
+              className="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            >
+              {deleteLoading ? "Deleting..." : "Delete League"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
