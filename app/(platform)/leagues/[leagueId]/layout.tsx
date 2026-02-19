@@ -49,7 +49,7 @@ export default async function LeagueLayout({
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <div className="flex gap-6">
-        <LeagueSidebar league={league} isCommissioner={isCommissioner} />
+        <LeagueSidebar league={league} isCommissioner={isCommissioner} teamId={team?.id} />
         <div className="flex-1 min-w-0">{children}</div>
       </div>
     </div>

@@ -227,27 +227,11 @@ export default function LobbyView({
       </div>
 
       {/* My Tribe card */}
-      {myTeam ? (
+      {myTeam && (
         <div className="card border-accent-orange/30 mb-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs text-accent-orange uppercase tracking-wider mb-0.5">Your Tribe</p>
-              <p className="text-lg font-bold text-text-primary">{myTeam.name}</p>
-            </div>
-            <Link
-              href={`/leagues/${league.id}/team/${myTeam.id}`}
-              className="btn-secondary text-sm shrink-0"
-            >
-              Team Settings →
-            </Link>
-          </div>
-        </div>
-      ) : !isCommissioner && (
-        <div className="card border-dashed border-border mb-6 text-center py-4">
-          <p className="text-text-muted text-sm">You haven&apos;t claimed a seat yet.</p>
-          <Link href={`/leagues/join?code=${league.invite_code}`} className="text-accent-orange text-sm hover:underline mt-1 inline-block">
-            Join with invite code →
-          </Link>
+          <p className="text-xs text-accent-orange uppercase tracking-wider mb-0.5">Your Tribe</p>
+          <p className="text-lg font-bold text-text-primary">{myTeam.name}</p>
+          <p className="text-xs text-text-muted mt-1">Manage your team from the sidebar → My Team</p>
         </div>
       )}
 

@@ -7,11 +7,13 @@ import type { League } from "@/types/database";
 interface LeagueSidebarProps {
   league: League;
   isCommissioner: boolean;
+  teamId?: string;
 }
 
 export default function LeagueSidebar({
   league,
   isCommissioner,
+  teamId,
 }: LeagueSidebarProps) {
   const pathname = usePathname();
   const base = `/leagues/${league.id}`;
@@ -22,6 +24,10 @@ export default function LeagueSidebar({
     { href: `${base}/predictions`, label: "Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
   ];
+
+  if (teamId) {
+    links.push({ href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" });
+  }
 
   if (isCommissioner) {
     links.push(
