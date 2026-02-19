@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import StandingsTable from "@/components/ui/StandingsTable";
@@ -35,10 +38,10 @@ export default async function LeagueHomePage({
     .single();
 
   // Use service client — bypasses RLS so all teams (claimed + unclaimed) are visible
-  const db = await createServiceClient();
+  const db = createServiceClient();
   const { data: teams } = await db
     .from("teams")
-    .select("*, profiles(*)")
+    .select("id, name, user_id, profiles(display_name, username)")
     .eq("league_id", leagueId)
     .order("created_at");
 
