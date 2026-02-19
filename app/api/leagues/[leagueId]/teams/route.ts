@@ -1,43 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 type Params = { params: Promise<{ leagueId: string }> };
 
 async function authorize(leagueId: string) {
-  const supabase = await createClient();
+  // Regular auth client — only used for identity/profile checks
+  const authClient = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
-  if (!user) return { error: "Unauthorized", status: 401, supabase: null, user: null, league: null };
+  if (!user) return { error: "Unauthorized", status: 401, db: null, user: null, league: null };
 
-  const { data: league } = await supabase
+  // Service client — bypasses RLS for league/team operations
+  const db = await createServiceClient();
+
+  const { data: league } = await db
     .from("leagues")
     .select("id, commissioner_id, budget, num_teams")
     .eq("id", leagueId)
     .single();
 
-  if (!league) return { error: "League not found", status: 404, supabase: null, user, league: null };
+  if (!league) return { error: "League not found", status: 404, db: null, user, league: null };
 
-  const { data: profile } = await supabase
+  const { data: profile } = await authClient
     .from("profiles")
     .select("is_super_admin")
     .eq("id", user.id)
     .single();
 
   const isAuthorized = league.commissioner_id === user.id || !!profile?.is_super_admin;
-  if (!isAuthorized) return { error: "Forbidden", status: 403, supabase: null, user, league: null };
+  if (!isAuthorized) return { error: "Forbidden", status: 403, db: null, user, league: null };
 
-  return { error: null, status: 200, supabase, user, league };
+  return { error: null, status: 200, db, user, league };
 }
 
 // GET /api/leagues/[leagueId]/teams — list all teams with owner info
 export async function GET(_req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
-  const { error, status, supabase, league } = await authorize(leagueId);
-  if (error || !league || !supabase) return NextResponse.json({ error }, { status });
+  const { error, status, db, league } = await authorize(leagueId);
+  if (error || !league || !db) return NextResponse.json({ error }, { status });
 
-  const { data: teams } = await supabase
+  const { data: teams } = await db
     .from("teams")
     .select("id, name, user_id, draft_order, profiles(display_name, username)")
     .eq("league_id", leagueId)
@@ -49,21 +53,21 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // POST /api/leagues/[leagueId]/teams — create unclaimed team
 export async function POST(req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
-  const { error, status, supabase, league } = await authorize(leagueId);
-  if (error || !league || !supabase) return NextResponse.json({ error }, { status });
+  const { error, status, db, league } = await authorize(leagueId);
+  if (error || !league || !db) return NextResponse.json({ error }, { status });
 
   const { name } = await req.json();
   if (!name?.trim()) {
     return NextResponse.json({ error: "Team name required" }, { status: 400 });
   }
 
-  const { data: team, error: insertError } = await supabase
+  const { data: team, error: insertError } = await db
     .from("teams")
     .insert({
       league_id: leagueId,
       name: name.trim(),
       budget_remaining: league.budget,
-      // user_id intentionally omitted — unclaimed seat (allowed by migration 006 RLS)
+      // user_id intentionally omitted — unclaimed seat
     })
     .select()
     .single();
@@ -78,8 +82,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 // PATCH /api/leagues/[leagueId]/teams — rename or assign a team
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
-  const { error, status, supabase, league } = await authorize(leagueId);
-  if (error || !league || !supabase) return NextResponse.json({ error }, { status });
+  const { error, status, db, league } = await authorize(leagueId);
+  if (error || !league || !db) return NextResponse.json({ error }, { status });
 
   const { teamId, name, userId } = await req.json();
   if (!teamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
@@ -92,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
-  const { data: team, error: updateError } = await supabase
+  const { data: team, error: updateError } = await db
     .from("teams")
     .update(updates)
     .eq("id", teamId)
@@ -110,13 +114,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 // DELETE /api/leagues/[leagueId]/teams — delete an unclaimed team
 export async function DELETE(req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
-  const { error, status, supabase, league } = await authorize(leagueId);
-  if (error || !league || !supabase) return NextResponse.json({ error }, { status });
+  const { error, status, db, league } = await authorize(leagueId);
+  if (error || !league || !db) return NextResponse.json({ error }, { status });
 
   const { teamId } = await req.json();
   if (!teamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
 
-  const { data: team } = await supabase
+  const { data: team } = await db
     .from("teams")
     .select("id, user_id")
     .eq("id", teamId)
@@ -128,7 +132,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Cannot delete a claimed team" }, { status: 409 });
   }
 
-  const { error: deleteError } = await supabase
+  const { error: deleteError } = await db
     .from("teams")
     .delete()
     .eq("id", teamId)
