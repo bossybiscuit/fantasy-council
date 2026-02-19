@@ -58,7 +58,6 @@ function InviteShare({
   const [activeTemplate, setActiveTemplate] = useState<"group" | "email" | "text">("group");
 
   const joinUrl = `${APP_URL}/leagues/join?code=${league.invite_code}`;
-  const openSeats = league.num_teams - 0; // will be overridden by caller if needed
 
   const templates = {
     group: `🔥 Survivor 50 Fantasy — we're doing it.
@@ -245,7 +244,7 @@ export default function LobbyView({
         </div>
       ) : !isCommissioner && (
         <div className="card border-dashed border-border mb-6 text-center py-4">
-          <p className="text-text-muted text-sm">You haven't claimed a seat yet.</p>
+          <p className="text-text-muted text-sm">You haven&apos;t claimed a seat yet.</p>
           <Link href={`/leagues/join?code=${league.invite_code}`} className="text-accent-orange text-sm hover:underline mt-1 inline-block">
             Join with invite code →
           </Link>
