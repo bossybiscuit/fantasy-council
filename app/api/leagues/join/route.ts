@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 // GET /api/leagues/join?code=XXXXXX — preview league info before joining
 export async function GET(request: NextRequest) {
@@ -116,16 +116,21 @@ export async function POST(request: NextRequest) {
   }
 
   if (team_id) {
-    // Atomically claim an unclaimed seat — security-definer ensures auth.uid() is used
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: claimedRows, error } = await (authClient as any).rpc("claim_team_seat", {
-      p_team_id: team_id,
-      p_league_id: league.id,
-    });
-    const team = (claimedRows as any[])?.[0];
+    // Atomically claim an unclaimed seat via service client — WHERE user_id IS NULL ensures
+    // the seat hasn't already been taken. user.id comes from the verified session above.
+    const db = await createServiceClient();
+    const { data: team, error } = await db
+      .from("teams")
+      .update({ user_id: user.id })
+      .eq("id", team_id)
+      .eq("league_id", league.id)
+      .is("user_id", null)
+      .select()
+      .single();
+
     if (error || !team) {
       return NextResponse.json(
-        { error: error?.message || "Seat was just taken — try another" },
+        { error: "Seat was just taken — try another" },
         { status: 409 }
       );
     }

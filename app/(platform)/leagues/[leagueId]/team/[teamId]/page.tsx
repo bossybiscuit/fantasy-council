@@ -4,6 +4,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
 import { getTierBadgeClass, calculatePredictionAccuracy } from "@/lib/utils";
 import Link from "next/link";
+import RenameTeam from "./RenameTeam";
 
 export default async function TeamPage({
   params,
@@ -92,6 +93,7 @@ export default async function TeamPage({
   const latestScore = episodeScores?.[episodeScores.length - 1];
 
   const profile = team.profiles as any;
+  const isOwner = (team as any).user_id === user.id;
 
   return (
     <div>
@@ -99,6 +101,11 @@ export default async function TeamPage({
         title={team.name}
         subtitle={`Managed by ${profile?.display_name || profile?.username || "Unknown"}`}
       />
+
+      {/* Team rename — owner only */}
+      {isOwner && (
+        <RenameTeam leagueId={leagueId} teamId={teamId} currentName={team.name} />
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4 mb-6">

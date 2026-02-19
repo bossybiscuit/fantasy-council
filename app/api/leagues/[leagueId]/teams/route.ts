@@ -80,17 +80,55 @@ export async function POST(req: NextRequest, { params }: Params) {
 }
 
 // PATCH /api/leagues/[leagueId]/teams — rename or assign a team
+// Commissioner/super-admin: can rename any team or assign a user_id.
+// Team owner: can rename only their own team (no userId changes).
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
-  const { error, status, db, league } = await authorize(leagueId);
-  if (error || !league || !db) return NextResponse.json({ error }, { status });
-
-  const { teamId, name, userId } = await req.json();
+  const body = await req.json();
+  const { teamId, name, userId } = body;
   if (!teamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
+
+  // Identify caller
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const db = await createServiceClient();
+
+  // Check if commissioner/super-admin
+  const { data: league } = await db
+    .from("leagues")
+    .select("id, commissioner_id")
+    .eq("id", leagueId)
+    .single();
+  if (!league) return NextResponse.json({ error: "League not found" }, { status: 404 });
+
+  const { data: profile } = await authClient
+    .from("profiles")
+    .select("is_super_admin")
+    .eq("id", user.id)
+    .single();
+
+  const isAdmin = league.commissioner_id === user.id || !!profile?.is_super_admin;
+
+  if (!isAdmin) {
+    // Team owner path — can only rename their own team, cannot change userId
+    if (userId !== undefined) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const { data: ownerCheck } = await db
+      .from("teams")
+      .select("id")
+      .eq("id", teamId)
+      .eq("league_id", leagueId)
+      .eq("user_id", user.id)
+      .single();
+    if (!ownerCheck) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name.trim();
-  if (userId !== undefined) updates.user_id = userId;
+  if (userId !== undefined && isAdmin) updates.user_id = userId;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });

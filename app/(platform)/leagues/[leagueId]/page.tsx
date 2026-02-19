@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import StandingsTable from "@/components/ui/StandingsTable";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
@@ -34,7 +34,9 @@ export default async function LeagueHomePage({
     .eq("user_id", user.id)
     .single();
 
-  const { data: teams } = await supabase
+  // Use service client — bypasses RLS so all teams (claimed + unclaimed) are visible
+  const db = await createServiceClient();
+  const { data: teams } = await db
     .from("teams")
     .select("*, profiles(*)")
     .eq("league_id", leagueId)
