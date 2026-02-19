@@ -13,19 +13,19 @@ export default function RenameTeam({
   currentName: string;
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(currentName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const isDirty = name.trim() !== currentName;
 
   async function handleSave() {
     const trimmed = name.trim();
-    if (!trimmed || trimmed === currentName) {
-      setEditing(false);
-      return;
-    }
+    if (!trimmed || !isDirty) return;
     setLoading(true);
     setError(null);
+    setSaved(false);
     try {
       const res = await fetch(`/api/leagues/${leagueId}/teams`, {
         method: "PATCH",
@@ -38,57 +38,35 @@ export default function RenameTeam({
         setLoading(false);
         return;
       }
-      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
       router.refresh();
     } catch {
-      setError("Failed to rename — check your connection");
+      setError("Failed to save — check your connection");
+    } finally {
       setLoading(false);
     }
   }
 
-  if (!editing) {
-    return (
-      <div className="mb-4 flex items-center gap-2">
-        <button
-          onClick={() => setEditing(true)}
-          className="text-xs text-text-muted hover:text-accent-orange transition-colors border border-border hover:border-accent-orange/40 rounded px-3 py-1"
-        >
-          Rename my team
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="mb-4 card py-3">
-      {error && (
-        <p className="text-red-400 text-xs mb-2">{error}</p>
-      )}
+    <div>
+      {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
       <div className="flex gap-2">
         <input
           type="text"
-          className="input flex-1 py-1.5 text-sm"
+          className="input flex-1 text-sm"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSave();
-            if (e.key === "Escape") setEditing(false);
-          }}
+          onChange={(e) => { setName(e.target.value); setSaved(false); }}
+          onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
           maxLength={40}
-          autoFocus
+          placeholder="Team name"
         />
         <button
           onClick={handleSave}
-          disabled={loading || !name.trim()}
-          className="btn-primary text-sm py-1.5 px-4 disabled:opacity-50"
+          disabled={loading || !isDirty || !name.trim()}
+          className="btn-primary text-sm px-4 disabled:opacity-40"
         >
-          {loading ? "Saving…" : "Save"}
-        </button>
-        <button
-          onClick={() => { setEditing(false); setName(currentName); }}
-          className="btn-secondary text-sm py-1.5 px-3"
-        >
-          Cancel
+          {loading ? "Saving…" : saved ? "Saved!" : "Save"}
         </button>
       </div>
     </div>

@@ -102,9 +102,17 @@ export default async function TeamPage({
         subtitle={`Managed by ${profile?.display_name || profile?.username || "Unknown"}`}
       />
 
-      {/* Team rename — owner only */}
+      {/* Team Settings — owner only */}
       {isOwner && (
-        <RenameTeam leagueId={leagueId} teamId={teamId} currentName={team.name} />
+        <div className="card mb-6 border-accent-orange/20">
+          <h2 className="section-title mb-3">Team Settings</h2>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-text-muted mb-1.5">Team Name</p>
+              <RenameTeam leagueId={leagueId} teamId={teamId} currentName={team.name} />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Stats Cards */}
