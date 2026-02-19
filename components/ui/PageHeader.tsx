@@ -6,12 +6,35 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, action }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between mb-6">
+    <div
+      className="relative flex items-start justify-between mb-8 px-5 py-5 rounded-xl overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(ellipse 80% 120% at 50% 0%, rgba(255,106,0,0.08) 0%, transparent 70%)",
+        borderBottom: "1px solid rgba(201,168,76,0.15)",
+      }}
+    >
+      {/* Subtle top-edge torch glow line */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, rgba(255,106,0,0.3), rgba(201,168,76,0.5), rgba(255,106,0,0.3), transparent)",
+        }}
+      />
+
       <div>
         <h1 className="page-title">{title}</h1>
-        {subtitle && <p className="text-text-muted mt-1">{subtitle}</p>}
+        {subtitle && (
+          <p
+            className="text-text-muted mt-1"
+            style={{ fontFamily: "var(--font-crimson, Georgia, serif)", fontSize: "1.05rem", fontStyle: "italic" }}
+          >
+            {subtitle}
+          </p>
+        )}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="shrink-0 ml-4">{action}</div>}
     </div>
   );
 }

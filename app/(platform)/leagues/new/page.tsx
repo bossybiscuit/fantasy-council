@@ -300,7 +300,7 @@ export default function NewLeaguePage() {
                 </div>
                 {remainder > 0 && (
                   <p className="text-yellow-400 text-xs mt-2">
-                    ⚠️ {remainder} castaway(s) won't be drafted — cast doesn&apos;t divide evenly
+                    ⚠️ {remainder} castaway(s) won&apos;t be drafted — cast doesn&apos;t divide evenly
                   </p>
                 )}
               </div>

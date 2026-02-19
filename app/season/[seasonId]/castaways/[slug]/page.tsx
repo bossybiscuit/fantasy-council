@@ -242,15 +242,15 @@ export default async function CastawayDetailPage({
         {[
           { label: "Fantasy Points", value: totalPoints, accent: true },
           { label: "This Week", value: `+${thisWeekPts}` },
-          { label: "Episodes Played", value: episodesPlayed },
+          { label: "Episodes", value: episodesPlayed },
           { label: "Challenge Wins", value: challengeWins.size },
           { label: "Immunity Wins", value: immunityWins.size },
         ].map(({ label, value, accent }) => (
-          <div key={label} className="card text-center py-3">
-            <p className={`text-2xl font-bold ${accent ? "text-gradient-fire" : "text-text-primary"}`}>
+          <div key={label} className="stat-tablet">
+            <p className={`stat-number ${accent ? "text-gradient-fire" : ""}`}>
               {value}
             </p>
-            <p className="text-xs text-text-muted mt-1">{label}</p>
+            <p className="stat-label">{label}</p>
           </div>
         ))}
       </div>
@@ -311,22 +311,22 @@ export default async function CastawayDetailPage({
       {/* Ownership */}
       <div className="card">
         <h2 className="section-title mb-4">Fantasy Ownership</h2>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-2xl font-bold text-text-primary">{ownershipPct}%</p>
-            <p className="text-xs text-text-muted mt-1">Owned in leagues</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="stat-tablet">
+            <p className="stat-number">{ownershipPct}%</p>
+            <p className="stat-label">Owned in leagues</p>
           </div>
-          <div>
-            <p className="text-2xl font-bold text-accent-gold">
+          <div className="stat-tablet">
+            <p className="stat-number" style={{ color: "var(--accent-gold)" }}>
               {player.suggested_value != null ? `$${player.suggested_value}` : "—"}
             </p>
-            <p className="text-xs text-text-muted mt-1">Suggested value</p>
+            <p className="stat-label">Suggested value</p>
           </div>
-          <div>
-            <p className="text-2xl font-bold text-text-primary">
+          <div className="stat-tablet">
+            <p className="stat-number">
               {avgPaid != null ? `$${avgPaid}` : "—"}
             </p>
-            <p className="text-xs text-text-muted mt-1">Avg auction paid</p>
+            <p className="stat-label">Avg auction paid</p>
           </div>
         </div>
       </div>
