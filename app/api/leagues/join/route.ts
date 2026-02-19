@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Security-definer RPC bypasses leagues RLS — works without service role key
-  const { data: leagueRows } = await authClient.rpc("league_by_invite_code", { p_code: code });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: leagueRows } = await (authClient as any).rpc("league_by_invite_code", { p_code: code });
   const league = leagueRows?.[0] as any;
 
   if (!league) {
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
     .eq("id", league.season_id)
     .single();
 
-  const { data: teamCountResult } = await authClient.rpc("team_count_for_league", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: teamCountResult } = await (authClient as any).rpc("team_count_for_league", {
     p_league_id: league.id,
   });
 
@@ -48,7 +50,8 @@ export async function GET(request: NextRequest) {
     .single();
 
   // Security-definer RPC: unclaimed teams visible to non-members
-  const { data: availableTeams } = await authClient.rpc("unclaimed_teams_for_league", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: availableTeams } = await (authClient as any).rpc("unclaimed_teams_for_league", {
     p_league_id: league.id,
   });
 
@@ -83,7 +86,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Security-definer RPC: bypasses leagues RLS
-  const { data: leagueRows } = await authClient.rpc("league_by_invite_code", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: leagueRows } = await (authClient as any).rpc("league_by_invite_code", {
     p_code: invite_code.trim().toUpperCase(),
   });
   const league = leagueRows?.[0] as any;
@@ -113,7 +117,8 @@ export async function POST(request: NextRequest) {
 
   if (team_id) {
     // Atomically claim an unclaimed seat — security-definer ensures auth.uid() is used
-    const { data: claimedRows, error } = await authClient.rpc("claim_team_seat", {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: claimedRows, error } = await (authClient as any).rpc("claim_team_seat", {
       p_team_id: team_id,
       p_league_id: league.id,
     });
@@ -128,7 +133,8 @@ export async function POST(request: NextRequest) {
   }
 
   // No team_id — backwards compat: no pre-created teams, user picks their own name
-  const { data: unclaimed } = await authClient.rpc("unclaimed_teams_for_league", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: unclaimed } = await (authClient as any).rpc("unclaimed_teams_for_league", {
     p_league_id: league.id,
   });
   if (((unclaimed as any[]) || []).length > 0) {
@@ -138,7 +144,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: teamCountResult } = await authClient.rpc("team_count_for_league", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: teamCountResult } = await (authClient as any).rpc("team_count_for_league", {
     p_league_id: league.id,
   });
   if (Number(teamCountResult || 0) >= league.num_teams) {
