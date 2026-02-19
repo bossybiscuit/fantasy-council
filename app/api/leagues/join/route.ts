@@ -17,12 +17,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Code required" }, { status: 400 });
   }
 
-  // Security-definer RPC bypasses leagues RLS — works without service role key
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: leagueRows } = await (authClient as any).rpc("league_by_invite_code", { p_code: code });
-  const league = leagueRows?.[0] as any;
+  // Service client bypasses RLS — league_by_invite_code needs to work for non-members
+  const db = createServiceClient();
+  const { data: league, error: leagueError } = await db
+    .from("leagues")
+    .select("*")
+    .eq("invite_code", code)
+    .single();
 
-  if (!league) {
+  if (leagueError || !league) {
     return NextResponse.json({ error: "Invalid invite code — no tribe found" }, { status: 404 });
   }
 
@@ -30,41 +33,43 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "This league has ended" }, { status: 400 });
   }
 
-  const { data: season } = await authClient
+  const { data: season } = await db
     .from("seasons")
     .select("name")
     .eq("id", league.season_id)
     .single();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: teamCountResult } = await (authClient as any).rpc("team_count_for_league", {
-    p_league_id: league.id,
-  });
+  const { count: teamCount } = await db
+    .from("teams")
+    .select("*", { count: "exact", head: true })
+    .eq("league_id", league.id);
 
-  // Regular auth works here — if user is in the league, my_league_ids() includes it
-  const { data: existingTeam } = await authClient
+  // Check if user already has a team in this league
+  const { data: existingTeam } = await db
     .from("teams")
     .select("id")
     .eq("league_id", league.id)
     .eq("user_id", user.id)
     .single();
 
-  // Security-definer RPC: unclaimed teams visible to non-members
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: availableTeams } = await (authClient as any).rpc("unclaimed_teams_for_league", {
-    p_league_id: league.id,
-  });
+  // Available (unclaimed) team slots
+  const { data: availableTeams } = await db
+    .from("teams")
+    .select("id, name")
+    .eq("league_id", league.id)
+    .is("user_id", null)
+    .order("created_at");
 
   return NextResponse.json({
     league_id: league.id,
     league_name: league.name,
     season_name: season?.name || null,
     num_teams: league.num_teams,
-    team_count: Number(teamCountResult || 0),
+    team_count: teamCount ?? 0,
     draft_type: league.draft_type,
     already_joined: !!existingTeam,
     already_joined_league_id: existingTeam ? league.id : null,
-    available_teams: ((availableTeams as any[]) || []).map((t) => ({ id: t.id, name: t.name })),
+    available_teams: (availableTeams || []).map((t) => ({ id: t.id, name: t.name })),
   });
 }
 
@@ -85,14 +90,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invite code required" }, { status: 400 });
   }
 
-  // Security-definer RPC: bypasses leagues RLS
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: leagueRows } = await (authClient as any).rpc("league_by_invite_code", {
-    p_code: invite_code.trim().toUpperCase(),
-  });
-  const league = leagueRows?.[0] as any;
+  // Service client — league lookup must work for non-members
+  const db = createServiceClient();
+  const { data: league, error: leagueError } = await db
+    .from("leagues")
+    .select("*")
+    .eq("invite_code", invite_code.trim().toUpperCase())
+    .single();
 
-  if (!league) {
+  if (leagueError || !league) {
     return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
   }
 
@@ -100,8 +106,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "This league has ended" }, { status: 400 });
   }
 
-  // Check if already in league (regular auth — if in league, team is visible)
-  const { data: existingTeam } = await authClient
+  // Check if user already has a team in this league
+  const { data: existingTeam } = await db
     .from("teams")
     .select("id")
     .eq("league_id", league.id)
@@ -116,10 +122,9 @@ export async function POST(request: NextRequest) {
   }
 
   if (team_id) {
-    // Atomically claim an unclaimed seat via service client — WHERE user_id IS NULL ensures
-    // the seat hasn't already been taken. user.id comes from the verified session above.
-    const db = await createServiceClient();
-    const { data: team, error } = await db
+    // Claim an unclaimed seat atomically — WHERE user_id IS NULL ensures
+    // we only claim seats that haven't been taken yet (race-condition safe).
+    const { data: team, error: claimError } = await db
       .from("teams")
       .update({ user_id: user.id })
       .eq("id", team_id)
@@ -128,37 +133,51 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error || !team) {
+    if (claimError || !team) {
       return NextResponse.json(
-        { error: "Seat was just taken — try another" },
+        {
+          error: claimError?.message || "Seat was just taken — please select another",
+          league_id: league.id,
+        },
         { status: 409 }
       );
     }
     return NextResponse.json({ team, league_id: league.id });
   }
 
-  // No team_id — backwards compat: no pre-created teams, user picks their own name
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: unclaimed } = await (authClient as any).rpc("unclaimed_teams_for_league", {
-    p_league_id: league.id,
-  });
-  if (((unclaimed as any[]) || []).length > 0) {
+  // No team_id — backwards compat: no pre-created teams, user picks their own name.
+  // If the league has unclaimed slots, force the user to pick one.
+  const { data: unclaimed } = await db
+    .from("teams")
+    .select("id")
+    .eq("league_id", league.id)
+    .is("user_id", null)
+    .limit(1);
+
+  if ((unclaimed || []).length > 0) {
     return NextResponse.json(
-      { error: "This league has pre-created teams — please select an open seat" },
+      {
+        error: "This league has pre-created teams — please select an open seat",
+        league_id: league.id,
+      },
       { status: 400 }
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: teamCountResult } = await (authClient as any).rpc("team_count_for_league", {
-    p_league_id: league.id,
-  });
-  if (Number(teamCountResult || 0) >= league.num_teams) {
-    return NextResponse.json({ error: "This league is full" }, { status: 400 });
+  const { count: teamCount } = await db
+    .from("teams")
+    .select("*", { count: "exact", head: true })
+    .eq("league_id", league.id);
+
+  if ((teamCount ?? 0) >= league.num_teams) {
+    return NextResponse.json(
+      { error: "This league is full", league_id: league.id },
+      { status: 400 }
+    );
   }
 
-  // Regular insert works — user_id = auth.uid() satisfies the INSERT RLS policy
-  const { data: team, error } = await authClient
+  // Backwards compat: insert a new team (no pre-created slots exist)
+  const { data: team, error: insertError } = await db
     .from("teams")
     .insert({
       league_id: league.id,
@@ -169,8 +188,11 @@ export async function POST(request: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (insertError) {
+    return NextResponse.json(
+      { error: insertError.message, league_id: league.id },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ team, league_id: league.id });

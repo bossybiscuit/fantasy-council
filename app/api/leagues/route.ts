@@ -62,24 +62,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Step 1: Commissioner claims Team 1 — regular auth client satisfies the INSERT RLS policy
-  await supabase.from("teams").insert({
+  // Create all team slots via service client (bypasses RLS for both user_id values).
+  // Slot 1 belongs to the commissioner; the rest are unclaimed (user_id = null).
+  const db = createServiceClient();
+  const teamSlots = Array.from({ length: num_teams }, (_, i) => ({
     league_id: league.id,
-    user_id: user.id,
-    name: "Team 1",
+    user_id: i === 0 ? user.id : null,
+    name: `Team ${i + 1}`,
     budget_remaining: budget || 100,
-  });
-
-  // Step 2: Create remaining unclaimed slots — service client needed for user_id = NULL
-  if (num_teams > 1) {
-    const db = await createServiceClient();
-    const unclaimedSlots = Array.from({ length: num_teams - 1 }, (_, i) => ({
-      league_id: league.id,
-      user_id: null,
-      name: `Team ${i + 2}`,
-      budget_remaining: budget || 100,
-    }));
-    await db.from("teams").insert(unclaimedSlots);
+  }));
+  const { error: teamError } = await db.from("teams").insert(teamSlots);
+  if (teamError) {
+    // League was created — return it even if team slots failed so user can retry
+    console.error("Failed to create team slots:", teamError.message);
   }
 
   return NextResponse.json({ league });
