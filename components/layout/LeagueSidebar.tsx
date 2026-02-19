@@ -31,6 +31,7 @@ export default function LeagueSidebar({
 
   if (isCommissioner) {
     links.push(
+      { href: `${base}/admin/teams`, label: "Manage Teams", icon: "👥" },
       { href: `${base}/admin/scoring`, label: "Score Episode", icon: "⚡" },
       { href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" }
     );

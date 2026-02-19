@@ -4,7 +4,6 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 type Params = { params: Promise<{ leagueId: string }> };
 
 async function authorize(leagueId: string) {
-  // Regular auth client — only used for identity/profile checks
   const authClient = await createClient();
   const {
     data: { user },
@@ -12,12 +11,11 @@ async function authorize(leagueId: string) {
 
   if (!user) return { error: "Unauthorized", status: 401, db: null, user: null, league: null };
 
-  // Service client — bypasses RLS for league/team operations
-  const db = await createServiceClient();
+  const db = createServiceClient();
 
   const { data: league } = await db
     .from("leagues")
-    .select("id, commissioner_id, budget, num_teams")
+    .select("id, name, commissioner_id, budget, num_teams, draft_type, draft_status")
     .eq("id", leagueId)
     .single();
 
@@ -35,19 +33,50 @@ async function authorize(leagueId: string) {
   return { error: null, status: 200, db, user, league };
 }
 
-// GET /api/leagues/[leagueId]/teams — list all teams with owner info
+// GET /api/leagues/[leagueId]/teams — list all teams with owner info + available users
 export async function GET(_req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
   const { error, status, db, league } = await authorize(leagueId);
   if (error || !league || !db) return NextResponse.json({ error }, { status });
 
-  const { data: teams } = await db
+  // Fetch teams without profiles() join (join silently fails with service client)
+  const { data: teamsData } = await db
     .from("teams")
-    .select("id, name, user_id, draft_order, profiles(display_name, username)")
+    .select("id, name, user_id, draft_order")
     .eq("league_id", leagueId)
     .order("created_at");
 
-  return NextResponse.json({ teams: teams || [] });
+  // Fetch profiles for claimed seats separately
+  const claimedUserIds = (teamsData || [])
+    .map((t) => t.user_id)
+    .filter(Boolean) as string[];
+
+  const { data: profilesList } = claimedUserIds.length > 0
+    ? await db.from("profiles").select("id, display_name, username").in("id", claimedUserIds)
+    : { data: [] };
+
+  const profileMap = new Map((profilesList || []).map((p) => [p.id, p]));
+
+  const teams = (teamsData || []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    user_id: t.user_id,
+    draft_order: t.draft_order,
+    ownerName: t.user_id
+      ? (profileMap.get(t.user_id)?.display_name || profileMap.get(t.user_id)?.username || null)
+      : null,
+  }));
+
+  // Fetch users not already in this league for the assign dropdown
+  const { data: availableUsers } = claimedUserIds.length > 0
+    ? await db
+        .from("profiles")
+        .select("id, display_name, username")
+        .not("id", "in", `(${claimedUserIds.join(",")})`)
+        .order("display_name")
+    : await db.from("profiles").select("id, display_name, username").order("display_name");
+
+  return NextResponse.json({ teams, availableUsers: availableUsers || [], league });
 }
 
 // POST /api/leagues/[leagueId]/teams — create unclaimed team
@@ -67,7 +96,6 @@ export async function POST(req: NextRequest, { params }: Params) {
       league_id: leagueId,
       name: name.trim(),
       budget_remaining: league.budget,
-      // user_id intentionally omitted — unclaimed seat
     })
     .select()
     .single();
@@ -79,23 +107,21 @@ export async function POST(req: NextRequest, { params }: Params) {
   return NextResponse.json({ team });
 }
 
-// PATCH /api/leagues/[leagueId]/teams — rename or assign a team
-// Commissioner/super-admin: can rename any team or assign a user_id.
-// Team owner: can rename only their own team (no userId changes).
+// PATCH /api/leagues/[leagueId]/teams — rename or assign/unassign a team
+// Commissioner/super-admin: rename any team, assign or clear user_id.
+// Team owner: rename only their own team.
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
   const body = await req.json();
   const { teamId, name, userId } = body;
   if (!teamId) return NextResponse.json({ error: "teamId required" }, { status: 400 });
 
-  // Identify caller
   const authClient = await createClient();
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const db = await createServiceClient();
+  const db = createServiceClient();
 
-  // Check if commissioner/super-admin
   const { data: league } = await db
     .from("leagues")
     .select("id, commissioner_id")
@@ -112,7 +138,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const isAdmin = league.commissioner_id === user.id || !!profile?.is_super_admin;
 
   if (!isAdmin) {
-    // Team owner path — can only rename their own team, cannot change userId
+    // Team owner path — rename only their own team, no userId changes
     if (userId !== undefined) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -128,6 +154,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name.trim();
+  // userId can be a string (assign) or null (kick/unassign) — both valid for admins
   if (userId !== undefined && isAdmin) updates.user_id = userId;
 
   if (Object.keys(updates).length === 0) {
@@ -149,7 +176,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   return NextResponse.json({ team });
 }
 
-// DELETE /api/leagues/[leagueId]/teams — delete an unclaimed team
+// DELETE /api/leagues/[leagueId]/teams — delete an unclaimed team slot
 export async function DELETE(req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
   const { error, status, db, league } = await authorize(leagueId);
