@@ -15,6 +15,7 @@ export default async function LeagueHomePage({
   params: Promise<{ leagueId: string }>;
 }) {
   const { leagueId } = await params;
+  console.log("Fetching teams for leagueId:", leagueId, typeof leagueId);
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,11 +40,17 @@ export default async function LeagueHomePage({
 
   // Use service client — bypasses RLS so all teams (claimed + unclaimed) are visible
   const db = createServiceClient();
-  const { data: teams } = await db
+  const { data: teams, error: teamsError } = await db
     .from("teams")
     .select("id, name, user_id, profiles(display_name, username)")
     .eq("league_id", leagueId)
     .order("created_at");
+
+  // DEBUG: raw query using auth client to compare
+  const { data: debugTeams, error: debugError } = await supabase
+    .from("teams")
+    .select("id, name, user_id, league_id, created_at")
+    .eq("league_id", leagueId);
 
   const season = league.seasons as any;
   const isCommissioner = league.commissioner_id === user.id;
@@ -77,6 +84,18 @@ export default async function LeagueHomePage({
           myTeamId={myTeam?.id}
           commissionerName={commissionerName}
         />
+        {/* TEMPORARY DEBUG PANEL */}
+        <pre style={{ color: "white", fontSize: "12px", padding: "20px", background: "#111", borderRadius: "8px", marginTop: "24px", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+          {`LEAGUE ID: ${leagueId}\n`}
+          {`\n--- SERVICE CLIENT ---\n`}
+          {`TEAMS FOUND: ${teams?.length ?? 0}\n`}
+          {`ERROR: ${teamsError?.message ?? "none"}\n`}
+          {`DATA: ${JSON.stringify(teams, null, 2)}\n`}
+          {`\n--- AUTH CLIENT ---\n`}
+          {`TEAMS FOUND: ${debugTeams?.length ?? 0}\n`}
+          {`ERROR: ${debugError?.message ?? "none"}\n`}
+          {`DATA: ${JSON.stringify(debugTeams, null, 2)}`}
+        </pre>
       </div>
     );
   }
