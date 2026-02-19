@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     .eq("id", league_id)
     .single();
 
-  if (!league || league.draft_status !== "active") {
-    return NextResponse.json({ error: "Draft is not active" }, { status: 400 });
+  if (!league) {
+    return NextResponse.json({ error: "League not found" }, { status: 404 });
   }
 
   // Verify team exists
@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
       { error: "Not authorized to pick for this team" },
       { status: 403 }
     );
+  }
+
+  // Commissioners can assign players at any draft stage; regular users only during active draft
+  if (!isCommissioner && league.draft_status !== "active") {
+    return NextResponse.json({ error: "Draft is not active" }, { status: 400 });
   }
 
   // Check player not already drafted in this league
@@ -86,6 +91,9 @@ export async function POST(request: NextRequest) {
       .eq("id", team_id);
   }
 
+  // Track whether the commissioner is picking on behalf of a team they don't own
+  const commissionerPick = isCommissioner && !isTeamOwner;
+
   // Insert draft pick
   const { data: pick, error } = await supabase
     .from("draft_picks")
@@ -96,6 +104,7 @@ export async function POST(request: NextRequest) {
       round: round || null,
       pick_number: pick_number || null,
       amount_paid: amount_paid || null,
+      commissioner_pick: commissionerPick,
     })
     .select()
     .single();
@@ -105,4 +114,77 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ pick });
+}
+
+// DELETE /api/draft/pick — commissioner removes a draft pick (e.g. manual assignment undo)
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { pick_id, league_id } = body;
+
+  if (!pick_id || !league_id) {
+    return NextResponse.json({ error: "pick_id and league_id required" }, { status: 400 });
+  }
+
+  // Verify commissioner access via service client
+  const db = createServiceClient();
+  const { data: league } = await db
+    .from("leagues")
+    .select("id, commissioner_id")
+    .eq("id", league_id)
+    .single();
+
+  if (!league) return NextResponse.json({ error: "League not found" }, { status: 404 });
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_super_admin")
+    .eq("id", user.id)
+    .single();
+
+  const isAdmin = league.commissioner_id === user.id || !!profile?.is_super_admin;
+  if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // Fetch the pick to restore budget if needed
+  const { data: pick } = await db
+    .from("draft_picks")
+    .select("id, team_id, amount_paid")
+    .eq("id", pick_id)
+    .eq("league_id", league_id)
+    .single();
+
+  if (!pick) return NextResponse.json({ error: "Pick not found" }, { status: 404 });
+
+  // Restore auction budget if applicable
+  if (pick.amount_paid) {
+    const { data: team } = await db
+      .from("teams")
+      .select("budget_remaining")
+      .eq("id", pick.team_id)
+      .single();
+    if (team) {
+      await db
+        .from("teams")
+        .update({ budget_remaining: (team.budget_remaining || 0) + pick.amount_paid })
+        .eq("id", pick.team_id);
+    }
+  }
+
+  const { error } = await db
+    .from("draft_picks")
+    .delete()
+    .eq("id", pick_id)
+    .eq("league_id", league_id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
 }

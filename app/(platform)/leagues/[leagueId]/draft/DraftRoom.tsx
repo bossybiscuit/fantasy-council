@@ -17,6 +17,9 @@ interface DraftRoomProps {
   isCommissioner: boolean;
 }
 
+// Tier priority for auto-skip: S is best, then A, B, C, D
+const TIER_PRIORITY: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
+
 export default function DraftRoom({
   league,
   myTeam,
@@ -69,10 +72,18 @@ export default function DraftRoom({
   const isMyTurn =
     league.draft_type === "snake" && myTeam && currentTeam?.id === myTeam.id;
 
-  // Available players
+  // Commissioner is picking for a team they don't own
+  const isCommissionerPickingForOther =
+    isCommissioner &&
+    !isMyTurn &&
+    league.draft_type === "snake";
+
+  // Available players (unfiltered, for auto-skip)
+  const availablePlayers = players.filter((p) => !draftedPlayerIds.has(p.id));
+
+  // Available players (filtered, for display)
   const tribes = [...new Set(players.map((p) => p.tribe).filter(Boolean))];
-  const filteredPlayers = players.filter((p) => {
-    if (draftedPlayerIds.has(p.id)) return false;
+  const filteredPlayers = availablePlayers.filter((p) => {
     if (filterTribe && p.tribe !== filterTribe) return false;
     if (filterTier && p.tier !== filterTier) return false;
     if (filterSearch && !p.name.toLowerCase().includes(filterSearch.toLowerCase()))
@@ -103,7 +114,7 @@ export default function DraftRoom({
   }
 
   async function snakePick(playerId: string) {
-    if (!currentTeam || !isMyTurn && !isCommissioner) return;
+    if (!currentTeam || (!isMyTurn && !isCommissioner)) return;
     setLoading(true);
     setError(null);
 
@@ -123,6 +134,18 @@ export default function DraftRoom({
     if (!res.ok) setError(data.error);
     else router.refresh();
     setLoading(false);
+  }
+
+  async function autoSkipPick() {
+    if (!currentTeam || !isCommissioner) return;
+    // Pick the highest-tier available player (S > A > B > C > D), then by name
+    const best = [...availablePlayers].sort((a, b) => {
+      const ta = TIER_PRIORITY[a.tier ?? "D"] ?? 4;
+      const tb = TIER_PRIORITY[b.tier ?? "D"] ?? 4;
+      if (ta !== tb) return ta - tb;
+      return a.name.localeCompare(b.name);
+    })[0];
+    if (best) await snakePick(best.id);
   }
 
   async function auctionPick(playerId: string) {
@@ -193,13 +216,25 @@ export default function DraftRoom({
               </button>
             )}
             {isDraftActive && (
-              <button
-                onClick={completeDraft}
-                disabled={loading}
-                className="btn-secondary"
-              >
-                Force Complete Draft
-              </button>
+              <>
+                <button
+                  onClick={completeDraft}
+                  disabled={loading}
+                  className="btn-secondary"
+                >
+                  Force Complete Draft
+                </button>
+                {league.draft_type === "snake" && (
+                  <button
+                    onClick={autoSkipPick}
+                    disabled={loading || availablePlayers.length === 0}
+                    className="btn-secondary text-xs"
+                    title={`Auto-pick best available for ${currentTeam?.name}`}
+                  >
+                    ⚡ Auto-pick for {currentTeam?.name || "..."}
+                  </button>
+                )}
+              </>
             )}
             {isDraftComplete && !isDraftDone && (
               <button
@@ -216,6 +251,20 @@ export default function DraftRoom({
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Commissioner-for-other-team banner */}
+      {isDraftActive && league.draft_type === "snake" && isCommissionerPickingForOther && currentTeam && (
+        <div className="mb-4 p-3 rounded-lg bg-accent-orange/10 border border-accent-orange/30 text-accent-orange text-sm flex items-center gap-2">
+          <span>📋</span>
+          <span>
+            Drafting for <strong>{currentTeam.name}</strong>
+            {currentTeam.profiles
+              ? ` (${currentTeam.profiles.display_name || currentTeam.profiles.username})`
+              : " (no owner — unclaimed seat)"}
+            . Select a player below to pick on their behalf.
+          </span>
         </div>
       )}
 
@@ -326,7 +375,7 @@ export default function DraftRoom({
                           disabled={loading}
                           className="btn-primary text-xs py-1 px-3"
                         >
-                          {loading ? "..." : "Pick"}
+                          {loading ? "..." : isCommissionerPickingForOther ? "Pick for them" : "Pick"}
                         </button>
                       )
                     ) : (
@@ -380,7 +429,7 @@ export default function DraftRoom({
                       )}
                     </p>
                     <p className="text-xs text-text-muted">
-                      {team.profiles?.display_name || team.profiles?.username}
+                      {team.profiles?.display_name || team.profiles?.username || "No owner"}
                     </p>
                   </div>
                   <div className="text-right text-xs">
@@ -401,11 +450,21 @@ export default function DraftRoom({
                       <span className="text-text-primary truncate">
                         {pick.players?.name || "Unknown"}
                       </span>
-                      {pick.amount_paid && (
-                        <span className="text-accent-gold ml-1 shrink-0">
-                          ${pick.amount_paid}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1 shrink-0 ml-1">
+                        {pick.commissioner_pick && (
+                          <span
+                            className="text-accent-orange/70 text-[10px]"
+                            title="Commissioner pick"
+                          >
+                            📋
+                          </span>
+                        )}
+                        {pick.amount_paid && (
+                          <span className="text-accent-gold">
+                            ${pick.amount_paid}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {roster.length === 0 && (
@@ -455,6 +514,11 @@ export default function DraftRoom({
                             {pick ? (
                               <span className="text-text-primary truncate block">
                                 {pick.players?.name || "—"}
+                                {pick.commissioner_pick && (
+                                  <span className="ml-1 text-accent-orange/60" title="Commissioner pick">
+                                    📋
+                                  </span>
+                                )}
                               </span>
                             ) : isCurrentSlot ? (
                               <span className="text-accent-orange font-medium">← Now</span>

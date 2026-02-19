@@ -225,6 +225,7 @@ export type Database = {
           round: number | null;
           pick_number: number | null;
           amount_paid: number | null;
+          commissioner_pick: boolean;
           created_at: string;
         };
         Insert: {
@@ -235,12 +236,14 @@ export type Database = {
           round?: number | null;
           pick_number?: number | null;
           amount_paid?: number | null;
+          commissioner_pick?: boolean;
           created_at?: string;
         };
         Update: {
           round?: number | null;
           pick_number?: number | null;
           amount_paid?: number | null;
+          commissioner_pick?: boolean;
         };
         Relationships: [
           {
@@ -259,6 +262,53 @@ export type Database = {
           },
           {
             foreignKeyName: "draft_picks_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      draft_valuations: {
+        Row: {
+          id: string;
+          league_id: string;
+          team_id: string;
+          player_id: string;
+          my_value: number;
+          max_bid: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          league_id: string;
+          team_id: string;
+          player_id: string;
+          my_value?: number;
+          max_bid?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          my_value?: number;
+          max_bid?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "draft_valuations_league_id_fkey";
+            columns: ["league_id"];
+            isOneToOne: false;
+            referencedRelation: "leagues";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_valuations_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "draft_valuations_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
             referencedRelation: "players";
