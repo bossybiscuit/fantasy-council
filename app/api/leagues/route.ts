@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { generateInviteCode, calculateRosterSize } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
@@ -62,13 +62,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Auto-create team for commissioner
-  await supabase.from("teams").insert({
+  // Auto-create all team slots. Commissioner claims slot 1; the rest are unclaimed.
+  // Requires migration 005 (user_id nullable) to be applied in Supabase.
+  const db = await createServiceClient();
+  const teamSlots = Array.from({ length: num_teams }, (_, i) => ({
     league_id: league.id,
-    user_id: user.id,
-    name: "My Team",
+    user_id: i === 0 ? user.id : null,
+    name: `Team ${i + 1}`,
     budget_remaining: budget || 100,
-  });
+  }));
+  await db.from("teams").insert(teamSlots);
 
   return NextResponse.json({ league });
 }

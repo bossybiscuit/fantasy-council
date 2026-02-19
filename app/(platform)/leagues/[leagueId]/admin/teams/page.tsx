@@ -23,7 +23,6 @@ export default function AdminTeamsPage({
   const [teams, setTeams] = useState<Team[]>([]);
   const [league, setLeague] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [newTeamName, setNewTeamName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,28 +54,6 @@ export default function AdminTeamsPage({
     setTimeout(() => setSuccess(null), 3000);
   }
 
-  async function handleAddTeam() {
-    if (!newTeamName.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/leagues/${leagueId}/teams`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newTeamName }),
-      });
-      const data = await res.json();
-      setLoading(false);
-      if (!res.ok) { setError(data.error || `Error ${res.status}`); return; }
-      setNewTeamName("");
-      flash("Team added");
-      loadTeams();
-    } catch (e) {
-      setLoading(false);
-      setError("Failed to add team — check your connection and try again");
-    }
-  }
-
   async function handleRename(teamId: string) {
     if (!editingName.trim()) return;
     setLoading(true);
@@ -94,7 +71,7 @@ export default function AdminTeamsPage({
       setEditingName("");
       flash("Team renamed");
       loadTeams();
-    } catch (e) {
+    } catch {
       setLoading(false);
       setError("Failed to rename team — check your connection and try again");
     }
@@ -115,29 +92,9 @@ export default function AdminTeamsPage({
       if (!res.ok) { setError(data.error || `Error ${res.status}`); return; }
       flash("Seat claimed!");
       loadTeams();
-    } catch (e) {
+    } catch {
       setLoading(false);
       setError("Failed to claim seat — check your connection and try again");
-    }
-  }
-
-  async function handleDelete(teamId: string) {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/leagues/${leagueId}/teams`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId }),
-      });
-      const data = await res.json();
-      setLoading(false);
-      if (!res.ok) { setError(data.error || `Error ${res.status}`); return; }
-      flash("Team removed");
-      loadTeams();
-    } catch (e) {
-      setLoading(false);
-      setError("Failed to remove team — check your connection and try again");
     }
   }
 
@@ -149,7 +106,7 @@ export default function AdminTeamsPage({
     <div>
       <PageHeader
         title="Manage Teams"
-        subtitle="Pre-create named seats for your tribe — players claim them when they join"
+        subtitle="Rename team slots and claim your seat — share your invite code and players pick the rest"
       />
 
       {/* Seat counter */}
@@ -157,7 +114,7 @@ export default function AdminTeamsPage({
         <div className="flex gap-4 mb-6">
           <div className="stat-tablet flex-1">
             <p className="stat-number">{teams.length}</p>
-            <p className="stat-label">Teams created</p>
+            <p className="stat-label">Total seats</p>
           </div>
           <div className="stat-tablet flex-1">
             <p className="stat-number">{claimed.length}</p>
@@ -165,7 +122,7 @@ export default function AdminTeamsPage({
           </div>
           <div className="stat-tablet flex-1">
             <p className="stat-number">{unclaimed.length}</p>
-            <p className="stat-label">Open seats</p>
+            <p className="stat-label">Open</p>
           </div>
         </div>
       )}
@@ -181,36 +138,13 @@ export default function AdminTeamsPage({
         </div>
       )}
 
-      {/* Add team */}
-      <div className="card mb-6">
-        <h3 className="section-title mb-3">Add a Team</h3>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            className="input flex-1"
-            placeholder="e.g. Luzon, Solana, Coyopa…"
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddTeam()}
-            maxLength={50}
-          />
-          <button
-            onClick={handleAddTeam}
-            disabled={loading || !newTeamName.trim()}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Add Team
-          </button>
-        </div>
-      </div>
-
       {/* Team list */}
       <div className="card">
         <h3 className="section-title mb-4">All Teams</h3>
 
         {teams.length === 0 ? (
           <p className="text-text-muted text-sm text-center py-6">
-            No teams yet — add some above and share your invite code.
+            No teams found. Teams are created automatically when you create a league.
           </p>
         ) : (
           <div className="space-y-2">
@@ -299,15 +233,6 @@ export default function AdminTeamsPage({
                           className="text-xs text-accent-orange hover:text-accent-gold transition-colors disabled:opacity-50"
                         >
                           Claim
-                        </button>
-                      )}
-                      {!team.user_id && (
-                        <button
-                          onClick={() => handleDelete(team.id)}
-                          disabled={loading}
-                          className="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
-                        >
-                          Delete
                         </button>
                       )}
                     </div>
