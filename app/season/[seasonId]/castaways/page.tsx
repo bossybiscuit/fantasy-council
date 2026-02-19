@@ -30,8 +30,8 @@ export default async function CastawaysPage({
   // Get total fantasy points per player across all leagues (service role bypasses RLS)
   const playerIds = (players || []).map((p) => p.id);
 
-  let pointsMap = new Map<string, number>();
-  let latestEpPointsMap = new Map<string, number>();
+  const pointsMap = new Map<string, number>();
+  const latestEpPointsMap = new Map<string, number>();
 
   if (playerIds.length > 0) {
     // Total points per player

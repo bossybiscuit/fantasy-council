@@ -1,5 +1,4 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
 import { getTierBadgeClass } from "@/lib/utils";
 import { CHALLENGE_CATEGORIES, MILESTONE_CATEGORIES } from "@/lib/scoring";
@@ -40,12 +39,6 @@ export default async function CastawayDetailPage({
     .single();
 
   if (!player) notFound();
-
-  const { data: season } = await supabase
-    .from("seasons")
-    .select("*")
-    .eq("id", seasonId)
-    .single();
 
   // All scored episodes for this season
   const { data: scoredEpisodes } = await supabase

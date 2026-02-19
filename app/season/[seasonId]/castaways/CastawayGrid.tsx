@@ -22,21 +22,6 @@ const TIER_ORDER: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
 
 type SortKey = "points" | "tier" | "tribe" | "status";
 
-function PlacementBadge({ badge }: { badge: string | null }) {
-  if (!badge) return null;
-  const styles: Record<string, string> = {
-    Winner: "bg-accent-gold/20 border-accent-gold/40 text-accent-gold",
-    "Runner Up": "bg-zinc-500/20 border-zinc-400/40 text-zinc-300",
-    "2nd Runner Up": "bg-amber-900/20 border-amber-700/40 text-amber-500",
-    "Fire Elimination": "bg-accent-orange/20 border-accent-orange/40 text-accent-orange",
-  };
-  return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded border ${styles[badge] || "bg-bg-surface border-border text-text-muted"}`}>
-      {badge}
-    </span>
-  );
-}
-
 export default function CastawayGrid({
   players,
   seasonId,
