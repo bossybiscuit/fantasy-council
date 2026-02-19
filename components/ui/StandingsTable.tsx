@@ -1,6 +1,18 @@
+"use client";
+
+import { useState, Fragment } from "react";
 import Link from "next/link";
-import { getRankIndicator } from "@/lib/utils";
+import { getRankIndicator, getTierBadgeClass } from "@/lib/utils";
 import type { EpisodeTeamScore, Team, Profile } from "@/types/database";
+
+type PlayerPick = {
+  playerId: string;
+  playerName: string;
+  tier: string | null;
+  slug: string | null;
+  isActive: boolean;
+  points: number;
+};
 
 interface StandingsRow {
   team: Team;
@@ -10,6 +22,7 @@ interface StandingsRow {
   predictionAccuracy: number;
   totalPoints: number;
   rank: number;
+  picks: PlayerPick[];
 }
 
 interface StandingsTableProps {
@@ -23,6 +36,13 @@ export default function StandingsTable({
   leagueId,
   myTeamId,
 }: StandingsTableProps) {
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+  const [hoveredTeamId, setHoveredTeamId] = useState<string | null>(null);
+
+  function toggleExpand(teamId: string) {
+    setExpandedTeamId((prev) => (prev === teamId ? null : teamId));
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -43,6 +63,7 @@ export default function StandingsTable({
             <th className="text-right py-3 px-4 text-text-muted font-medium hidden md:table-cell">
               Predictions
             </th>
+            <th className="py-3 px-2 w-8" />
           </tr>
         </thead>
         <tbody>
@@ -52,66 +73,138 @@ export default function StandingsTable({
               row.previousScore?.rank ?? null
             );
             const isMe = row.team.id === myTeamId;
+            const isExpanded = expandedTeamId === row.team.id;
+            const isHovered = hoveredTeamId === row.team.id;
+            const hasPicks = row.picks && row.picks.length > 0;
 
             return (
-              <tr
-                key={row.team.id}
-                className={`border-b border-border table-row-hover ${
-                  isMe ? "bg-accent-orange/5" : ""
-                }`}
-              >
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-bold text-base ${
-                        row.rank === 1
-                          ? "text-accent-gold"
-                          : row.rank === 2
-                          ? "text-gray-300"
-                          : row.rank === 3
-                          ? "text-orange-600"
-                          : "text-text-primary"
-                      }`}
+              <Fragment key={row.team.id}>
+                <tr
+                  className={`border-border table-row-hover ${
+                    isMe ? "bg-accent-orange/5" : ""
+                  } ${isExpanded ? "" : "border-b"}`}
+                >
+                  {/* Rank */}
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`font-bold text-base ${
+                          row.rank === 1
+                            ? "text-accent-gold"
+                            : row.rank === 2
+                            ? "text-gray-300"
+                            : row.rank === 3
+                            ? "text-orange-600"
+                            : "text-text-primary"
+                        }`}
+                      >
+                        #{row.rank}
+                      </span>
+                      <RankIndicator indicator={indicator} />
+                    </div>
+                  </td>
+
+                  {/* Team name + desktop hover popover */}
+                  <td className="py-3 px-4">
+                    <div
+                      className="relative inline-block"
+                      onMouseEnter={() => hasPicks && setHoveredTeamId(row.team.id)}
+                      onMouseLeave={() => setHoveredTeamId(null)}
                     >
-                      #{row.rank}
-                    </span>
-                    <RankIndicator indicator={indicator} />
-                  </div>
-                </td>
-                <td className="py-3 px-4">
-                  <Link
-                    href={`/leagues/${leagueId}/team/${row.team.id}`}
-                    className="hover:text-accent-orange transition-colors"
-                  >
-                    <p className="font-medium text-text-primary">
-                      {row.team.name}
-                      {isMe && (
-                        <span className="ml-2 text-xs text-accent-orange">
-                          (You)
-                        </span>
+                      <Link
+                        href={`/leagues/${leagueId}/team/${row.team.id}`}
+                        className="hover:text-accent-orange transition-colors"
+                      >
+                        <p className="font-medium text-text-primary">
+                          {row.team.name}
+                          {isMe && (
+                            <span className="ml-2 text-xs text-accent-orange">
+                              (You)
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-text-muted">
+                          {row.profile?.display_name ||
+                            row.profile?.username ||
+                            "—"}
+                        </p>
+                      </Link>
+
+                      {/* Desktop-only hover popover */}
+                      {isHovered && hasPicks && (
+                        <div className="hidden md:block absolute top-full left-0 z-50 mt-1.5 w-80 p-3 rounded-xl bg-bg-card border border-border shadow-2xl">
+                          <p className="text-[10px] text-text-muted uppercase tracking-wider font-medium mb-2">
+                            {row.team.name}
+                          </p>
+                          <RosterChips
+                            picks={row.picks}
+                            leagueId={leagueId}
+                            compact
+                          />
+                        </div>
                       )}
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      {row.profile?.display_name || row.profile?.username || "—"}
-                    </p>
-                  </Link>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <span className="text-text-primary font-medium">
-                    {row.currentScore?.total_points ?? 0}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <span className="text-accent-gold font-bold text-base">
-                    {row.totalPoints}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right hidden md:table-cell">
-                  <span className="text-text-muted">
-                    {row.predictionAccuracy}%
-                  </span>
-                </td>
-              </tr>
+                    </div>
+                  </td>
+
+                  {/* This Week */}
+                  <td className="py-3 px-4 text-right">
+                    <span className="text-text-primary font-medium">
+                      {row.currentScore?.total_points ?? 0}
+                    </span>
+                  </td>
+
+                  {/* Total */}
+                  <td className="py-3 px-4 text-right">
+                    <span className="text-accent-gold font-bold text-base">
+                      {row.totalPoints}
+                    </span>
+                  </td>
+
+                  {/* Predictions */}
+                  <td className="py-3 px-4 text-right hidden md:table-cell">
+                    <span className="text-text-muted">
+                      {row.predictionAccuracy}%
+                    </span>
+                  </td>
+
+                  {/* Expand/collapse chevron */}
+                  <td className="py-3 px-2 text-center">
+                    <button
+                      onClick={() => toggleExpand(row.team.id)}
+                      className="text-text-muted hover:text-accent-orange transition-colors p-1 rounded"
+                      title={isExpanded ? "Collapse roster" : "Show roster"}
+                    >
+                      <span
+                        className={`inline-block text-[10px] transition-transform duration-150 ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                      >
+                        ▶
+                      </span>
+                    </button>
+                  </td>
+                </tr>
+
+                {/* Inline expanded roster */}
+                {isExpanded && (
+                  <tr className="border-b border-border">
+                    <td colSpan={6} className="px-4 pb-4 pt-2">
+                      <div className="pl-2 sm:pl-8">
+                        {hasPicks ? (
+                          <RosterChips
+                            picks={row.picks}
+                            leagueId={leagueId}
+                          />
+                        ) : (
+                          <span className="text-text-muted text-xs italic">
+                            No players drafted yet
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
@@ -124,6 +217,59 @@ export default function StandingsTable({
     </div>
   );
 }
+
+// ── Roster chips ──────────────────────────────────────────────────────────────
+
+function RosterChips({
+  picks,
+  leagueId,
+  compact = false,
+}: {
+  picks: PlayerPick[];
+  leagueId: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {picks.map((pick) => (
+        <Link
+          key={pick.playerId}
+          href={`/leagues/${leagueId}/player/${pick.playerId}`}
+          onClick={(e) => e.stopPropagation()}
+          className={`flex items-center gap-1.5 rounded-full border text-xs transition-colors ${
+            compact ? "px-2 py-1" : "px-2.5 py-1.5"
+          } ${
+            pick.isActive
+              ? "bg-bg-surface border-border hover:border-accent-orange/50 hover:bg-accent-orange/5"
+              : "bg-bg-surface/40 border-border/40 opacity-55"
+          }`}
+        >
+          {pick.tier && (
+            <span
+              className={`${getTierBadgeClass(pick.tier)} !text-[9px] !px-1 !py-0 leading-4`}
+            >
+              {pick.tier}
+            </span>
+          )}
+          <span className={pick.isActive ? "text-text-primary" : "text-text-muted"}>
+            {pick.playerName}
+          </span>
+          {!pick.isActive && (
+            <span className="text-[10px]" title="Voted out">
+              🕯️
+            </span>
+          )}
+          <span className="text-accent-gold font-semibold">
+            {pick.points}
+            <span className="text-text-muted font-normal">pts</span>
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+// ── Rank indicator ────────────────────────────────────────────────────────────
 
 function RankIndicator({
   indicator,

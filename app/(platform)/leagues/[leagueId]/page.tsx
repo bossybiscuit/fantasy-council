@@ -121,6 +121,26 @@ export default async function LeagueHomePage({
 
   const previousEpisode = (previousEpisodeArr as any[])?.[0] || null;
 
+  // Draft picks with player data for roster previews
+  const { data: draftPicksRaw } = await supabase
+    .from("draft_picks")
+    .select("team_id, player_id, players(id, name, tier, slug, is_active)")
+    .eq("league_id", leagueId);
+
+  // All scoring events to compute per-player point contributions per team
+  const { data: scoringEventsRaw } = await supabase
+    .from("scoring_events")
+    .select("team_id, player_id, points")
+    .eq("league_id", leagueId);
+
+  // Build a team+player → points map
+  const playerPointsMap = new Map<string, number>();
+  for (const ev of scoringEventsRaw || []) {
+    if (!ev.team_id || !ev.player_id) continue;
+    const key = `${ev.team_id}:${ev.player_id}`;
+    playerPointsMap.set(key, (playerPointsMap.get(key) || 0) + (ev.points || 0));
+  }
+
   let standingsRows: any[] = [];
 
   if (latestEpisode && teams) {
@@ -165,6 +185,22 @@ export default async function LeagueHomePage({
             ? Math.round((totalEarned / totalAllocated) * 100)
             : 0;
 
+        // Build roster picks for this team
+        const picks = (draftPicksRaw || [])
+          .filter((dp) => dp.team_id === team.id)
+          .map((dp) => {
+            const player = dp.players as any;
+            return {
+              playerId: dp.player_id,
+              playerName: player?.name || "Unknown",
+              tier: player?.tier || null,
+              slug: player?.slug || null,
+              isActive: player?.is_active ?? true,
+              points: playerPointsMap.get(`${team.id}:${dp.player_id}`) || 0,
+            };
+          })
+          .sort((a, b) => b.points - a.points);
+
         return {
           team,
           profile: team.profiles,
@@ -173,6 +209,7 @@ export default async function LeagueHomePage({
           predictionAccuracy,
           totalPoints: currentScore?.cumulative_total || 0,
           rank: currentScore?.rank || 999,
+          picks,
         };
       })
       .sort((a, b) => a.rank - b.rank);
