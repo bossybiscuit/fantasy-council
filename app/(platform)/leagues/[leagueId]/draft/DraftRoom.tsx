@@ -163,7 +163,7 @@ export default function DraftRoom({
         title="Draft Room"
         subtitle={
           isDraftPending
-            ? "Waiting for draft to begin"
+            ? "The tribe awaits — start the draft when everyone is ready"
             : isDraftActive
             ? league.draft_type === "snake"
               ? `Pick ${currentPickNum} of ${totalPicks} — ${currentTeam?.name || "..."}'s turn`
@@ -189,7 +189,7 @@ export default function DraftRoom({
                 disabled={loading || teams.length < 2}
                 className="btn-primary"
               >
-                {loading ? "Starting..." : "Start Draft"}
+                {loading ? "Starting…" : "🔥 Begin the Draft"}
               </button>
             )}
             {isDraftActive && (

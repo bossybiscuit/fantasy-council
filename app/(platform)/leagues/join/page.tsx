@@ -2,20 +2,56 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import PageHeader from "@/components/ui/PageHeader";
 import { Suspense } from "react";
+
+type LeaguePreview = {
+  league_id: string;
+  league_name: string;
+  season_name: string | null;
+  num_teams: number;
+  team_count: number;
+  draft_type: string;
+  already_joined: boolean;
+  already_joined_league_id: string | null;
+};
 
 function JoinLeagueContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [code, setCode] = useState(searchParams.get("code")?.toUpperCase() || "");
   const [teamName, setTeamName] = useState("");
+  const [preview, setPreview] = useState<LeaguePreview | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [joining, setJoining] = useState(false);
+
+  async function handleLookup(e: React.FormEvent) {
+    e.preventDefault();
+    setLookingUp(true);
+    setError(null);
+
+    const res = await fetch(`/api/leagues/join?code=${encodeURIComponent(code)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error);
+      setLookingUp(false);
+      return;
+    }
+
+    if (data.already_joined) {
+      router.push(`/leagues/${data.already_joined_league_id}`);
+      return;
+    }
+
+    setPreview(data);
+    setLookingUp(false);
+  }
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setJoining(true);
     setError(null);
 
     const res = await fetch("/api/leagues/join", {
@@ -32,65 +68,152 @@ function JoinLeagueContent() {
         return;
       }
       setError(data.error);
-      setLoading(false);
+      setJoining(false);
     } else {
       router.push(`/leagues/${data.league_id}`);
     }
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 py-8">
-      <PageHeader title="Join a League" subtitle="Enter your invite code to join" />
-
-      <div className="card">
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleJoin} className="space-y-4">
-          <div>
-            <label className="label">Invite Code</label>
-            <input
-              type="text"
-              className="input text-center text-2xl font-mono tracking-widest uppercase"
-              placeholder="XXXXXX"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              maxLength={6}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label">Your Team Name</label>
-            <input
-              type="text"
-              className="input"
-              placeholder="e.g. Fire Walkers"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || code.length !== 6 || !teamName}
-            className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Joining..." : "Join League"}
-          </button>
-        </form>
+    <div className="max-w-md mx-auto px-4 py-10">
+      <div className="text-center mb-8">
+        <div className="text-4xl mb-2">🪶</div>
+        <h1 className="text-2xl font-bold text-text-primary">Join a League</h1>
+        <p className="text-text-muted mt-1 text-sm">
+          Find your alliance by entering the invite code
+        </p>
       </div>
+
+      {/* ── Step 1: Enter code ── */}
+      {!preview && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-text-primary mb-1">
+            Enter the Tribal Code
+          </h2>
+          <p className="text-text-muted text-sm mb-5">
+            Your commissioner shared a 6-character code — enter it below.
+          </p>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLookup} className="space-y-4">
+            <div>
+              <label className="label">Invite Code</label>
+              <input
+                type="text"
+                className="input text-center text-2xl font-mono tracking-widest uppercase"
+                placeholder="XXXXXX"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                autoFocus
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={lookingUp || code.length !== 6}
+              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {lookingUp ? "Searching…" : "Find My Tribe →"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* ── Step 2: Preview + claim seat ── */}
+      {preview && (
+        <div className="card">
+          {/* League preview */}
+          <div className="rounded-lg bg-bg-surface border border-accent-orange/20 p-4 mb-5">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="font-bold text-text-primary text-lg leading-tight">
+                  {preview.league_name}
+                </p>
+                {preview.season_name && (
+                  <p className="text-text-muted text-sm mt-0.5">{preview.season_name}</p>
+                )}
+              </div>
+              <span className="text-2xl">🔥</span>
+            </div>
+            <div className="flex gap-4 text-sm">
+              <div>
+                <p className="text-text-muted text-xs uppercase tracking-wider mb-0.5">Seats</p>
+                <p className="font-semibold text-text-primary">
+                  {preview.team_count} / {preview.num_teams}
+                </p>
+              </div>
+              <div>
+                <p className="text-text-muted text-xs uppercase tracking-wider mb-0.5">Draft</p>
+                <p className="font-semibold text-text-primary capitalize">
+                  {preview.draft_type}
+                </p>
+              </div>
+              <div>
+                <p className="text-text-muted text-xs uppercase tracking-wider mb-0.5">Open</p>
+                <p className="font-semibold text-accent-orange">
+                  {preview.num_teams - preview.team_count} seat
+                  {preview.num_teams - preview.team_count !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleJoin} className="space-y-4">
+            <div>
+              <label className="label">Your Tribe Name</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="e.g. Fire Walkers"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                autoFocus
+                required
+              />
+              <p className="text-xs text-text-muted mt-1">
+                This is how your alliance will know you.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setPreview(null); setError(null); }}
+                className="btn-secondary flex-1"
+              >
+                ← Back
+              </button>
+              <button
+                type="submit"
+                disabled={joining || !teamName.trim()}
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {joining ? "Joining…" : "Claim My Seat 🔥"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function JoinLeaguePage() {
   return (
-    <Suspense fallback={<div className="text-text-muted p-8">Loading...</div>}>
+    <Suspense fallback={<div className="text-text-muted p-8 text-center">Loading…</div>}>
       <JoinLeagueContent />
     </Suspense>
   );

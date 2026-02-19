@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import StandingsTable from "@/components/ui/StandingsTable";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
+import LobbyView from "./LobbyView";
 import Link from "next/link";
 
 export default async function LeagueHomePage({
@@ -33,7 +34,6 @@ export default async function LeagueHomePage({
     .eq("user_id", user.id)
     .single();
 
-  // All teams with profiles
   const { data: teams } = await supabase
     .from("teams")
     .select("*, profiles(*)")
@@ -41,8 +41,38 @@ export default async function LeagueHomePage({
     .order("created_at");
 
   const season = league.seasons as any;
+  const isCommissioner = league.commissioner_id === user.id;
 
-  // Latest scored episode
+  // ── Pre-draft lobby ──────────────────────────────────────────────────
+  if (league.draft_status === "pending") {
+    return (
+      <div>
+        <PageHeader
+          title={league.name}
+          subtitle={season?.name}
+          action={
+            isCommissioner ? (
+              <Link href={`/leagues/${league.id}/draft`} className="btn-primary">
+                Draft Room →
+              </Link>
+            ) : undefined
+          }
+        />
+        <LobbyView
+          league={league}
+          teams={(teams || []).map((t) => ({
+            id: t.id,
+            name: t.name,
+            profiles: (t as any).profiles,
+          }))}
+          isCommissioner={isCommissioner}
+          myTeamId={myTeam?.id}
+        />
+      </div>
+    );
+  }
+
+  // ── Active / completed: standings view ───────────────────────────────
   const { data: latestEpisodeArr } = await supabase
     .from("episodes")
     .select("*")
@@ -53,7 +83,6 @@ export default async function LeagueHomePage({
 
   const latestEpisode = latestEpisodeArr?.[0] || null;
 
-  // Previous scored episode
   const { data: previousEpisodeArr } = latestEpisode
     ? await supabase
         .from("episodes")
@@ -94,8 +123,7 @@ export default async function LeagueHomePage({
         const currentScore =
           currentScores?.find((s) => s.team_id === team.id) || null;
         const previousScore =
-          (previousScores as any[])?.find((s) => s.team_id === team.id) ||
-          null;
+          (previousScores as any[])?.find((s) => s.team_id === team.id) || null;
         const teamPreds = (allPredictions || []).filter(
           (p) => p.team_id === team.id
         );
@@ -125,19 +153,13 @@ export default async function LeagueHomePage({
       .sort((a, b) => a.rank - b.rank);
   }
 
-  const isCommissioner = league.commissioner_id === user.id;
-
   return (
     <div>
       <PageHeader
         title={league.name}
-        subtitle={(league.seasons as any)?.name}
+        subtitle={season?.name}
         action={
-          isCommissioner && league.status === "setup" ? (
-            <Link href={`/leagues/${league.id}/draft`} className="btn-primary">
-              Go to Draft
-            </Link>
-          ) : isCommissioner && league.status === "active" ? (
+          isCommissioner && league.status === "active" ? (
             <Link
               href={`/leagues/${league.id}/admin/scoring`}
               className="btn-primary"
@@ -147,33 +169,6 @@ export default async function LeagueHomePage({
           ) : undefined
         }
       />
-
-      {/* Invite Code for commissioner in setup */}
-      {isCommissioner && league.status === "setup" && (
-        <div className="card mb-6 border-accent-orange/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-muted mb-1">
-                Invite Code — Share with your league
-              </p>
-              <p className="text-3xl font-mono font-bold text-gradient-fire tracking-widest">
-                {league.invite_code}
-              </p>
-            </div>
-            <div className="text-right text-sm text-text-muted">
-              <p>
-                {teams?.length || 0} / {league.num_teams} teams joined
-              </p>
-              <Link
-                href={`/leagues/${league.id}/draft`}
-                className="text-accent-orange text-xs hover:underline mt-1 block"
-              >
-                Go to draft room →
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Standings */}
       <div className="card mb-6">
@@ -204,9 +199,9 @@ export default async function LeagueHomePage({
         )}
       </div>
 
-      {/* Teams Grid */}
+      {/* Teams */}
       <div>
-        <h2 className="section-title mb-3">Teams</h2>
+        <h2 className="section-title mb-3">Tribes</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {teams?.map((team) => (
             <Link
@@ -221,7 +216,7 @@ export default async function LeagueHomePage({
                   "Unknown"}
               </p>
               {team.id === myTeam?.id && (
-                <p className="text-xs text-accent-orange mt-1">Your team</p>
+                <p className="text-xs text-accent-orange mt-1">Your tribe</p>
               )}
             </Link>
           ))}

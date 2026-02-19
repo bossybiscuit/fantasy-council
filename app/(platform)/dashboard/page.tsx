@@ -36,14 +36,14 @@ export default async function DashboardPage() {
     <div className="max-w-5xl mx-auto px-4 py-8">
       <PageHeader
         title={`Welcome back, ${profile?.display_name || profile?.username || "Survivor"}`}
-        subtitle="Your fantasy leagues"
+        subtitle="Your alliances"
         action={
           <div className="flex gap-2">
             <Link href="/leagues/join" className="btn-secondary">
-              Join League
+              Join a League
             </Link>
             <Link href="/leagues/new" className="btn-primary">
-              + New League
+              🔥 Form an Alliance
             </Link>
           </div>
         }
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
 
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-text-muted">Your Team</span>
+                    <span className="text-text-muted">Your Tribe</span>
                     <span className="text-text-primary font-medium">
                       {team.name}
                     </span>
@@ -101,17 +101,17 @@ export default async function DashboardPage() {
       ) : (
         <EmptyState
           icon="🔥"
-          title="No leagues yet"
-          description="Create a new league or join one with an invite code to get started."
-          action={{ label: "Create League", href: "/leagues/new" }}
+          title="You haven't joined a tribe yet"
+          description="Form a new alliance or join one with a tribal code to enter the game."
+          action={{ label: "Form an Alliance", href: "/leagues/new" }}
         />
       )}
 
       {/* Quick Join */}
       <div className="mt-8 card">
-        <h3 className="section-title mb-3">Join a League</h3>
+        <h3 className="section-title mb-3">Enter a Tribal Code</h3>
         <p className="text-text-muted text-sm mb-4">
-          Have an invite code? Enter it below to join a league.
+          Got an invite code? Enter it below to find your alliance.
         </p>
         <JoinForm />
       </div>

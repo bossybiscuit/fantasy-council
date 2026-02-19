@@ -1,6 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// GET /api/leagues/join?code=XXXXXX — preview league info before joining
+export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const code = request.nextUrl.searchParams.get("code")?.toUpperCase();
+  if (!code) {
+    return NextResponse.json({ error: "Code required" }, { status: 400 });
+  }
+
+  const { data: league } = await supabase
+    .from("leagues")
+    .select("*, seasons(*)")
+    .eq("invite_code", code)
+    .single();
+
+  if (!league) {
+    return NextResponse.json({ error: "Invalid invite code — no tribe found" }, { status: 404 });
+  }
+
+  if (league.status === "completed") {
+    return NextResponse.json({ error: "This league has ended" }, { status: 400 });
+  }
+
+  const { count: teamCount } = await supabase
+    .from("teams")
+    .select("*", { count: "exact", head: true })
+    .eq("league_id", league.id);
+
+  // Check if the user is already in this league
+  const { data: existingTeam } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("league_id", league.id)
+    .eq("user_id", user.id)
+    .single();
+
+  return NextResponse.json({
+    league_id: league.id,
+    league_name: league.name,
+    season_name: (league.seasons as any)?.name || null,
+    num_teams: league.num_teams,
+    team_count: teamCount || 0,
+    draft_type: league.draft_type,
+    already_joined: !!existingTeam,
+    already_joined_league_id: existingTeam ? league.id : null,
+  });
+}
+
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const {
