@@ -37,15 +37,34 @@ export default async function LeagueHomePage({
     .eq("user_id", user.id)
     .single();
 
-  // Auth client works here — RLS allows members and commissioners to see all teams
-  // in their league (via my_league_ids() or commissioner check in the SELECT policy).
-  // The direct @supabase/supabase-js service client lacks PostgREST's schema cache
-  // and cannot resolve the profiles() foreign-key join.
-  const { data: teams } = await supabase
+  // Fetch teams without the profiles() join — that join errors silently
+  // (returns null data) likely due to RLS on profiles during PostgREST join.
+  // Instead: get teams, then look up profiles separately and merge.
+  const { data: teamsData } = await supabase
     .from("teams")
-    .select("id, name, user_id, profiles(display_name, username)")
+    .select("id, name, user_id")
     .eq("league_id", leagueId)
     .order("created_at");
+
+  const claimedUserIds = (teamsData || [])
+    .map((t) => t.user_id)
+    .filter(Boolean) as string[];
+
+  const { data: profilesList } = claimedUserIds.length > 0
+    ? await supabase
+        .from("profiles")
+        .select("id, display_name, username")
+        .in("id", claimedUserIds)
+    : { data: [] };
+
+  const profileMap = new Map((profilesList || []).map((p) => [p.id, p]));
+
+  const teams = (teamsData || []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    user_id: t.user_id,
+    profiles: t.user_id ? (profileMap.get(t.user_id) ?? null) : null,
+  }));
 
   const season = league.seasons as any;
   const isCommissioner = league.commissioner_id === user.id;
@@ -61,45 +80,15 @@ export default async function LeagueHomePage({
 
   // ── Pre-draft lobby ──────────────────────────────────────────────────
   if (league.draft_status === "pending") {
-    // DEBUG — remove after diagnosing lobby issue
-    const { data: teamsRaw, error: teamsError } = await supabase
-      .from("teams")
-      .select("id, name, user_id")
-      .eq("league_id", leagueId);
-
     return (
       <div>
         <PageHeader
           title={league.name}
           subtitle={season?.name}
         />
-
-        {/* TEMP DEBUG */}
-        <pre className="bg-black text-green-400 text-xs p-4 rounded mb-4 overflow-x-auto">
-          {JSON.stringify({
-            user_id: user.id,
-            is_commissioner: isCommissioner,
-            my_team_id: myTeam?.id ?? null,
-            teams_query_error: teamsError?.message ?? null,
-            teams_count: teamsRaw?.length ?? null,
-            teams_simple: (teamsRaw || []).map(t => ({ id: t.id.slice(0,8), name: t.name, user_id: t.user_id ? t.user_id.slice(0,8) : null })),
-            teams_with_profiles: (teams || []).map(t => ({
-              id: t.id.slice(0,8),
-              name: t.name,
-              user_id_raw: JSON.stringify((t as any).user_id),
-              user_id_keys: Object.keys(t as any),
-            })),
-          }, null, 2)}
-        </pre>
-
         <LobbyView
           league={league}
-          teams={(teams || []).map((t) => ({
-            id: t.id,
-            name: t.name,
-            user_id: (t as any).user_id ?? null,
-            profiles: (t as any).profiles ?? null,
-          }))}
+          teams={teams}
           isCommissioner={isCommissioner}
           myTeamId={myTeam?.id}
           commissionerName={commissionerName}
@@ -178,7 +167,7 @@ export default async function LeagueHomePage({
 
         return {
           team,
-          profile: (team as any).profiles,
+          profile: team.profiles,
           currentScore,
           previousScore,
           predictionAccuracy,
@@ -257,8 +246,8 @@ export default async function LeagueHomePage({
             >
               <p className="font-semibold text-text-primary">{team.name}</p>
               <p className="text-sm text-text-muted mt-0.5">
-                {(team as any).profiles?.display_name ||
-                  (team as any).profiles?.username ||
+                {team.profiles?.display_name ||
+                  team.profiles?.username ||
                   "Unknown"}
               </p>
               {team.id === myTeam?.id && (
