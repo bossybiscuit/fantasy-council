@@ -29,7 +29,7 @@ export default function Navbar({ profile }: NavbarProps) {
             <span className="text-xl">🔥</span>
             <span
               className="text-lg text-gradient-fire tracking-wide"
-              style={{ fontFamily: "var(--font-cinzel-deco, var(--font-cinzel), serif)" }}
+              style={{ fontFamily: "var(--font-playfair, \"Playfair Display\", serif)", fontWeight: 800, fontStyle: "italic" }}
             >
               The Council
             </span>

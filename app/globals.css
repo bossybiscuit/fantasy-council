@@ -289,20 +289,20 @@ body::after {
 
   /* ── Typography ── */
   .page-title {
-    font-family: var(--font-cinzel), Cinzel, serif;
+    font-family: var(--font-playfair), "Playfair Display", serif;
     font-size: 1.75rem;
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.01em;
     line-height: 1.2;
   }
 
   .section-title {
-    font-family: var(--font-cinzel), Cinzel, serif;
+    font-family: var(--font-playfair), "Playfair Display", serif;
     font-size: 1.05rem;
     font-weight: 600;
     color: var(--text-primary);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
   }
 
   /* ── Stat tablets — stone carving aesthetic ── */

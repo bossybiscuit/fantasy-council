@@ -98,7 +98,7 @@ export default function EmptyState({
       )}
       <h3
         className="text-lg font-semibold text-text-primary mb-2"
-        style={{ fontFamily: "var(--font-cinzel, serif)" }}
+        style={{ fontFamily: "var(--font-playfair, \"Playfair Display\", serif)", fontWeight: 700 }}
       >
         {title}
       </h3>

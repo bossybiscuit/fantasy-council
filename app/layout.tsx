@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import { Cinzel, Cinzel_Decorative, Bebas_Neue, Crimson_Pro } from "next/font/google";
+import { Playfair_Display, Bebas_Neue, Crimson_Pro } from "next/font/google";
 import "./globals.css";
 
-const cinzel = Cinzel({
+const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-cinzel",
-  display: "swap",
-});
-
-const cinzelDecorative = Cinzel_Decorative({
-  subsets: ["latin"],
-  weight: ["400", "700", "900"],
-  variable: "--font-cinzel-deco",
+  style: ["normal", "italic"],
+  variable: "--font-playfair",
   display: "swap",
 });
 
@@ -45,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${cinzel.variable} ${cinzelDecorative.variable} ${bebasNeue.variable} ${crimsonPro.variable} antialiased bg-bg-base text-text-primary min-h-screen`}
+        className={`${playfair.variable} ${bebasNeue.variable} ${crimsonPro.variable} antialiased bg-bg-base text-text-primary min-h-screen`}
       >
         {children}
       </body>

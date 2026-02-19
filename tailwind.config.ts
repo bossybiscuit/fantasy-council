@@ -20,8 +20,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        heading: ["var(--font-cinzel)", "Cinzel", "serif"],
-        logo: ["var(--font-cinzel-deco)", "serif"],
+        heading: ["var(--font-playfair)", "Playfair Display", "serif"],
+        logo: ["var(--font-playfair)", "Playfair Display", "serif"],
         stats: ["var(--font-bebas)", "sans-serif"],
         body: ["var(--font-crimson)", "Georgia", "serif"],
       },
