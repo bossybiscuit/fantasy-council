@@ -1,0 +1,303 @@
+import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
+import { resolve } from "path";
+
+// Load .env.local from the project root
+config({ path: resolve(process.cwd(), ".env.local") });
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+const cast = [
+  {
+    name: "Angelina Keeley",
+    slug: "angelina-keeley",
+    hometown: "San Diego, CA",
+    previous_seasons: ["S37"],
+    best_placement: "2nd Runner Up",
+    placement_badge: "2nd Runner Up",
+    bio: "The tenacious Angelina proved that she is not afraid to ask for what she wants. After a tribe swap, she played a major role in an immunity win, though a subsequent loss for the group would lead to Angelina's most iconic moment: asking for Natalie to give her the jacket off her back right on the heels of being voted out. Unfortunately for Angelina, this request was denied, and on top of that, she now found herself in a more precarious position in the game. In another historic moment, Angelina made a series-changing move when she bartered with Jeff Probst for more rice at an Immunity Challenge, setting the stage for more negotiations in subsequent seasons. Now, returning to Survivor 50, will Angelina finally get her jacket?",
+  },
+  {
+    name: "Aubry Bracco",
+    slug: "aubry-bracco",
+    hometown: "Hampton Falls, NH",
+    previous_seasons: ["S32", "S34", "S38"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "Things didn't start out great for Aubry in Kaôh Rōng, and she considered quitting the game early on. But she went on to make an incredible comeback from that self-doubt, helping secure immunity wins for her \"Brains\" tribe and forming an alliance that would prove pivotal at points. Aubry had her fair share of obstacles and highs and lows, yet managed to endure to make it to the Final Three, where she ultimately came in second place. On Survivor: Game Changers, Aubry worked to stay under the radar and ended the season in fifth place, and on Edge of Extinction, she was targeted from the start and was voted out shortly after a tribe swap. Now, what does the master strategist have in store for her fourth game? Find out as Aubry returns to Survivor 50.",
+  },
+  {
+    name: "Benjamin \"Coach\" Wade",
+    slug: "benjamin-coach-wade",
+    hometown: "Susanville, CA",
+    previous_seasons: ["S18", "S20", "S23"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "The self-proclaimed \"Dragon Slayer\" Coach certainly made a big impression from the moment he debuted on Survivor: Tocantins. Coach's quirks and larger-than-life stories made him an unlikely assassin, but he surprised some by forming multiple key alliances and making it to the Final Five. Placed on the Villains tribe in Survivor: Heroes vs. Villains, Coach's eccentricities made him a polarizing figure, but his partnership with Jerri benefited him in multiple Tribal Councils. In the end, his unpredictable nature ruffled feathers and led to an early exit in the game. Coach played his best game yet in Survivor: South Pacific, this time making it to the Final Three. Now, can this dark horse take the lessons he's learned and his much-improved gameplay all the way to the end in Survivor 50?",
+  },
+  {
+    name: "Charlie Davis",
+    slug: "charlie-davis",
+    hometown: "Boston, MA",
+    previous_seasons: ["S46"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "As Jeff put it so aptly, Season 46 proved itself to be a \"Cruel Summer\" for Swiftie and Massachusetts native, Charlie Davis. His partnership with Maria helped to control the Siga tribe and facilitate multiple blindsides within the Nuinui tribe. Together, the duo orchestrated three eliminations in a row — each with its ousted castaway leaving with a Hidden Immunity Idol. Once he made it to the Final Six, Charlie stopped aligning with Maria, believing their gameplay was too similar. He made it to the Final Three but was unable to convince the jury that he should be named Sole Survivor. Now that Charlie's returning for Survivor 50, Jeff Probst asks, \"Can he 'shake it off' before In the Hands of the Fans?\"",
+  },
+  {
+    name: "Chrissy Hofbeck",
+    slug: "chrissy-hofbeck",
+    hometown: "The Villages, FL",
+    previous_seasons: ["S35"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "Placed on the Heroes tribe in Season 35, Chrissy played a tough and fluid game, forging strong relationships early on, and fighting to stay on the island. Doing her best to not overplay her hand, she decided to not use the Super Idol gifted to her by Ryan at the first Tribal Council. Notably, she planned to use the expired Super Idol as a decoy, but her plan was foiled when Ben found the real idol. Chrissy's impressive strength in challenges led her to tie the women's record for most individual immunity wins in a season. In the end, she came in second, with many fans hoping she'd get the chance to play again. Now, after nearly a decade away, Chrissy finally gets her second chance in Survivor 50.",
+  },
+  {
+    name: "Christian Hubicki",
+    slug: "christian-hubicki",
+    hometown: "Tallahassee, FL",
+    previous_seasons: ["S37"],
+    best_placement: "7th Place",
+    placement_badge: null,
+    bio: "Robotics professor Christian may have initially appeared unassuming, but quickly proved to be a dominant force in his season with shockingly quick puzzle-solving abilities and an innately likeable nature. Christian's smarts increasingly made him a major threat to win the game, and his allies began to turn against him, worried about taking him to the end. He saved himself when Gabby attempted to get him voted out by playing his hidden Immunity Idol, but in the end, the numbers simply weren't on his side. Incredibly savvy and thoughtful, Christian has had a few years to analyze how he might go further in Survivor 50.",
+  },
+  {
+    name: "Cirie Fields",
+    slug: "cirie-fields",
+    hometown: "Jersey City, NJ",
+    previous_seasons: ["S12", "S16", "S20", "S34"],
+    best_placement: "4th Place",
+    placement_badge: null,
+    bio: "Hailed by many as one of the very best players to not win Survivor, Cirie has continually impressed with her incredibly shrewd and clever gameplay. Her legend status was cemented on her second appearance on Survivor: Micronesia — Fans vs. Favorites. As part of the Black Widow Brigade, it was Cirie who came up with the plan to convince Erik Reichenbach to give up the Immunity necklace he'd just won, following his immediate exit. In Heroes vs. Villains, she was voted out by her fellow Heroes who were weary of her strategy. But on Game Changers, she managed to dodge and weave through early hostilities and grudges, frequently managing to get players back on her side. Now, returning to the game for a record fifth time, could the beloved Cirie finally have her moment as Sole Survivor?",
+  },
+  {
+    name: "Colby Donaldson",
+    slug: "colby-donaldson",
+    hometown: "Austin, TX",
+    previous_seasons: ["S2", "S8", "S20"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "Returning to the game 16 years after he last played, Colby's legendary original performance still looms large in the game's history. Colby proved himself to be one of Survivor's first true challenge beasts in his Season 2 debut. Post-merge, he was always the one to beat, ultimately winning a highly impressive eight individual reward or immunity challenges, including the Final Four individual challenges in a row. Perhaps most notably, in just the show's second season, Colby's five individual Immunity wins in a single season set a record that has been tied but never surpassed in the show's 24 years. Colby returned in Survivor: All-Stars and Heroes vs. Villains, but has yet to win the title of Sole Survivor. Can he outlast everyone this time in Survivor 50?",
+  },
+  {
+    name: "Dee Valladres",
+    slug: "dee-valladres",
+    hometown: "Miami, FL",
+    previous_seasons: ["S45"],
+    best_placement: "Winner",
+    placement_badge: "Winner",
+    bio: "Cuban immigrant and self-described \"hustler\" Dee was the driving force behind the Reba Four Alliance. Her control of the group continued to see her through the end, along with her somewhat conservative, but strong and strategic gameplay. In addition to being an incredible relationship builder and careful thinker, her physical prowess also won the respect of her jurors — making her Sole Survivor over Jake and her connection, Austin. As Jeff describes her, Season 45 winner Dee is \"one of the most overall dominating players of the new era,\" and likely a castaway to watch in Survivor 50, as she competes against other returning icons, tracing back all the way to Season 1.",
+  },
+  {
+    name: "Emily Flippen",
+    slug: "emily-flippen",
+    hometown: "Laurel, MD",
+    previous_seasons: ["S45"],
+    best_placement: "5th Place",
+    placement_badge: null,
+    bio: "In her Season 45 introduction, Emily expressed that her experience as an investment analyst allowed her to separate emotions from goals. Self-described as \"outspoken\" and \"irritated by people who think they're better than [her],\" Emily may have initially come across to castaways as a little harsh and prickly. But with some help from her ally, Kaleb, she fixed her image and was able to find a spot in the Reba Four. As Jeff puts it, Emily \"went from being abrasive to being embraced by tribemates and fans.\" Will Season 50 earn her even more love from Survivor Nation and perhaps more importantly, the castaways, or will her direct nature get her in some hot water all over again?",
+  },
+  {
+    name: "Genevieve Mushaluk",
+    slug: "genevieve-mushaluk",
+    hometown: "Winnipeg, MB",
+    previous_seasons: ["S47"],
+    best_placement: "5th Place",
+    placement_badge: null,
+    bio: "Corporate lawyer Genevieve's love for problem-solving and passion for people was her winning combo. Early in Survivor 47, she solidified herself as a player to watch when she established a truce between Rome and Sol and subsequently blindsided Kishan. As Jeff says, \"she started the game playing with no emotion, then realized emotion was key to her game.\" Eventually, the castaways began to see Genevieve as a deceitful player and the target was on her back, especially with her Lavo tribemate Teeny. Her immunity win kept her in the Final Six, but when she lost immunity in the Final Five to Rachel, Genevieve was voted out on Day 24. In Survivor 50, will this self-described \"terrible liar\" come back with a similar game, or will she emerge with an unexpected strategy?",
+  },
+  {
+    name: "Jenna Lewis-Dougherty",
+    slug: "jenna-lewis-dougherty",
+    hometown: "Woodland, CA",
+    previous_seasons: ["S1", "S8"],
+    best_placement: "3rd Place",
+    placement_badge: null,
+    bio: "Trailblazer Jenna's return to Survivor for In the Hands of the Fans is the longest gap for any of the contestants playing in Survivor 50, with 22 years between seasons. Jenna made a big impression in Borneo with her strong will and perseverance, and viewers connected with her vulnerability. Memorably, she pushed hard to counter Survivor's first alliance, which had been formed by members of the original Tagi tribe. Jenna returned for Survivor: All-Stars in 2004, bringing a strong game and notably advocating for any previous season winners to be voted out. Though Jenna ultimately came in third, it was notable that she made it further than anyone else besides the dominant power couple of Rob and Amber. Now in Season 50, can this OG show she's still got what it takes to go the distance?",
+  },
+  {
+    name: "Joe Hunter",
+    slug: "joe-hunter",
+    hometown: "West Sacramento, CA",
+    previous_seasons: ["S48"],
+    best_placement: "2nd Runner Up",
+    placement_badge: "2nd Runner Up",
+    bio: "Joe, known as one of the physically strongest competitors of Season 48, aligned with Eva early in the game. He stayed loyal to their alliance and they eventually both made it to the Strong Five. Despite his beliefs about honor and integrity, Joe was able to keep the target off of his back for most of the season and avoided being eliminated. However, in the end, he was let down by his supposed ally Kyle, who ultimately stayed loyal to Kamilla and worked with her to undermine Joe whenever possible. In the end, Joe couldn't convince the jury to make him Sole Survivor and was named second runner-up. In Season 50, will Joe go from an emotional to a more stoic game, or will he stay true to his values?",
+  },
+  {
+    name: "Jonathan Young",
+    slug: "jonathan-young",
+    hometown: "Gulf Shores, AL",
+    previous_seasons: ["S42"],
+    best_placement: "4th Place",
+    placement_badge: null,
+    bio: "Jeff Probst calls Jonathan \"one of the most physically intimidating challenge performers we've ever seen.\" In fact, one of his greatest accomplishments is breaking the Guinness World Record for the most pullups — while holding 100 pounds on his back! Despite his physical advantages, Jonathan's Achilles' heel was revealed in puzzle challenges on Day 1 of Season 42. Later in the season, his social game began to suffer, as tensions formed with his allies. However, it was Jonathan's honesty and loyalty that gained him an ally in Mike Turner, whom he eventually lost to in the fire-making challenge, solidifying Jonathan's role as the last member of the jury. In Survivor 50, will he be able to redeem his reputation and uphold his legacy as a proud member of the Taku Four?",
+  },
+  {
+    name: "Kamilla Karthigesu",
+    slug: "kamilla-karthigesu",
+    hometown: "Foster City, CA",
+    previous_seasons: ["S48"],
+    best_placement: "4th Place (Fire Elimination)",
+    placement_badge: "Fire Elimination",
+    bio: "In her introduction to Season 48, Canadian software engineer Kamilla described herself as \"intentionally annoying\" but ultimately proved to be much more. In fact, Jeff Probst described her as \"an assassin.\" Kamilla started in the Civa tribe and formed a secret alliance with Kyle, bonding over their shared Guyanese background. Together, they eventually moved to Vula, working in the shadows against their tribemates. Her alliance with Kyle helped him to ultimately make it as Sole Survivor, while she ended the season in the Final Four, losing to Eva in the Final Immunity Challenge of fire-making. Now, in Season 50, will Kamilla prove herself an unassuming but absolutely fierce competitor once again, or will her confidence from Season 48 place her as a frontrunner from the start?",
+  },
+  {
+    name: "Kyle Fraser",
+    slug: "kyle-fraser",
+    hometown: "Brooklyn, NY",
+    previous_seasons: ["S48"],
+    best_placement: "Winner",
+    placement_badge: "Winner",
+    bio: "Described by Jeff Probst as \"cunning, athletic and charming,\" Season 48 winner Kyle Fraser returns to the game, along with Kamilla, whose secret alliance with him came to define their season. Early in the game, Kyle made a strategic decision to hide that he was a lawyer from his Civa tribe mates, and instead told them he was a teacher. Eventually, his athletic prowess brought him to the Strong Five and he was able to use his bond with Kamilla to take down Joe. Kyle used both his Final Immunity Challenge win and people skills to get the jury's respect and favor to become the Sole Survivor of Season 48. As Kyle returns to the game in Season 50, will he and Kamilla align again or will he use his real-world skills and diplomacy to bond with a new castaway?",
+  },
+  {
+    name: "Mike White",
+    slug: "mike-white",
+    hometown: "Santa Monica, CA",
+    previous_seasons: ["S37"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "Writer, director and actor Mike White, best known for creating the multi-time Emmy Award-winning series The White Lotus, was a force in Survivor: David vs. Goliath. Mike started as a Goliath and was able to form shifting alliances across original tribal lines, including with Christian Hubicki. However, Mike quickly began to see him as a threat, and gradually took a more dominant role in the game to get his former ally out of the game. Ultimately forced to make fire at the Final Four, Mike succeeded in guaranteeing his spot in the Final Three by winning out, before coming in second for the season at the final vote. Now, can the TV titan prove himself as cunning as some of his series' most maniacal characters? Only one way to find out...",
+  },
+  {
+    name: "Ozzy Lusth",
+    slug: "ozzy-lusth",
+    hometown: "Guanajuato, MX",
+    previous_seasons: ["S13", "S16", "S23", "S34"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "Ozzy proved himself a physical force, with some of the most impressive swimming and diving abilities ever seen by a player. He is among the small group who have been able to tie Colby Donaldson's record for five individual Immunity wins in the post-merge, and he ultimately came in second for the season in a close vote, which he only lost by one. Ozzy proved himself as a cunning game player again in Micronesia and in South Pacific, Ozzy had early ups and downs with his Savaii tribemates, and at one point, declared himself a \"free agent\" out of frustration, but eventually turned things around and earned a spot in the Final Four. Like Cirie, Ozzy also returns to the game for the fifth time with Survivor 50. His reputation as a threat precedes him, but he's managed to go far more than once.",
+  },
+  {
+    name: "Q Burdette",
+    slug: "q-burdette",
+    hometown: "Germantown, TN",
+    previous_seasons: ["S46"],
+    best_placement: "6th Place",
+    placement_badge: null,
+    bio: "Growing up as one of 17 children makes former SEC football player Q an absolute natural for the game of Survivor. Initially, he came across as a dependable ally who could keep the Yanu tribe united. But his puzzling game moves and power-hungry strategies defined Q's time on Season 46. A season-defining move placed him in social exile, and his status as a public enemy was a distraction that helped achieve three blindsides, with each victim leaving with a Hidden Immunity Idol. Q's bond with Maria was a red flag for the castaways and ultimately, he was blindsided in the Final Six — also exiting with a Hidden Immunity Idol. Now, will the confident one-letter-castaway whom Jeff calls \"one of the most electric and chaotic players the game has ever seen\" cause even more mayhem in Season 50?",
+  },
+  {
+    name: "Rick Devens",
+    slug: "rick-devens",
+    hometown: "Macon, GA",
+    previous_seasons: ["S38"],
+    best_placement: "4th Place (Fire Elimination)",
+    placement_badge: "Fire Elimination",
+    bio: "Things started out well for Rick on Season 38, where he formed an early bond with David Wright, but he was an early boot, voted out fourth. However, with the introduction of Edge of Extinction, he managed to endure his time on the Edge and win the challenge that allowed one player to return to the game. Rick proved to be fast on his feet, continually thwarting attempts to be voted out, winning four immunity challenges, finding several hidden Immunity Idols, and making it to the Final Four. Now, Survivor's favorite newscaster Rick brings his energetic and persistent gameplay to Season 50.",
+  },
+  {
+    name: "Rizo Velovic",
+    slug: "rizo-velovic",
+    hometown: "Yonkers, NY",
+    previous_seasons: ["S49"],
+    best_placement: "4th Place (Fire Elimination)",
+    placement_badge: "Fire Elimination",
+    bio: "He may have been the youngest contestant on Survivor 49, but what Rizo lacks in age, he makes up for in confidence and drive. Introducing himself as \"the man, the myth, the legend R-I-Z G-O-D,\" he immediately made a strong first impression with castaways. In episode 4, Rizo found an Immunity Idol and made sure everyone knew, threatening to use it every week and even creating a fake one in order to keep it. He even lied to his tribemates, telling them it expired at the Final Six instead of Five. Though his Idol took him far, in the end, the gods were not on Rizo's side during the Final Four's firemaking challenge. Luckily for him, he doesn't have to wait long for his chance at redemption. Season 50, get ready for the Riz God.",
+  },
+  {
+    name: "Savannah Louie",
+    slug: "savannah-louie",
+    hometown: "Atlanta, GA",
+    previous_seasons: ["S49"],
+    best_placement: "Winner",
+    placement_badge: "Winner",
+    bio: "Former television reporter Savannah, a self-described \"under-the-radar physical threat,\" proved herself quickly, winning crucial Immunities and playing aggressively early on in Season 49. Her swift blindsides and sharp commentary made her a hot topic among Survivor fans, comparing her to the strategic and cunning Parvati Shallow. Savannah set herself amongst a group of elite women, making her only the sixth woman to win four Individual Immunity Challenges in one season. Now the lovable, but no-nonsense Savannah is back for more. Will the Sole Survivor of Season 49 make friends with her new castaways on In the Hands of the Fans?",
+  },
+  {
+    name: "Stephenie LaGrossa Kendrick",
+    slug: "stephenie-lagrossa-kendrick",
+    hometown: "Dunedin, FL",
+    previous_seasons: ["S10", "S11", "S20"],
+    best_placement: "Runner Up",
+    placement_badge: "Runner Up",
+    bio: "It's difficult to think of a player who had more resilience than Stephenie. Her original tribe in Survivor: Palau, Ulong, had an incredibly rough go of it, with the unfortunate distinction of becoming the first tribe to lose every single Immunity Challenge. Stephenie always fought as hard as she could, trying her best to rally and ultimately was the last Ulong standing, but was later voted out by Koror. Brought back for Survivor: Guatemala, Stephenie took a new, more deceptive and strategic approach in an attempt to get further. It paid off, and she made it to the Final Two. In Survivor: Heroes vs. Villains, Stephenie was the second Hero voted out, after some early clashes with tribemates. Now it's anyone's guess how Stephenie chooses to approach things when she returns for Survivor 50.",
+  },
+  {
+    name: "Tiffany Ervin",
+    slug: "tiffany-ervin",
+    hometown: "Los Angeles, CA",
+    previous_seasons: ["S46"],
+    best_placement: "8th Place",
+    placement_badge: null,
+    bio: "In her Season 46 intro, bubbly and outgoing artist Tiffany confessed \"I don't like to lose.\" She survived the broken Yanu tribe and made it to the merge, with a Hidden Immunity Idol in tow. Her alliance with Q broke apart in the Final Ten, when he made his infamous move to betray her, but then told the tribe to vote him out when his strategy fell through. He blindsided Tiffany during the Final Eight, telling the other castaways about her idol, while she felt secure enough to not use it. Her love/hate, up-and-down relationship with Q defined her time on Season 46, but when the two return with Survivor 50, will their reunion be sentimental or explosive?",
+  },
+];
+
+async function main() {
+  console.log("🌴 Seeding Season 50 castaways...\n");
+
+  // Find or create the Season 50 record
+  let { data: season, error: seasonErr } = await supabase
+    .from("seasons")
+    .select("id, name")
+    .eq("season_number", 50)
+    .single();
+
+  if (seasonErr || !season) {
+    console.log("Season 50 not found, creating...");
+    const { data: newSeason, error: createErr } = await supabase
+      .from("seasons")
+      .insert({
+        name: "Survivor 50: In the Hands of the Fans",
+        season_number: 50,
+        status: "active",
+      })
+      .select("id, name")
+      .single();
+
+    if (createErr || !newSeason) {
+      console.error("Failed to create season:", createErr);
+      process.exit(1);
+    }
+    season = newSeason;
+  }
+
+  console.log(`✅ Season: ${season.name} (${season.id})\n`);
+
+  // Upsert all players
+  const players = cast.map((c) => ({
+    season_id: season!.id,
+    name: c.name,
+    slug: c.slug,
+    hometown: c.hometown,
+    previous_seasons: c.previous_seasons,
+    best_placement: c.best_placement,
+    placement_badge: c.placement_badge,
+    bio: c.bio,
+    is_active: true,
+    suggested_value: 10,
+  }));
+
+  const { data: upserted, error: upsertErr } = await supabase
+    .from("players")
+    .upsert(players, { onConflict: "season_id,slug", ignoreDuplicates: false })
+    .select("id, name, slug");
+
+  if (upsertErr) {
+    console.error("Failed to upsert players:", upsertErr);
+    process.exit(1);
+  }
+
+  console.log(`✅ Upserted ${upserted?.length ?? 0} players:\n`);
+  for (const p of upserted ?? []) {
+    console.log(`  - ${p.name} (${p.slug})`);
+  }
+
+  console.log("\n🎉 Seed complete!");
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -64,6 +64,12 @@ export type Database = {
           bio: string | null;
           img_url: string | null;
           is_active: boolean;
+          slug: string | null;
+          hometown: string | null;
+          previous_seasons: string[] | null;
+          best_placement: string | null;
+          placement_badge: string | null;
+          vote_out_episode: number | null;
           created_at: string;
         };
         Insert: {
@@ -76,6 +82,12 @@ export type Database = {
           bio?: string | null;
           img_url?: string | null;
           is_active?: boolean;
+          slug?: string | null;
+          hometown?: string | null;
+          previous_seasons?: string[] | null;
+          best_placement?: string | null;
+          placement_badge?: string | null;
+          vote_out_episode?: number | null;
           created_at?: string;
         };
         Update: {
@@ -86,6 +98,12 @@ export type Database = {
           bio?: string | null;
           img_url?: string | null;
           is_active?: boolean;
+          slug?: string | null;
+          hometown?: string | null;
+          previous_seasons?: string[] | null;
+          best_placement?: string | null;
+          placement_badge?: string | null;
+          vote_out_episode?: number | null;
         };
         Relationships: [
           {
