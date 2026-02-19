@@ -40,10 +40,10 @@ export default async function DashboardPage() {
         action={
           <div className="flex gap-2">
             <Link href="/leagues/join" className="btn-secondary">
-              Join a League
+              Join an Alliance
             </Link>
             <Link href="/leagues/new" className="btn-primary">
-              🔥 Form an Alliance
+              🔥 Create a League
             </Link>
           </div>
         }
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
           icon="🔥"
           title="You haven't joined a tribe yet"
           description="Form a new alliance or join one with a tribal code to enter the game."
-          action={{ label: "Form an Alliance", href: "/leagues/new" }}
+          action={{ label: "Create a League", href: "/leagues/new" }}
         />
       )}
 

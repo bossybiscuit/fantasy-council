@@ -3,10 +3,11 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 // GET /api/leagues/join?code=XXXXXX — preview league info before joining
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  // Auth check via regular client
+  const authClient = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,7 +18,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Code required" }, { status: 400 });
   }
 
-  const { data: league } = await supabase
+  // Use service client for league lookup — leagues RLS only shows your own leagues,
+  // so a new user can't find a league by invite code with the auth client
+  const db = await createServiceClient();
+
+  const { data: league } = await db
     .from("leagues")
     .select("*, seasons(*)")
     .eq("invite_code", code)
@@ -31,22 +36,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "This league has ended" }, { status: 400 });
   }
 
-  const { count: teamCount } = await supabase
+  const { count: teamCount } = await db
     .from("teams")
     .select("*", { count: "exact", head: true })
     .eq("league_id", league.id);
 
   // Check if the user is already in this league
-  const { data: existingTeam } = await supabase
+  const { data: existingTeam } = await db
     .from("teams")
     .select("id")
     .eq("league_id", league.id)
     .eq("user_id", user.id)
     .single();
 
-  // Use service client to fetch unclaimed pre-created teams (bypasses RLS for non-members)
-  const serviceClient = await createServiceClient();
-  const { data: availableTeams } = await serviceClient
+  // Fetch unclaimed pre-created teams
+  const { data: availableTeams } = await db
     .from("teams")
     .select("id, name")
     .eq("league_id", league.id)
@@ -67,10 +71,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const authClient = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -83,8 +87,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invite code required" }, { status: 400 });
   }
 
-  // Find league by invite code
-  const { data: league } = await supabase
+  const db = await createServiceClient();
+
+  // Find league by invite code (service client bypasses RLS)
+  const { data: league } = await db
     .from("leagues")
     .select("*")
     .eq("invite_code", invite_code.toUpperCase())
@@ -99,7 +105,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check if already in league
-  const { data: existingTeam } = await supabase
+  const { data: existingTeam } = await db
     .from("teams")
     .select("id")
     .eq("league_id", league.id)
@@ -113,12 +119,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Use service client for all team lookups (bypasses RLS for non-members)
-  const serviceClient = await createServiceClient();
-
   if (team_id) {
     // Claim a pre-created unclaimed seat
-    const { data: targetTeam } = await serviceClient
+    const { data: targetTeam } = await db
       .from("teams")
       .select("id, user_id")
       .eq("id", team_id)
@@ -132,7 +135,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "That seat has already been claimed" }, { status: 409 });
     }
 
-    const { data: team, error } = await serviceClient
+    const { data: team, error } = await db
       .from("teams")
       .update({ user_id: user.id })
       .eq("id", team_id)
@@ -152,8 +155,7 @@ export async function POST(request: NextRequest) {
   }
 
   // No team_id — backwards compat: create a new team
-  // But first check if pre-created unclaimed slots exist (must pick one of those)
-  const { count: unclaimedCount } = await serviceClient
+  const { count: unclaimedCount } = await db
     .from("teams")
     .select("*", { count: "exact", head: true })
     .eq("league_id", league.id)
@@ -166,8 +168,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Check if league is full
-  const { count: teamCount } = await serviceClient
+  const { count: teamCount } = await db
     .from("teams")
     .select("*", { count: "exact", head: true })
     .eq("league_id", league.id);
@@ -176,8 +177,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "This league is full" }, { status: 400 });
   }
 
-  // Create team
-  const { data: team, error } = await supabase
+  const { data: team, error } = await db
     .from("teams")
     .insert({
       league_id: league.id,

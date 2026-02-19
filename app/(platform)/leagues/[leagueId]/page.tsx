@@ -43,6 +43,15 @@ export default async function LeagueHomePage({
   const season = league.seasons as any;
   const isCommissioner = league.commissioner_id === user.id;
 
+  // Get commissioner's display name for invite templates
+  const { data: commissionerProfile } = await supabase
+    .from("profiles")
+    .select("display_name, username")
+    .eq("id", league.commissioner_id)
+    .single();
+  const commissionerName =
+    commissionerProfile?.display_name || commissionerProfile?.username || undefined;
+
   // ── Pre-draft lobby ──────────────────────────────────────────────────
   if (league.draft_status === "pending") {
     return (
@@ -50,13 +59,6 @@ export default async function LeagueHomePage({
         <PageHeader
           title={league.name}
           subtitle={season?.name}
-          action={
-            isCommissioner ? (
-              <Link href={`/leagues/${league.id}/draft`} className="btn-primary">
-                Draft Room →
-              </Link>
-            ) : undefined
-          }
         />
         <LobbyView
           league={league}
@@ -68,6 +70,7 @@ export default async function LeagueHomePage({
           }))}
           isCommissioner={isCommissioner}
           myTeamId={myTeam?.id}
+          commissionerName={commissionerName}
         />
       </div>
     );

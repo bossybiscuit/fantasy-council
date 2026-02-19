@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://thecouncil.live";
 
 type Team = {
   id: string;
@@ -17,10 +20,12 @@ type LobbyViewProps = {
     invite_code: string;
     commissioner_id: string;
     draft_status: string;
+    draft_type: string;
   };
   teams: Team[];
   isCommissioner: boolean;
   myTeamId: string | undefined;
+  commissionerName?: string;
 };
 
 function SeatAvatar({ name }: { name: string }) {
@@ -42,17 +47,167 @@ function SeatAvatar({ name }: { name: string }) {
   );
 }
 
+function InviteShare({
+  league,
+  commissionerName,
+}: {
+  league: LobbyViewProps["league"];
+  commissionerName?: string;
+}) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const [activeTemplate, setActiveTemplate] = useState<"group" | "email" | "text">("group");
+
+  const joinUrl = `${APP_URL}/leagues/join?code=${league.invite_code}`;
+  const openSeats = league.num_teams - 0; // will be overridden by caller if needed
+
+  const templates = {
+    group: `🔥 Survivor 50 Fantasy — we're doing it.
+Join my league: ${league.name}
+Code: ${league.invite_code} at ${joinUrl}
+Draft is ${league.draft_type} — TBD
+Don't get voted out before you even sign up.`,
+
+    email: `Subject: You've been summoned — ${league.name}
+
+Hey —
+
+I'm running a Survivor 50 fantasy league and you're invited. Season 50 is an all-returning-players season, so the cast is stacked and the draft is going to be competitive.
+
+League: ${league.name}
+Draft: ${league.draft_type === "auction" ? "Auction" : "Snake"} — TBD
+Invite Code: ${league.invite_code}
+Join at: ${joinUrl}
+
+Create your account, enter the code, and claim your seat before draft day. Roster locks the moment the draft ends — no trades, no second chances.
+
+See you at Tribal.
+— ${commissionerName || "The Commissioner"}`,
+
+    text: `Survivor 50 fantasy — join my league! Code: ${league.invite_code} at ${joinUrl}. Draft TBD.`,
+  };
+
+  async function copyText(text: string, key: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      // fallback: select text
+    }
+  }
+
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Join ${league.name} — Survivor Fantasy`,
+          text: `Join my Survivor fantasy league! Code: ${league.invite_code}`,
+          url: joinUrl,
+        });
+      } catch {
+        // user cancelled or not supported
+      }
+    } else {
+      copyText(joinUrl, "url");
+    }
+  }
+
+  return (
+    <div className="mt-6 space-y-4">
+      {/* Code + quick copy */}
+      <div className="card border-accent-orange/20">
+        <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">
+          Pass the Torch — share this code
+        </p>
+        <div className="flex items-center gap-3 mb-3">
+          <p className="text-4xl font-mono font-bold text-gradient-fire tracking-widest flex-1">
+            {league.invite_code}
+          </p>
+          <button
+            onClick={() => copyText(league.invite_code, "code")}
+            className="btn-secondary text-sm px-3 py-1.5 shrink-0"
+          >
+            {copied === "code" ? "Copied!" : "Copy Code"}
+          </button>
+          <button
+            onClick={handleShare}
+            className="btn-secondary text-sm px-3 py-1.5 shrink-0"
+          >
+            {copied === "url" ? "Copied!" : "Share Link"}
+          </button>
+        </div>
+        <p className="text-xs text-text-muted">
+          Join at:{" "}
+          <span className="text-text-primary font-mono text-xs">{joinUrl}</span>
+        </p>
+      </div>
+
+      {/* Message templates */}
+      <div>
+        <p className="text-xs text-text-muted uppercase tracking-wider mb-2">
+          Invite Message
+        </p>
+        <div className="flex gap-2 mb-3">
+          {(["group", "email", "text"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTemplate(t)}
+              className={`text-xs px-3 py-1 rounded-full border transition-colors capitalize ${
+                activeTemplate === t
+                  ? "border-accent-orange text-accent-orange bg-accent-orange/10"
+                  : "border-border text-text-muted hover:border-accent-orange/40"
+              }`}
+            >
+              {t === "group" ? "Group Chat" : t === "email" ? "Email" : "Text"}
+            </button>
+          ))}
+        </div>
+        <div className="relative">
+          <pre
+            className="text-xs text-text-muted bg-bg-surface border border-border rounded-lg p-4 whitespace-pre-wrap font-sans leading-relaxed"
+            style={{ fontFamily: "var(--font-crimson, Georgia, serif)", fontSize: "0.85rem" }}
+          >
+            {templates[activeTemplate]}
+          </pre>
+          <button
+            onClick={() => copyText(templates[activeTemplate], "template")}
+            className="absolute top-2 right-2 text-xs btn-secondary py-1 px-2"
+          >
+            {copied === "template" ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </div>
+
+      {/* Admin actions */}
+      <div className="flex flex-wrap gap-2 pt-2">
+        <Link
+          href={`/leagues/${league.id}/admin/teams`}
+          className="btn-secondary text-sm"
+        >
+          Manage Teams
+        </Link>
+        <Link
+          href={`/leagues/${league.id}/draft`}
+          className="btn-primary"
+        >
+          Head to the Draft Room →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function LobbyView({
   league,
   teams,
   isCommissioner,
   myTeamId,
+  commissionerName,
 }: LobbyViewProps) {
   const claimedTeams = teams.filter((t) => t.user_id);
   const unclaimedTeams = teams.filter((t) => !t.user_id);
   const filledSeats = claimedTeams.length;
   const totalSeats = league.num_teams;
-  // Only add blank placeholder slots if admin hasn't pre-created any teams
   const hasPreCreatedSlots = unclaimedTeams.length > 0;
   const blankEmptyCount = hasPreCreatedSlots
     ? 0
@@ -80,7 +235,6 @@ export default function LobbyView({
             : "grid-cols-2 sm:grid-cols-4 md:grid-cols-5"
         }`}
       >
-        {/* Claimed seats */}
         {claimedTeams.map((team) => {
           const isMe = team.id === myTeamId;
           const displayName =
@@ -107,7 +261,6 @@ export default function LobbyView({
           );
         })}
 
-        {/* Unclaimed pre-created seats — show admin team name */}
         {unclaimedTeams.map((team) => (
           <div
             key={team.id}
@@ -123,7 +276,6 @@ export default function LobbyView({
           </div>
         ))}
 
-        {/* Blank placeholder slots (only if no pre-created teams) */}
         {Array.from({ length: blankEmptyCount }).map((_, i) => (
           <div
             key={`empty-${i}`}
@@ -138,35 +290,9 @@ export default function LobbyView({
         ))}
       </div>
 
-      {/* Invite code + actions */}
+      {/* Commissioner: share section. Member: waiting message */}
       {isCommissioner ? (
-        <div className="card border-accent-orange/20 mb-4">
-          <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">
-            Pass the Torch — share this code
-          </p>
-          <p className="text-4xl font-mono font-bold text-gradient-fire tracking-widest mb-3">
-            {league.invite_code}
-          </p>
-          <p className="text-xs text-text-muted mb-4">
-            Anyone who enters this code becomes part of your alliance.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={`/leagues/${league.id}/admin/teams`}
-              className="btn-secondary text-sm"
-            >
-              Manage Teams
-            </Link>
-            {filledSeats >= 2 && (
-              <Link
-                href={`/leagues/${league.id}/draft`}
-                className="btn-primary"
-              >
-                Head to the Draft Room →
-              </Link>
-            )}
-          </div>
-        </div>
+        <InviteShare league={league} commissionerName={commissionerName} />
       ) : (
         <div className="card text-center text-text-muted text-sm py-6">
           <p className="text-base font-medium text-text-primary mb-1">

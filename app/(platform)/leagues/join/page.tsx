@@ -91,7 +91,7 @@ function JoinLeagueContent() {
     <div className="max-w-md mx-auto px-4 py-10">
       <div className="text-center mb-8">
         <div className="text-4xl mb-2">🪶</div>
-        <h1 className="text-2xl font-bold text-text-primary">Join a League</h1>
+        <h1 className="text-2xl font-bold text-text-primary">Join an Alliance</h1>
         <p className="text-text-muted mt-1 text-sm">
           Find your alliance by entering the invite code
         </p>
