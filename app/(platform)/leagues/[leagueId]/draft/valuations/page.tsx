@@ -113,13 +113,6 @@ export default function ValuationsPage({
 
       <div className="card mb-4">
         <div className="flex gap-2 flex-wrap">
-          <input
-            type="text"
-            className="input flex-1 min-w-32 text-sm py-1.5"
-            placeholder="Search players..."
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-          />
           <select
             className="input text-sm py-1.5 w-auto"
             value={filterTribe}
@@ -140,6 +133,13 @@ export default function ValuationsPage({
               <option key={t} value={t}>Tier {t}</option>
             ))}
           </select>
+          <input
+            type="text"
+            className="input flex-1 min-w-32 text-sm py-1.5"
+            placeholder="Search players..."
+            value={filterSearch}
+            onChange={(e) => setFilterSearch(e.target.value)}
+          />
         </div>
       </div>
 

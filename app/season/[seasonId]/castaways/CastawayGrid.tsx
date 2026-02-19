@@ -39,6 +39,7 @@ export default function CastawayGrid({
   const [sort, setSort] = useState<SortKey>("points");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showSpoilers, setShowSpoilers] = useState(false);
 
   const sorted = useMemo(() => {
     return [...players].sort((a, b) => {
@@ -85,8 +86,21 @@ export default function CastawayGrid({
 
   return (
     <div>
-      {/* Count pill */}
-      <p className="text-text-muted text-xs mb-3">{players.length} castaways</p>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-text-muted text-xs">{players.length} castaways</p>
+        <button
+          onClick={() => setShowSpoilers((s) => !s)}
+          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+            showSpoilers
+              ? "border-accent-orange/40 text-accent-orange bg-accent-orange/10"
+              : "border-border text-text-muted hover:border-accent-orange/40 hover:text-text-primary"
+          }`}
+        >
+          <span>{showSpoilers ? "🔓" : "🔒"}</span>
+          <span>{showSpoilers ? "Hide Spoilers" : "Reveal Spoilers"}</span>
+        </button>
+      </div>
 
       <div className="card p-0 overflow-hidden">
         <div className="overflow-x-auto">
@@ -112,7 +126,9 @@ export default function CastawayGrid({
                 >
                   Tier <SortIcon col="tier" />
                 </th>
-                <th className={`${thClass} hidden lg:table-cell`}>Status</th>
+                {showSpoilers && (
+                  <th className={`${thClass} hidden lg:table-cell`}>Status</th>
+                )}
                 <th
                   className={`${thClass} text-right cursor-pointer hover:text-text-primary hidden sm:table-cell`}
                   onClick={() => handleSort("points")}
@@ -160,7 +176,7 @@ export default function CastawayGrid({
                               size="sm"
                               imgUrl={player.img_url}
                             />
-                            {!player.is_active && (
+                            {showSpoilers && !player.is_active && (
                               <span className="absolute -bottom-0.5 -right-0.5 text-[10px] leading-none">
                                 🪦
                               </span>
@@ -205,16 +221,18 @@ export default function CastawayGrid({
                         )}
                       </td>
 
-                      {/* Status */}
-                      <td className="py-3 px-4 hidden lg:table-cell">
-                        {player.is_active ? (
-                          <span className="text-xs text-green-400">🔥 Active</span>
-                        ) : (
-                          <span className="text-xs text-text-muted">
-                            Out Ep {player.vote_out_episode ?? "?"}
-                          </span>
-                        )}
-                      </td>
+                      {/* Status — spoiler gated */}
+                      {showSpoilers && (
+                        <td className="py-3 px-4 hidden lg:table-cell">
+                          {player.is_active ? (
+                            <span className="text-xs text-green-400">🔥 Active</span>
+                          ) : (
+                            <span className="text-xs text-text-muted">
+                              Out Ep {player.vote_out_episode ?? "?"}
+                            </span>
+                          )}
+                        </td>
+                      )}
 
                       {/* This week */}
                       <td className="py-3 px-4 text-right hidden sm:table-cell">
@@ -247,7 +265,7 @@ export default function CastawayGrid({
                     {/* ── Expanded stats row ── */}
                     {isSelected && (
                       <tr className="border-b border-border bg-bg-surface/50">
-                        <td colSpan={8} className="px-4 pb-5 pt-3">
+                        <td colSpan={showSpoilers ? 8 : 7} className="px-4 pb-5 pt-3">
                           <div className="max-w-3xl">
                             {/* Bio + meta */}
                             <div className="flex flex-wrap items-start gap-4 mb-4">
