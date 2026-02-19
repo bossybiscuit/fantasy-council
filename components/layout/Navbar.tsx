@@ -40,6 +40,9 @@ export default function Navbar({ profile }: NavbarProps) {
             <NavLink href="/dashboard" current={pathname}>
               Dashboard
             </NavLink>
+            <NavLink href="/cast" current={pathname} activePrefix="/season">
+              Cast
+            </NavLink>
             {profile?.is_super_admin && (
               <NavLink href="/admin" current={pathname}>
                 Admin
@@ -80,13 +83,18 @@ export default function Navbar({ profile }: NavbarProps) {
 function NavLink({
   href,
   current,
+  activePrefix,
   children,
 }: {
   href: string;
   current: string;
+  activePrefix?: string;
   children: React.ReactNode;
 }) {
-  const isActive = current === href || current.startsWith(href + "/");
+  const isActive =
+    current === href ||
+    current.startsWith(href + "/") ||
+    (activePrefix ? current.startsWith(activePrefix) : false);
   return (
     <Link
       href={href}
