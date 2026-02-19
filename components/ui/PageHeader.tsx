@@ -7,7 +7,7 @@ interface PageHeaderProps {
 export default function PageHeader({ title, subtitle, action }: PageHeaderProps) {
   return (
     <div
-      className="relative flex items-start justify-between mb-8 px-5 py-5 rounded-xl overflow-hidden"
+      className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-8 px-5 py-5 rounded-xl overflow-hidden"
       style={{
         background:
           "radial-gradient(ellipse 80% 120% at 50% 0%, rgba(255,106,0,0.08) 0%, transparent 70%)",
@@ -34,7 +34,7 @@ export default function PageHeader({ title, subtitle, action }: PageHeaderProps)
           </p>
         )}
       </div>
-      {action && <div className="shrink-0 ml-4">{action}</div>}
+      {action && <div className="sm:shrink-0">{action}</div>}
     </div>
   );
 }
