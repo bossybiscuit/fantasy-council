@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import LeagueSidebar from "@/components/layout/LeagueSidebar";
 import MobileLeagueNav from "@/components/layout/MobileLeagueNav";
 
@@ -26,13 +26,16 @@ export default async function LeagueLayout({
 
   if (!league) redirect("/dashboard");
 
+  // Use service client so RLS doesn't block the team lookup
+  const db = createServiceClient();
+
   // Verify user is a member or commissioner or super admin
-  const { data: team } = await supabase
+  const { data: team } = await db
     .from("teams")
     .select("id")
     .eq("league_id", leagueId)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   const { data: profile } = await supabase
     .from("profiles")
