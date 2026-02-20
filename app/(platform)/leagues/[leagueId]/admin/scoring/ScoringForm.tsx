@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { DEFAULT_SCORING } from "@/lib/scoring";
-import type { League, Player, Episode } from "@/types/database";
+import type { League, Player, Episode, SeasonPrediction } from "@/types/database";
+import SeasonPredictionsGrader from "../season-predictions/SeasonPredictionsGrader";
 
 interface ScoringEvent {
   episode_id: string;
@@ -12,15 +13,25 @@ interface ScoringEvent {
   category: string;
 }
 
+interface Team {
+  id: string;
+  name: string;
+  user_id: string | null;
+}
+
 interface ScoringFormProps {
   league: League & { seasons: any };
   players: Player[];
   episodes: Episode[];
   scoringEvents: ScoringEvent[];
+  teams: Team[];
+  predictions: SeasonPrediction[];
+  isLocked: boolean;
 }
 
-export default function ScoringForm({ league, players, episodes, scoringEvents }: ScoringFormProps) {
+export default function ScoringForm({ league, players, episodes, scoringEvents, teams, predictions, isLocked }: ScoringFormProps) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"episode" | "season">("episode");
   const [selectedEpisodeId, setSelectedEpisodeId] = useState(
     episodes.find((e) => !e.is_scored)?.id || episodes[episodes.length - 1]?.id || ""
   );
@@ -180,9 +191,46 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
   return (
     <div>
       <PageHeader
-        title="Score Episode"
-        subtitle="Enter results to calculate fantasy points"
+        title="Scoring"
+        subtitle="Score episodes and grade season predictions"
       />
+
+      {/* Tab toggle */}
+      <div className="flex gap-1 p-1 rounded-lg bg-bg-surface border border-border mb-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab("episode")}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "episode"
+              ? "bg-bg-card text-text-primary shadow-sm"
+              : "text-text-muted hover:text-text-primary"
+          }`}
+        >
+          Episode Scoring
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("season")}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "season"
+              ? "bg-bg-card text-text-primary shadow-sm"
+              : "text-text-muted hover:text-text-primary"
+          }`}
+        >
+          Season Predictions
+        </button>
+      </div>
+
+      {activeTab === "season" && (
+        <SeasonPredictionsGrader
+          leagueId={league.id}
+          teams={teams}
+          predictions={predictions}
+          isLocked={isLocked}
+        />
+      )}
+
+      {activeTab === "episode" && (<>
 
       {/* Episode Selector */}
       <div className="card mb-6">
@@ -403,6 +451,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
           {loading ? "Calculating scores..." : "Submit Episode Results"}
         </button>
       </form>
+      </>)}
     </div>
   );
 }
