@@ -70,15 +70,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Delete existing predictions for this team/episode
-  await supabase
-    .from("predictions")
-    .delete()
-    .eq("league_id", league_id)
-    .eq("episode_id", episode_id)
-    .eq("team_id", team_id);
+  const newPlayerIds = allocations
+    .filter((a: { points_allocated: number }) => a.points_allocated > 0)
+    .map((a: { player_id: string }) => a.player_id);
 
-  // Insert new predictions
+  // Upsert predictions that have points allocated
   const records = allocations
     .filter((a: { points_allocated: number }) => a.points_allocated > 0)
     .map((a: { player_id: string; points_allocated: number }) => ({
@@ -91,10 +87,30 @@ export async function POST(request: NextRequest) {
     }));
 
   if (records.length > 0) {
-    const { error } = await supabase.from("predictions").insert(records);
+    const { error } = await supabase
+      .from("predictions")
+      .upsert(records, { onConflict: "league_id,episode_id,team_id,player_id" });
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+  }
+
+  // Delete predictions for players no longer in the allocation
+  if (newPlayerIds.length > 0) {
+    await supabase
+      .from("predictions")
+      .delete()
+      .eq("league_id", league_id)
+      .eq("episode_id", episode_id)
+      .eq("team_id", team_id)
+      .filter("player_id", "not.in", `(${newPlayerIds.join(",")})`);
+  } else {
+    await supabase
+      .from("predictions")
+      .delete()
+      .eq("league_id", league_id)
+      .eq("episode_id", episode_id)
+      .eq("team_id", team_id);
   }
 
   return NextResponse.json({ success: true });
