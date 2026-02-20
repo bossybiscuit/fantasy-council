@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import ScoringForm from "./ScoringForm";
@@ -75,14 +76,16 @@ export default async function ScoringPage({
   ]);
 
   return (
-    <ScoringForm
-      league={league}
-      players={players || []}
-      episodes={episodes || []}
-      scoringEvents={scoringEvents || []}
-      teams={teams || []}
-      predictions={predictions || []}
-      isLocked={isLocked}
-    />
+    <Suspense>
+      <ScoringForm
+        league={league}
+        players={players || []}
+        episodes={episodes || []}
+        scoringEvents={scoringEvents || []}
+        teams={teams || []}
+        predictions={predictions || []}
+        isLocked={isLocked}
+      />
+    </Suspense>
   );
 }

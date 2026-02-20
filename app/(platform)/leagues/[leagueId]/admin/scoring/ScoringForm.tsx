@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { DEFAULT_SCORING } from "@/lib/scoring";
 import type { League, Player, Episode, SeasonPrediction } from "@/types/database";
@@ -31,7 +31,17 @@ interface ScoringFormProps {
 
 export default function ScoringForm({ league, players, episodes, scoringEvents, teams, predictions, isLocked }: ScoringFormProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"episode" | "season">("episode");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"episode" | "season">(
+    searchParams.get("tab") === "season" ? "season" : "episode"
+  );
+
+  function switchTab(tab: "episode" | "season") {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    router.replace(url.pathname + url.search, { scroll: false });
+  }
   const [selectedEpisodeId, setSelectedEpisodeId] = useState(
     episodes.find((e) => !e.is_scored)?.id || episodes[episodes.length - 1]?.id || ""
   );
@@ -199,7 +209,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents, 
       <div className="flex gap-1 p-1 rounded-lg bg-bg-surface border border-border mb-6">
         <button
           type="button"
-          onClick={() => setActiveTab("episode")}
+          onClick={() => switchTab("episode")}
           className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
             activeTab === "episode"
               ? "bg-bg-card text-text-primary shadow-sm"
@@ -210,7 +220,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents, 
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("season")}
+          onClick={() => switchTab("season")}
           className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
             activeTab === "season"
               ? "bg-bg-card text-text-primary shadow-sm"
