@@ -23,7 +23,6 @@ export default function PredictionsForm({
 }: PredictionsFormProps) {
   const router = useRouter();
 
-  // Initialize allocations from existing predictions
   const initialAllocations: Record<string, number> = {};
   for (const pred of existingPredictions) {
     initialAllocations[pred.player_id] = pred.points_allocated;
@@ -41,10 +40,10 @@ export default function PredictionsForm({
   const remaining = 10 - totalAllocated;
 
   function setAllocation(playerId: string, value: number) {
-    const clamped = Math.max(0, Math.min(value, value + remaining));
-    const newTotal = totalAllocated - (allocations[playerId] || 0) + clamped;
+    if (value < 0) return;
+    const newTotal = totalAllocated - (allocations[playerId] || 0) + value;
     if (newTotal > 10) return;
-    setAllocations({ ...allocations, [playerId]: clamped });
+    setAllocations({ ...allocations, [playerId]: value });
   }
 
   async function handleSubmit() {
@@ -60,7 +59,6 @@ export default function PredictionsForm({
       .filter(([, pts]) => pts > 0)
       .map(([player_id, points_allocated]) => ({ player_id, points_allocated }));
 
-    // Save vote predictions and title pick in parallel
     const [predRes, titleRes] = await Promise.all([
       fetch("/api/predictions", {
         method: "POST",
@@ -101,9 +99,9 @@ export default function PredictionsForm({
   }
 
   return (
-    <div className="card">
-      {/* Title Pick — above the allocations */}
-      <div className="mb-6">
+    <div className="space-y-4">
+      {/* Title Pick */}
+      <div className="card">
         <h2 className="section-title mb-1">Episode Title Pick</h2>
         <p className="text-xs text-text-muted mb-3">
           Who says the episode title? Worth{" "}
@@ -124,119 +122,112 @@ export default function PredictionsForm({
         </select>
       </div>
 
-      <div className="torch-divider mb-6" />
-
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="section-title">Allocate Points</h2>
-        <div
-          className={`text-lg font-bold ${
-            remaining === 0
-              ? "text-green-400"
-              : remaining < 0
-              ? "text-red-400"
-              : "text-accent-orange"
-          }`}
-        >
-          {remaining} pts remaining
-        </div>
-      </div>
-
-      {success && (
-        <div className="mb-4 p-3 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 text-sm">
-          ✓ Predictions saved! You can update them until the deadline.
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
-
-      <p className="text-xs text-text-muted mb-4">
-        Allocate points across players you think will be voted out this episode. If your predicted player is eliminated, you earn those points.
-      </p>
-
-      {/* Visual allocation bar */}
-      <div className="w-full h-2 bg-bg-surface rounded-full mb-6 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{
-            width: `${Math.min(100, (totalAllocated / 10) * 100)}%`,
-            background:
+      {/* Vote Allocations */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="section-title mb-0">Vote Predictions</h2>
+          <div
+            className={`text-sm font-bold tabular-nums px-3 py-1 rounded-full border ${
               totalAllocated === 10
-                ? "linear-gradient(90deg, #22c55e, #16a34a)"
-                : "linear-gradient(90deg, #ff6a00, #c9a84c)",
-          }}
-        />
-      </div>
+                ? "text-green-400 border-green-700/40 bg-green-900/20"
+                : "text-accent-orange border-accent-orange/30 bg-accent-orange/5"
+            }`}
+          >
+            {totalAllocated} / 10 pts
+          </div>
+        </div>
+        <p className="text-xs text-text-muted mb-4">
+          Allocate 10 points across players you think will be voted out. If your player is
+          eliminated, you earn those points.
+        </p>
 
-      <div className="space-y-3">
-        {players.map((player) => {
-          const allocated = allocations[player.id] || 0;
-          return (
-            <div key={player.id} className="flex items-center gap-3">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-text-primary">
-                    {player.name}
-                  </span>
+        {/* Progress bar */}
+        <div className="w-full h-1.5 bg-bg-surface rounded-full mb-5 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-200"
+            style={{
+              width: `${Math.min(100, (totalAllocated / 10) * 100)}%`,
+              background:
+                totalAllocated === 10
+                  ? "linear-gradient(90deg, #22c55e, #16a34a)"
+                  : "linear-gradient(90deg, #ff6a00, #c9a84c)",
+            }}
+          />
+        </div>
+
+        {success && (
+          <div className="mb-4 p-3 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 text-sm">
+            ✓ Predictions saved! You can update them until the deadline.
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-red-900/20 border border-red-700/30 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Player cards grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {players.map((player) => {
+            const allocated = allocations[player.id] || 0;
+            return (
+              <div
+                key={player.id}
+                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                  allocated > 0
+                    ? "border-accent-orange/40 bg-accent-orange/5"
+                    : "border-border bg-bg-surface"
+                }`}
+              >
+                <div className="min-w-0 mr-3">
+                  <p className="text-sm font-medium text-text-primary truncate">{player.name}</p>
                   {player.tribe && (
-                    <span className="text-xs text-text-muted">{player.tribe}</span>
+                    <p className="text-xs text-text-muted">{player.tribe}</p>
                   )}
                 </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={10}
-                  value={allocated}
-                  onChange={(e) => setAllocation(player.id, Number(e.target.value))}
-                  className="w-full accent-accent-orange"
-                  style={{ accentColor: "#ff6a00" }}
-                />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setAllocation(player.id, Math.max(0, allocated - 1))}
+                    disabled={allocated === 0}
+                    className="w-7 h-7 rounded border border-border bg-bg-card text-text-primary hover:border-accent-orange transition-colors text-sm font-bold disabled:opacity-30"
+                  >
+                    −
+                  </button>
+                  <span
+                    className={`w-6 text-center font-bold text-sm tabular-nums ${
+                      allocated > 0 ? "text-accent-orange" : "text-text-muted"
+                    }`}
+                  >
+                    {allocated}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAllocation(player.id, Math.min(10, allocated + 1))}
+                    disabled={remaining === 0}
+                    className="w-7 h-7 rounded border border-border bg-bg-card text-text-primary hover:border-accent-orange transition-colors text-sm font-bold disabled:opacity-30"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setAllocation(player.id, Math.max(0, allocated - 1))}
-                  className="w-7 h-7 rounded bg-bg-surface border border-border text-text-primary hover:border-accent-orange transition-colors text-sm"
-                >
-                  −
-                </button>
-                <span
-                  className={`w-6 text-center font-bold text-sm ${
-                    allocated > 0 ? "text-accent-orange" : "text-text-muted"
-                  }`}
-                >
-                  {allocated}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setAllocation(player.id, Math.min(10, allocated + 1))}
-                  disabled={remaining === 0}
-                  className="w-7 h-7 rounded bg-bg-surface border border-border text-text-primary hover:border-accent-orange transition-colors text-sm disabled:opacity-40"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading || totalAllocated !== 10}
+          className="btn-primary w-full mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading
+            ? "Submitting..."
+            : totalAllocated === 10
+            ? "Submit Predictions"
+            : `Allocate ${remaining} more point${remaining !== 1 ? "s" : ""}`}
+        </button>
       </div>
-
-      <div className="torch-divider mt-6" />
-
-      <button
-        onClick={handleSubmit}
-        disabled={loading || totalAllocated !== 10}
-        className="btn-primary w-full mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading
-          ? "Submitting..."
-          : totalAllocated === 10
-          ? "Submit Predictions"
-          : `Allocate ${remaining} more point${remaining !== 1 ? "s" : ""}`}
-      </button>
     </div>
   );
 }

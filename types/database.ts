@@ -490,6 +490,52 @@ export type Database = {
         };
         Relationships: [];
       };
+      season_predictions: {
+        Row: {
+          id: string;
+          league_id: string;
+          team_id: string;
+          category: string;
+          answer: string | null;
+          is_correct: boolean | null;
+          points_earned: number;
+          locked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          league_id: string;
+          team_id: string;
+          category: string;
+          answer?: string | null;
+          is_correct?: boolean | null;
+          points_earned?: number;
+          locked_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          answer?: string | null;
+          is_correct?: boolean | null;
+          points_earned?: number;
+          locked_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "season_predictions_league_id_fkey";
+            columns: ["league_id"];
+            isOneToOne: false;
+            referencedRelation: "leagues";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "season_predictions_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       title_picks: {
         Row: {
           id: string;
@@ -622,3 +668,4 @@ export type EpisodeTeamScore =
   Database["public"]["Tables"]["episode_team_scores"]["Row"];
 export type TitlePick = Database["public"]["Tables"]["title_picks"]["Row"];
 export type LeaguePlayerValue = Database["public"]["Tables"]["league_player_values"]["Row"];
+export type SeasonPrediction = Database["public"]["Tables"]["season_predictions"]["Row"];

@@ -71,16 +71,20 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("episodes(episode_number)");
 
-  // Get predictions
+  // Get predictions with player + episode info
   const { data: predictions } = await supabase
     .from("predictions")
-    .select("*")
+    .select("*, players(name), episodes(episode_number, title)")
     .eq("league_id", leagueId)
-    .eq("team_id", teamId);
+    .eq("team_id", teamId)
+    .not("locked_at", "is", null)
+    .order("created_at", { ascending: false });
 
   const totalAllocated = (predictions || []).reduce((sum, p) => sum + p.points_allocated, 0);
   const totalEarned = (predictions || []).reduce((sum, p) => sum + (p.points_earned || 0), 0);
   const predAccuracy = calculatePredictionAccuracy(totalAllocated, totalEarned);
+
+  const activePlayers = (picks || []).filter((p) => (p.players as any)?.is_active).length;
 
   // Points per player across all episodes
   const playerPoints = new Map<string, number>();
@@ -116,7 +120,7 @@ export default async function TeamPage({
       )}
 
       {/* Stats Cards */}
-      <div className={`grid gap-4 mb-6 ${league.draft_type === "auction" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+      <div className={`grid gap-4 mb-6 ${league.draft_type === "auction" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
         <div className="card text-center">
           <p className="text-3xl font-bold text-gradient-fire">{totalPoints}</p>
           <p className="text-text-muted text-xs mt-1">Total Points</p>
@@ -126,11 +130,15 @@ export default async function TeamPage({
           <p className="text-text-muted text-xs mt-1">Current Rank</p>
         </div>
         <div className="card text-center">
+          <p className="text-3xl font-bold text-text-primary">{activePlayers}</p>
+          <p className="text-text-muted text-xs mt-1">Players Remaining</p>
+        </div>
+        <div className="card text-center">
           <p className="text-3xl font-bold text-text-primary">{predAccuracy}%</p>
-          <p className="text-text-muted text-xs mt-1">Prediction Accuracy</p>
+          <p className="text-text-muted text-xs mt-1">Pred. Accuracy</p>
         </div>
         {league.draft_type === "auction" && (
-          <div className="card text-center">
+          <div className="card text-center col-span-2 sm:col-span-1">
             <p className="text-3xl font-bold text-accent-gold">${(team as any).budget_remaining ?? "—"}</p>
             <p className="text-text-muted text-xs mt-1">Budget Left</p>
           </div>
@@ -251,6 +259,54 @@ export default async function TeamPage({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      {/* Prediction History */}
+      {predictions && predictions.length > 0 && (
+        <div className="card mt-6">
+          <h2 className="section-title mb-4">Prediction History</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 text-text-muted font-medium">Episode</th>
+                  <th className="text-left py-3 px-4 text-text-muted font-medium">Player</th>
+                  <th className="text-right py-3 px-4 text-text-muted font-medium">Allocated</th>
+                  <th className="text-right py-3 px-4 text-text-muted font-medium">Earned</th>
+                  <th className="text-right py-3 px-4 text-text-muted font-medium">Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {predictions.map((pred) => {
+                  const ep = pred.episodes as any;
+                  const player = pred.players as any;
+                  return (
+                    <tr key={pred.id} className="border-b border-border">
+                      <td className="py-3 px-4 text-text-muted text-xs">
+                        E{ep?.episode_number} {ep?.title}
+                      </td>
+                      <td className="py-3 px-4 text-text-primary">{player?.name}</td>
+                      <td className="py-3 px-4 text-right text-text-muted">
+                        {pred.points_allocated}pts
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className={pred.points_earned > 0 ? "text-green-400 font-semibold" : "text-text-muted"}>
+                          {pred.points_earned}pts
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        {pred.points_earned > 0 ? (
+                          <span className="text-green-400">✓</span>
+                        ) : (
+                          <span className="text-red-400">✗</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

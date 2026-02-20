@@ -20,7 +20,8 @@ export default function LeagueSidebar({
 
   const links = [
     { href: base, label: "Standings", icon: "🏆" },
-    { href: `${base}/predictions`, label: "Predictions", icon: "🔮" },
+    { href: `${base}/predictions/season`, label: "Season Predictions", icon: "🌴" },
+    { href: `${base}/predictions`, label: "Weekly Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
   ];
 
