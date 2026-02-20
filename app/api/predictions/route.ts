@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -74,7 +74,6 @@ export async function POST(request: NextRequest) {
     .filter((a: { points_allocated: number }) => a.points_allocated > 0)
     .map((a: { player_id: string }) => a.player_id);
 
-  // Upsert predictions that have points allocated
   const records = allocations
     .filter((a: { points_allocated: number }) => a.points_allocated > 0)
     .map((a: { player_id: string; points_allocated: number }) => ({
@@ -86,8 +85,12 @@ export async function POST(request: NextRequest) {
       locked_at: new Date().toISOString(),
     }));
 
+  // Use service client to bypass RLS (predictions_update_own blocks updates
+  // when locked_at IS NOT NULL, but we want to allow re-submitting before deadline)
+  const db = createServiceClient();
+
   if (records.length > 0) {
-    const { error } = await supabase
+    const { error } = await db
       .from("predictions")
       .upsert(records, { onConflict: "league_id,episode_id,team_id,player_id" });
     if (error) {
@@ -97,7 +100,7 @@ export async function POST(request: NextRequest) {
 
   // Delete predictions for players no longer in the allocation
   if (newPlayerIds.length > 0) {
-    await supabase
+    await db
       .from("predictions")
       .delete()
       .eq("league_id", league_id)
@@ -105,7 +108,7 @@ export async function POST(request: NextRequest) {
       .eq("team_id", team_id)
       .filter("player_id", "not.in", `(${newPlayerIds.join(",")})`);
   } else {
-    await supabase
+    await db
       .from("predictions")
       .delete()
       .eq("league_id", league_id)
