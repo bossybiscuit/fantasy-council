@@ -22,13 +22,19 @@ export default async function TeamPage({
   // Use service client for all data fetches to bypass RLS
   const db = createServiceClient();
 
-  const { data: team } = await db
+  const { data: team, error: teamError } = await db
     .from("teams")
-    .select("*, profiles(*)")
+    .select("*")
     .eq("id", teamId)
     .single();
 
-  if (!team) redirect(`/leagues/${leagueId}`);
+  if (!team || teamError) redirect(`/leagues/${leagueId}`);
+
+  // Fetch profile separately — teams.user_id references auth.users, not profiles,
+  // so PostgREST can't auto-join them in a single query.
+  const { data: profile } = team.user_id
+    ? await db.from("profiles").select("*").eq("id", team.user_id).single()
+    : { data: null };
 
   const { data: league } = await db
     .from("leagues")
@@ -99,7 +105,7 @@ export default async function TeamPage({
   const totalPoints = (episodeScores || []).reduce((sum, s) => sum + s.total_points, 0);
   const latestScore = episodeScores?.[episodeScores.length - 1];
 
-  const profile = team.profiles as any;
+  // profile fetched separately above
   const isOwner = (team as any).user_id === user.id;
 
   return (
