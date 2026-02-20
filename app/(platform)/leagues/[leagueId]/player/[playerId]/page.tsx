@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
-import { getTierBadgeClass } from "@/lib/utils";
 import { CATEGORY_LABELS } from "@/lib/scoring";
 import type { ScoringCategory } from "@/types/database";
 
@@ -101,9 +100,6 @@ export default async function PlayerPage({
           <PlayerAvatar name={player.name} size="lg" imgUrl={player.img_url} />
           <div className="flex-1">
             <div className="flex flex-wrap gap-2 mb-3">
-              {player.tier && (
-                <span className={getTierBadgeClass(player.tier)}>Tier {player.tier}</span>
-              )}
               {!player.is_active && (
                 <span className="text-xs font-medium px-2 py-0.5 rounded bg-red-900/20 border border-red-700/30 text-red-400">
                   Voted Out

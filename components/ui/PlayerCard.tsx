@@ -1,5 +1,4 @@
 import type { Player } from "@/types/database";
-import { getTierBadgeClass } from "@/lib/utils";
 
 interface PlayerCardProps {
   player: Player;
@@ -37,11 +36,6 @@ export default function PlayerCard({
               {player.tribe && (
                 <span className="text-xs text-text-muted">{player.tribe}</span>
               )}
-              {player.tier && (
-                <span className={getTierBadgeClass(player.tier)}>
-                  {player.tier}
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -73,11 +67,6 @@ export default function PlayerCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-text-primary">{player.name}</h3>
-            {player.tier && (
-              <span className={getTierBadgeClass(player.tier)}>
-                Tier {player.tier}
-              </span>
-            )}
             {!player.is_active && (
               <span className="text-xs text-red-400 font-medium">Voted Out</span>
             )}

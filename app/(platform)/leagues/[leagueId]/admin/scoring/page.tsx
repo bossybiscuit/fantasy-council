@@ -51,11 +51,18 @@ export default async function ScoringPage({
     .eq("season_id", season.id)
     .order("episode_number");
 
+  // Fetch existing scoring events for pre-fill (all scored episodes in this league)
+  const { data: scoringEvents } = await supabase
+    .from("scoring_events")
+    .select("episode_id, player_id, category")
+    .eq("league_id", leagueId);
+
   return (
     <ScoringForm
       league={league}
       players={players || []}
       episodes={episodes || []}
+      scoringEvents={scoringEvents || []}
     />
   );
 }

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/server";
 
 export async function PATCH(
   req: Request,
@@ -41,12 +40,18 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid value" }, { status: 400 });
   }
 
-  // Use service client to update players table (bypasses RLS)
-  const service = await createServiceClient();
-  const { error } = await service
-    .from("players")
-    .update({ suggested_value: Number(suggested_value) })
-    .eq("id", playerId);
+  // Upsert into league_player_values — per-league override, doesn't touch global players table
+  const { error } = await supabase
+    .from("league_player_values")
+    .upsert(
+      {
+        league_id: leagueId,
+        player_id: playerId,
+        value: Number(suggested_value),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "league_id,player_id" }
+    );
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

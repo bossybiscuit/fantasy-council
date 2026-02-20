@@ -1,18 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { DEFAULT_SCORING } from "@/lib/scoring";
 import type { League, Player, Episode } from "@/types/database";
 
+interface ScoringEvent {
+  episode_id: string;
+  player_id: string;
+  category: string;
+}
+
 interface ScoringFormProps {
   league: League & { seasons: any };
   players: Player[];
   episodes: Episode[];
+  scoringEvents: ScoringEvent[];
 }
 
-export default function ScoringForm({ league, players, episodes }: ScoringFormProps) {
+export default function ScoringForm({ league, players, episodes, scoringEvents }: ScoringFormProps) {
   const router = useRouter();
   const [selectedEpisodeId, setSelectedEpisodeId] = useState(
     episodes.find((e) => !e.is_scored)?.id || episodes[episodes.length - 1]?.id || ""
@@ -34,6 +41,53 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
   const [isFinalThree, setIsFinalThree] = useState(false);
   const [finalThreePlayers, setFinalThreePlayers] = useState<string[]>([]);
   const [winnerPlayer, setWinnerPlayer] = useState("");
+
+  // Pre-fill form from existing scoring events when episode changes
+  const loadEpisodeData = useCallback((episodeId: string) => {
+    const ep = episodes.find((e) => e.id === episodeId);
+    if (!ep?.is_scored) {
+      // Clear form for unscored episodes
+      setTribeRewardWinners([]);
+      setIndividualRewardWinner("");
+      setTribeImmunityWinners([]);
+      setIndividualImmunityWinner("");
+      setTribeImmunitySecond("");
+      setEpisodeTitleSpeaker("");
+      setVotedOutPlayers([]);
+      setIsMerge(false);
+      setIsFinalThree(false);
+      setFinalThreePlayers([]);
+      setWinnerPlayer("");
+      return;
+    }
+
+    // Reconstruct from scoring events
+    const epEvents = scoringEvents.filter((e) => e.episode_id === episodeId);
+    const playersByCategory = (cat: string) =>
+      epEvents.filter((e) => e.category === cat).map((e) => e.player_id);
+    const firstPlayerByCategory = (cat: string) => playersByCategory(cat)[0] || "";
+
+    // tribe_reward events may duplicate per team, deduplicate
+    setTribeRewardWinners([...new Set(playersByCategory("tribe_reward"))]);
+    setIndividualRewardWinner(firstPlayerByCategory("individual_reward"));
+    setTribeImmunityWinners([...new Set(playersByCategory("tribe_immunity"))]);
+    setIndividualImmunityWinner(firstPlayerByCategory("individual_immunity"));
+    setTribeImmunitySecond(firstPlayerByCategory("second_place_immunity"));
+    setEpisodeTitleSpeaker(firstPlayerByCategory("episode_title"));
+    // voted_out_prediction player_ids tell us who was voted out
+    setVotedOutPlayers([...new Set(playersByCategory("voted_out_prediction"))]);
+    setIsMerge(ep.is_merge);
+    setIsFinalThree(ep.is_finale);
+    setFinalThreePlayers([...new Set(playersByCategory("final_three"))]);
+    setWinnerPlayer(firstPlayerByCategory("winner"));
+  }, [episodes, scoringEvents]);
+
+  // When episode changes, pre-fill
+  useEffect(() => {
+    if (selectedEpisodeId) {
+      loadEpisodeData(selectedEpisodeId);
+    }
+  }, [selectedEpisodeId, loadEpisodeData]);
 
   const activePlayers = players.filter((p) => p.is_active);
   const allPlayers = players;
@@ -116,17 +170,7 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
       setError(data.error);
     } else {
       setSuccess("Episode scoring cleared. Re-enter the results below.");
-      setTribeRewardWinners([]);
-      setIndividualRewardWinner("");
-      setTribeImmunityWinners([]);
-      setIndividualImmunityWinner("");
-      setTribeImmunitySecond("");
-      setEpisodeTitleSpeaker("");
-      setVotedOutPlayers([]);
-      setIsMerge(false);
-      setIsFinalThree(false);
-      setFinalThreePlayers([]);
-      setWinnerPlayer("");
+      loadEpisodeData(selectedEpisodeId);
       router.refresh();
     }
   }
@@ -158,7 +202,7 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
         {selectedEpisode?.is_scored && (
           <div className="flex items-center justify-between mt-2 gap-4">
             <p className="text-yellow-400 text-xs">
-              ⚠️ This episode is already scored. Re-submitting will recalculate all scores.
+              ⚠️ This episode is already scored. Form is pre-filled — re-submit to recalculate.
             </p>
             <button
               type="button"
@@ -271,17 +315,23 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
           <h3 className="section-title mb-3">Voted Out</h3>
           <p className="text-xs text-text-muted mb-3">These players will be marked as eliminated</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto scrollbar-hide">
-            {activePlayers.map((p) => (
-              <label key={p.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-bg-surface">
-                <input
-                  type="checkbox"
-                  checked={votedOutPlayers.includes(p.id)}
-                  onChange={() => toggleInArray(votedOutPlayers, p.id, setVotedOutPlayers)}
-                  className="accent-red-500"
-                />
-                <span className="text-sm text-text-primary">{p.name}</span>
-              </label>
-            ))}
+            {/* Show active players + any pre-filled voted-out players (who are now inactive) */}
+            {allPlayers
+              .filter((p) => p.is_active || votedOutPlayers.includes(p.id))
+              .map((p) => (
+                <label key={p.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-bg-surface">
+                  <input
+                    type="checkbox"
+                    checked={votedOutPlayers.includes(p.id)}
+                    onChange={() => toggleInArray(votedOutPlayers, p.id, setVotedOutPlayers)}
+                    className="accent-red-500"
+                  />
+                  <span className="text-sm text-text-primary">
+                    {p.name}
+                    {!p.is_active && <span className="text-xs text-text-muted ml-1">(inactive)</span>}
+                  </span>
+                </label>
+              ))}
           </div>
         </div>
 

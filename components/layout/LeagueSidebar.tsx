@@ -20,7 +20,6 @@ export default function LeagueSidebar({
 
   const links = [
     { href: base, label: "Standings", icon: "🏆" },
-    { href: `${base}/draft`, label: "Draft Room", icon: "📋" },
     { href: `${base}/predictions`, label: "Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
   ];
@@ -29,20 +28,10 @@ export default function LeagueSidebar({
     links.push({ href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" });
   }
 
-  // Pre-draft valuations — available for auction leagues before draft completes
-  if (
-    teamId &&
-    league.draft_type === "auction" &&
-    league.draft_status !== "completed"
-  ) {
-    links.push({ href: `${base}/draft/valuations`, label: "My Valuations", icon: "💰" });
-  }
-
   if (isCommissioner) {
     links.push(
       { href: `${base}/admin/teams`, label: "Manage Teams", icon: "👥" },
       { href: `${base}/admin/players`, label: "Player Values", icon: "💲" },
-      { href: `${base}/admin/scoring`, label: "Score Episode", icon: "⚡" },
       { href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" }
     );
   }

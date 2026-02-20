@@ -469,6 +469,27 @@ export type Database = {
           }
         ];
       };
+      league_player_values: {
+        Row: {
+          id: string;
+          league_id: string;
+          player_id: string;
+          value: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          league_id: string;
+          player_id: string;
+          value?: number;
+          updated_at?: string;
+        };
+        Update: {
+          value?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       title_picks: {
         Row: {
           id: string;
@@ -600,3 +621,4 @@ export type Prediction = Database["public"]["Tables"]["predictions"]["Row"];
 export type EpisodeTeamScore =
   Database["public"]["Tables"]["episode_team_scores"]["Row"];
 export type TitlePick = Database["public"]["Tables"]["title_picks"]["Row"];
+export type LeaguePlayerValue = Database["public"]["Tables"]["league_player_values"]["Row"];

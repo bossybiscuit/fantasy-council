@@ -42,7 +42,7 @@ export default async function LeagueHomePage({
   // Instead: get teams, then look up profiles separately and merge.
   const { data: teamsData } = await supabase
     .from("teams")
-    .select("id, name, user_id")
+    .select("id, name, user_id, budget_remaining")
     .eq("league_id", leagueId)
     .order("created_at");
 
@@ -63,6 +63,7 @@ export default async function LeagueHomePage({
     id: t.id,
     name: t.name,
     user_id: t.user_id,
+    budget_remaining: t.budget_remaining,
     profiles: t.user_id ? (profileMap.get(t.user_id) ?? null) : null,
   }));
 
@@ -222,22 +223,12 @@ export default async function LeagueHomePage({
         subtitle={season?.name}
         action={
           isCommissioner ? (
-            <div className="flex gap-2 flex-wrap justify-end">
-              <Link
-                href={`/leagues/${league.id}/admin/teams`}
-                className="btn-secondary text-sm"
-              >
-                Manage Teams
-              </Link>
-              {league.status === "active" && (
-                <Link
-                  href={`/leagues/${league.id}/admin/scoring`}
-                  className="btn-primary"
-                >
-                  Score Episode
-                </Link>
-              )}
-            </div>
+            <Link
+              href={`/leagues/${league.id}/admin/teams`}
+              className="btn-secondary text-sm"
+            >
+              Manage Teams
+            </Link>
           ) : undefined
         }
       />
@@ -257,6 +248,7 @@ export default async function LeagueHomePage({
             rows={standingsRows}
             leagueId={leagueId}
             myTeamId={myTeam?.id}
+            showBudget={league.draft_type === "auction"}
           />
         ) : (
           <EmptyState
@@ -281,7 +273,12 @@ export default async function LeagueHomePage({
               href={`/leagues/${leagueId}/team/${team.id}`}
               className="card hover:border-accent-orange/30 transition-all"
             >
-              <p className="font-semibold text-text-primary">{team.name}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-text-primary">{team.name}</p>
+                {team.budget_remaining != null && league.draft_type === "auction" && (
+                  <span className="text-xs font-semibold text-accent-gold shrink-0">${team.budget_remaining}</span>
+                )}
+              </div>
               <p className="text-sm text-text-muted mt-0.5">
                 {team.profiles?.display_name ||
                   team.profiles?.username ||

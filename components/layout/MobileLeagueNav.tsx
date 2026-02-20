@@ -39,7 +39,6 @@ export default function MobileLeagueNav({
 
   const allLinks = [
     { href: base, label: "Standings", icon: "🏆" },
-    { href: `${base}/draft`, label: "Draft Room", icon: "📋" },
     { href: `${base}/predictions`, label: "Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
   ];
@@ -48,19 +47,10 @@ export default function MobileLeagueNav({
     allLinks.push({ href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" });
   }
 
-  if (
-    teamId &&
-    league.draft_type === "auction" &&
-    league.draft_status !== "completed"
-  ) {
-    allLinks.push({ href: `${base}/draft/valuations`, label: "My Valuations", icon: "💰" });
-  }
-
   if (isCommissioner) {
     allLinks.push(
       { href: `${base}/admin/teams`, label: "Manage Teams", icon: "👥" },
       { href: `${base}/admin/players`, label: "Player Values", icon: "💲" },
-      { href: `${base}/admin/scoring`, label: "Score Episode", icon: "⚡" },
       { href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" }
     );
   }
@@ -68,13 +58,13 @@ export default function MobileLeagueNav({
   // Bottom tabs: always-visible shortcuts (max 5)
   const bottomTabs = [
     { href: base, label: "Standings", icon: "🏆" },
-    { href: `${base}/draft`, label: "Draft", icon: "📋" },
     { href: `${base}/predictions`, label: "Picks", icon: "🔮" },
     { href: `${base}/recap`, label: "Recap", icon: "📺" },
-    isCommissioner
-      ? { href: `${base}/admin/scoring`, label: "Admin", icon: "⚡" }
-      : teamId
+    teamId
       ? { href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" }
+      : { href: base, label: "League", icon: "🔥" },
+    isCommissioner
+      ? { href: `${base}/admin/settings`, label: "Admin", icon: "⚙️" }
       : { href: base, label: "League", icon: "🔥" },
   ];
 

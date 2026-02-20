@@ -2,7 +2,7 @@
 
 import { useState, Fragment } from "react";
 import Link from "next/link";
-import { getRankIndicator, getTierBadgeClass } from "@/lib/utils";
+import { getRankIndicator } from "@/lib/utils";
 import type { EpisodeTeamScore, Team, Profile } from "@/types/database";
 
 type PlayerPick = {
@@ -29,12 +29,14 @@ interface StandingsTableProps {
   rows: StandingsRow[];
   leagueId: string;
   myTeamId?: string;
+  showBudget?: boolean;
 }
 
 export default function StandingsTable({
   rows,
   leagueId,
   myTeamId,
+  showBudget = false,
 }: StandingsTableProps) {
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
   const [hoveredTeamId, setHoveredTeamId] = useState<string | null>(null);
@@ -98,7 +100,11 @@ export default function StandingsTable({
                 {/* Points */}
                 <div className="text-right shrink-0">
                   <p className="text-accent-gold font-bold">{row.totalPoints}</p>
-                  <p className="text-xs text-text-muted">{row.currentScore?.total_points ?? 0} this wk</p>
+                  {showBudget && row.team.budget_remaining != null ? (
+                    <p className="text-xs text-accent-gold/70">${row.team.budget_remaining} left</p>
+                  ) : (
+                    <p className="text-xs text-text-muted">{row.currentScore?.total_points ?? 0} this wk</p>
+                  )}
                 </div>
 
                 {/* Chevron */}
@@ -219,6 +225,9 @@ export default function StandingsTable({
                             row.profile?.username ||
                             "—"}
                         </p>
+                        {showBudget && row.team.budget_remaining != null && (
+                          <p className="text-xs text-accent-gold/70 mt-0.5">${row.team.budget_remaining} remaining</p>
+                        )}
                       </Link>
 
                       {/* Desktop-only hover popover */}
@@ -336,13 +345,6 @@ function RosterChips({
               : "bg-bg-surface/40 border-border/40 opacity-55"
           }`}
         >
-          {pick.tier && (
-            <span
-              className={`${getTierBadgeClass(pick.tier)} !text-[9px] !px-1 !py-0 leading-4`}
-            >
-              {pick.tier}
-            </span>
-          )}
           <span className={pick.isActive ? "text-text-primary" : "text-text-muted"}>
             {pick.playerName}
           </span>

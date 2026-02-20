@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
-import { getTierBadgeClass, calculatePredictionAccuracy } from "@/lib/utils";
+import { calculatePredictionAccuracy } from "@/lib/utils";
 import Link from "next/link";
 import RenameTeam from "./RenameTeam";
 
@@ -116,7 +116,7 @@ export default async function TeamPage({
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className={`grid gap-4 mb-6 ${league.draft_type === "auction" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
         <div className="card text-center">
           <p className="text-3xl font-bold text-gradient-fire">{totalPoints}</p>
           <p className="text-text-muted text-xs mt-1">Total Points</p>
@@ -129,6 +129,12 @@ export default async function TeamPage({
           <p className="text-3xl font-bold text-text-primary">{predAccuracy}%</p>
           <p className="text-text-muted text-xs mt-1">Prediction Accuracy</p>
         </div>
+        {league.draft_type === "auction" && (
+          <div className="card text-center">
+            <p className="text-3xl font-bold text-accent-gold">${(team as any).budget_remaining ?? "—"}</p>
+            <p className="text-text-muted text-xs mt-1">Budget Left</p>
+          </div>
+        )}
       </div>
 
       {/* Roster */}
@@ -152,11 +158,6 @@ export default async function TeamPage({
                         <span className="text-sm font-medium text-text-primary">
                           {player?.name || "Unknown"}
                         </span>
-                        {player?.tier && (
-                          <span className={getTierBadgeClass(player.tier)}>
-                            {player.tier}
-                          </span>
-                        )}
                         {!player?.is_active && (
                           <span className="text-xs text-red-400">Voted Out</span>
                         )}

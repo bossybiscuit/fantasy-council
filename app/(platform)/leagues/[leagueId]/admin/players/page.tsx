@@ -3,12 +3,9 @@
 import { useState, useEffect, use, useCallback } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
-import { getTierBadgeClass } from "@/lib/utils";
-
 type Player = {
   id: string;
   name: string;
-  tier: string | null;
   tribe: string | null;
   img_url: string | null;
   suggested_value: number;
@@ -67,13 +64,6 @@ function PlayerValueRow({
           <span className="text-text-muted/30 text-xs">—</span>
         )}
       </td>
-      <td className="py-3 px-4 hidden md:table-cell">
-        {player.tier ? (
-          <span className={getTierBadgeClass(player.tier)}>Tier {player.tier}</span>
-        ) : (
-          <span className="text-text-muted/30 text-xs">—</span>
-        )}
-      </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
           <span className="text-text-muted text-sm">$</span>
@@ -106,7 +96,6 @@ export default function AdminPlayersPage({
   const { leagueId } = use(params);
   const [players, setPlayers] = useState<Player[]>([]);
   const [filterTribe, setFilterTribe] = useState("");
-  const [filterTier, setFilterTier] = useState("");
   const [filterSearch, setFilterSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -132,7 +121,6 @@ export default function AdminPlayersPage({
 
   const filtered = players.filter((p) => {
     if (filterTribe && p.tribe !== filterTribe) return false;
-    if (filterTier && p.tier !== filterTier) return false;
     if (filterSearch && !p.name.toLowerCase().includes(filterSearch.toLowerCase()))
       return false;
     return true;
@@ -156,16 +144,6 @@ export default function AdminPlayersPage({
             <option value="">All Tribes</option>
             {tribes.map((t) => (
               <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-          <select
-            className="input text-sm py-1.5 w-auto"
-            value={filterTier}
-            onChange={(e) => setFilterTier(e.target.value)}
-          >
-            <option value="">All Tiers</option>
-            {["S", "A", "B", "C", "D"].map((t) => (
-              <option key={t} value={t}>Tier {t}</option>
             ))}
           </select>
           <input
@@ -192,9 +170,6 @@ export default function AdminPlayersPage({
                   <th className="text-left py-3 px-4 text-text-muted font-medium text-xs uppercase tracking-wider hidden sm:table-cell">
                     Tribe
                   </th>
-                  <th className="text-left py-3 px-4 text-text-muted font-medium text-xs uppercase tracking-wider hidden md:table-cell">
-                    Tier
-                  </th>
                   <th className="text-left py-3 px-4 text-text-muted font-medium text-xs uppercase tracking-wider">
                     Value
                   </th>
@@ -211,7 +186,7 @@ export default function AdminPlayersPage({
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-text-muted text-sm italic">
+                    <td colSpan={3} className="text-center py-8 text-text-muted text-sm italic">
                       No players found.
                     </td>
                   </tr>

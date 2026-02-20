@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use, useCallback } from "react";
 import PageHeader from "@/components/ui/PageHeader";
-import { getTierBadgeClass } from "@/lib/utils";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
 
 type Player = {
@@ -219,11 +218,7 @@ function ValuationRow({
       </td>
       <td className="py-3 px-4 text-text-muted">{player.tribe || "—"}</td>
       <td className="py-3 px-4">
-        {player.tier ? (
-          <span className={getTierBadgeClass(player.tier)}>{player.tier}</span>
-        ) : (
-          <span className="text-text-muted">—</span>
-        )}
+        <span className="text-text-muted">—</span>
       </td>
       <td className="py-3 px-4 text-right text-accent-gold">${player.suggested_value}</td>
       <td className="py-3 px-4 text-right">

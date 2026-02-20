@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
-import { getTierBadgeClass, getSnakeDraftOrder } from "@/lib/utils";
+import { getSnakeDraftOrder } from "@/lib/utils";
 import type { League, Team, Player } from "@/types/database";
 
 interface DraftRoomProps {
@@ -356,11 +356,6 @@ export default function DraftRoom({
                       <div className="flex items-center gap-2 mt-0.5">
                         {player.tribe && (
                           <span className="text-xs text-text-muted">{player.tribe}</span>
-                        )}
-                        {player.tier && (
-                          <span className={getTierBadgeClass(player.tier)}>
-                            {player.tier}
-                          </span>
                         )}
                         <span className="text-xs text-accent-gold">${player.suggested_value}</span>
                       </div>

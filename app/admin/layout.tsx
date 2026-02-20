@@ -43,6 +43,9 @@ export default async function AdminLayout({
             <Link href="/admin/leagues" className="text-sm text-text-muted hover:text-text-primary">
               All Leagues
             </Link>
+            <Link href="/admin/scoring" className="text-sm text-text-muted hover:text-text-primary">
+              Scoring
+            </Link>
           </nav>
         </div>
       </div>

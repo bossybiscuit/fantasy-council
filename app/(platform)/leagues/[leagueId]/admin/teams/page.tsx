@@ -3,7 +3,6 @@
 import { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/ui/PageHeader";
-import { getTierBadgeClass } from "@/lib/utils";
 
 type Team = {
   id: string;
@@ -484,11 +483,6 @@ export default function AdminTeamsPage({
                       {player.tribe && (
                         <span className="text-xs text-text-muted">{player.tribe}</span>
                       )}
-                      {player.tier && (
-                        <span className={getTierBadgeClass(player.tier)}>
-                          {player.tier}
-                        </span>
-                      )}
                     </div>
                   </button>
                 ))}
@@ -552,11 +546,6 @@ export default function AdminTeamsPage({
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-text-primary">{pick.players?.name || "—"}</span>
-                            {pick.players?.tier && (
-                              <span className={getTierBadgeClass(pick.players.tier)}>
-                                {pick.players.tier}
-                              </span>
-                            )}
                             {pick.commissioner_pick && (
                               <span className="text-[10px] text-accent-orange/60" title="Commissioner pick">📋</span>
                             )}

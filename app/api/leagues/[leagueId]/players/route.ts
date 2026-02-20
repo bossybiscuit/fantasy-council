@@ -28,10 +28,23 @@ export async function GET(_req: NextRequest, { params }: Params) {
     .from("players")
     .select("id, name, tribe, tier, suggested_value, img_url, is_active")
     .eq("season_id", league.season_id)
-    .order("tier", { ascending: true })
     .order("name", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ players: players || [] });
+  // Fetch league-specific value overrides (commissioner can set per-league values)
+  const { data: leagueValues } = await supabase
+    .from("league_player_values")
+    .select("player_id, value")
+    .eq("league_id", leagueId);
+
+  const overrideMap = new Map((leagueValues || []).map((v) => [v.player_id, v.value]));
+
+  // Use league override when available, otherwise fall back to global suggested_value
+  const merged = (players || []).map((p) => ({
+    ...p,
+    suggested_value: overrideMap.has(p.id) ? overrideMap.get(p.id)! : (p.suggested_value ?? 0),
+  }));
+
+  return NextResponse.json({ players: merged });
 }
