@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
+import TribeBadge from "@/components/ui/TribeBadge";
 import { getTierBadgeClass } from "@/lib/utils";
 import { CHALLENGE_CATEGORIES, MILESTONE_CATEGORIES } from "@/lib/scoring";
 import CumulativeChart from "@/components/ui/CumulativeChart";
@@ -205,9 +206,7 @@ export default async function CastawayDetailPage({
                 <span className={getTierBadgeClass(player.tier)}>Tier {player.tier}</span>
               )}
               {player.tribe && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded bg-accent-orange/10 border border-accent-orange/20 text-accent-orange">
-                  {player.tribe}
-                </span>
+                <TribeBadge tribe={player.tribe} color={player.tribe_color} />
               )}
               <PlacementBadge badge={player.placement_badge} />
             </div>

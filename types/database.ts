@@ -59,6 +59,7 @@ export type Database = {
           season_id: string;
           name: string;
           tribe: string | null;
+          tribe_color: string | null;
           tier: "S" | "A" | "B" | "C" | "D" | null;
           suggested_value: number;
           bio: string | null;
@@ -77,6 +78,7 @@ export type Database = {
           season_id: string;
           name: string;
           tribe?: string | null;
+          tribe_color?: string | null;
           tier?: "S" | "A" | "B" | "C" | "D" | null;
           suggested_value?: number;
           bio?: string | null;
@@ -93,6 +95,7 @@ export type Database = {
         Update: {
           name?: string;
           tribe?: string | null;
+          tribe_color?: string | null;
           tier?: "S" | "A" | "B" | "C" | "D" | null;
           suggested_value?: number;
           bio?: string | null;

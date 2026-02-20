@@ -1,4 +1,5 @@
 import type { Player } from "@/types/database";
+import TribeBadge from "@/components/ui/TribeBadge";
 
 interface PlayerCardProps {
   player: Player;
@@ -34,7 +35,7 @@ export default function PlayerCard({
             </p>
             <div className="flex items-center gap-2 mt-0.5">
               {player.tribe && (
-                <span className="text-xs text-text-muted">{player.tribe}</span>
+                <TribeBadge tribe={player.tribe} color={player.tribe_color} size="sm" />
               )}
             </div>
           </div>
@@ -72,7 +73,9 @@ export default function PlayerCard({
             )}
           </div>
           {player.tribe && (
-            <p className="text-sm text-text-muted mt-0.5">{player.tribe} Tribe</p>
+            <div className="mt-0.5">
+              <TribeBadge tribe={player.tribe} color={player.tribe_color} size="sm" />
+            </div>
           )}
           <div className="flex items-center gap-3 mt-2 text-sm">
             <span className="text-text-muted">

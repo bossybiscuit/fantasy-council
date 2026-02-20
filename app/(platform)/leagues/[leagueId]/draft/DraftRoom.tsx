@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
+import TribeBadge from "@/components/ui/TribeBadge";
 import { getSnakeDraftOrder } from "@/lib/utils";
 import type { League, Team, Player } from "@/types/database";
 
@@ -355,7 +356,7 @@ export default function DraftRoom({
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         {player.tribe && (
-                          <span className="text-xs text-text-muted">{player.tribe}</span>
+                          <TribeBadge tribe={player.tribe} color={player.tribe_color} size="sm" />
                         )}
                         <span className="text-xs text-accent-gold">${player.suggested_value}</span>
                       </div>

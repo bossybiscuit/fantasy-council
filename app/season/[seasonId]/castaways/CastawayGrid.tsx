@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Fragment } from "react";
+import React, { useState, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
+import TribeBadge from "@/components/ui/TribeBadge";
 import { getTierBadgeClass } from "@/lib/utils";
 import type { EpisodeStat } from "./page";
 
@@ -11,6 +11,7 @@ type CastawayRow = {
   id: string;
   name: string;
   tribe: string | null;
+  tribe_color: string | null;
   tier: string | null;
   img_url: string | null;
   is_active: boolean;
@@ -28,6 +29,7 @@ type CastawayRow = {
 const TIER_ORDER: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
 
 type SortKey = "points" | "tier" | "tribe" | "name";
+type ViewMode = "grid" | "tribes";
 
 export default function CastawayGrid({
   players,
@@ -40,9 +42,34 @@ export default function CastawayGrid({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showSpoilers, setShowSpoilers] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+
+  // Filters
+  const [filterTribe, setFilterTribe] = useState<string>("All");
+  const [filterTier, setFilterTier] = useState<string>("All");
+  const [filterStatus, setFilterStatus] = useState<string>("All");
+
+  // Unique tribes (preserving order by first occurrence, sorted alpha)
+  const tribes = useMemo(() => {
+    const seen = new Map<string, string>(); // tribe → color
+    for (const p of players) {
+      if (p.tribe && !seen.has(p.tribe)) seen.set(p.tribe, p.tribe_color || "#FF6B00");
+    }
+    return Array.from(seen.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [players]);
+
+  const filtered = useMemo(() => {
+    return players.filter((p) => {
+      if (filterTribe !== "All" && p.tribe !== filterTribe) return false;
+      if (filterTier !== "All" && p.tier !== filterTier) return false;
+      if (filterStatus === "active" && !p.is_active) return false;
+      if (filterStatus === "out" && p.is_active) return false;
+      return true;
+    });
+  }, [players, filterTribe, filterTier, filterStatus]);
 
   const sorted = useMemo(() => {
-    return [...players].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sort === "points") cmp = b.total_pts - a.total_pts;
       else if (sort === "tier") {
@@ -57,7 +84,7 @@ export default function CastawayGrid({
       }
       return sortDir === "asc" ? -cmp : cmp;
     });
-  }, [players, sort, sortDir]);
+  }, [filtered, sort, sortDir]);
 
   function handleSort(key: SortKey) {
     if (sort === key) {
@@ -84,25 +111,105 @@ export default function CastawayGrid({
   const thClass =
     "py-3 px-4 text-left text-text-muted font-medium text-xs uppercase tracking-wider select-none";
 
+  // ── Tribe view ─────────────────────────────────────────────────────────────
+  if (viewMode === "tribes" && tribes.length > 0) {
+    const byTribe = new Map<string, CastawayRow[]>();
+    for (const [t] of tribes) byTribe.set(t, []);
+    for (const p of players) {
+      if (p.tribe && byTribe.has(p.tribe)) {
+        byTribe.get(p.tribe)!.push(p);
+      }
+    }
+    // Sort each tribe column by points desc
+    for (const [, arr] of byTribe) {
+      arr.sort((a, b) => b.total_pts - a.total_pts);
+    }
+
+    return (
+      <div>
+        <Toolbar
+          players={players}
+          tribes={tribes}
+          filterTribe={filterTribe}
+          setFilterTribe={setFilterTribe}
+          filterTier={filterTier}
+          setFilterTier={setFilterTier}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          showSpoilers={showSpoilers}
+          setShowSpoilers={setShowSpoilers}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+        />
+
+        <div className={`grid gap-4 mt-4`} style={{ gridTemplateColumns: `repeat(${tribes.length}, minmax(0, 1fr))` }}>
+          {tribes.map(([tribe, color]) => {
+            const members = byTribe.get(tribe) || [];
+            return (
+              <div key={tribe}>
+                {/* Column header */}
+                <div
+                  className="rounded-t-lg px-3 py-2 mb-0 text-center font-bold text-sm uppercase tracking-wide"
+                  style={{ backgroundColor: `${color}25`, borderBottom: `2px solid ${color}60`, color }}
+                >
+                  {tribe}
+                </div>
+                <div className="border border-t-0 border-border rounded-b-lg overflow-hidden">
+                  {members.map((player) => (
+                    <Link
+                      key={player.id}
+                      href={`/season/${seasonId}/castaways/${player.slug || player.id}`}
+                      className={`flex items-center gap-2 px-3 py-2.5 border-b border-border last:border-0 hover:bg-bg-surface transition-colors ${
+                        !player.is_active ? "opacity-50" : ""
+                      }`}
+                    >
+                      <PlayerAvatar name={player.name} size="sm" imgUrl={player.img_url} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text-primary truncate">
+                          {player.name}
+                        </p>
+                        {player.tier && (
+                          <span className={`${getTierBadgeClass(player.tier)} text-[10px]`}>
+                            T{player.tier}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-accent-gold font-bold text-sm">{player.total_pts}</p>
+                        {showSpoilers && !player.is_active && (
+                          <span className="text-[10px] text-text-muted">🪦 Ep {player.vote_out_episode}</span>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Grid / table view ──────────────────────────────────────────────────────
   return (
     <div>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-text-muted text-xs">{players.length} castaways</p>
-        <button
-          onClick={() => setShowSpoilers((s) => !s)}
-          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-            showSpoilers
-              ? "border-accent-orange/40 text-accent-orange bg-accent-orange/10"
-              : "border-border text-text-muted hover:border-accent-orange/40 hover:text-text-primary"
-          }`}
-        >
-          <span>{showSpoilers ? "🔓" : "🔒"}</span>
-          <span>{showSpoilers ? "Hide Spoilers" : "Reveal Spoilers"}</span>
-        </button>
-      </div>
+      <Toolbar
+        players={players}
+        tribes={tribes}
+        filterTribe={filterTribe}
+        setFilterTribe={setFilterTribe}
+        filterTier={filterTier}
+        setFilterTier={setFilterTier}
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        showSpoilers={showSpoilers}
+        setShowSpoilers={setShowSpoilers}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+      />
 
-      <div className="card p-0 overflow-hidden">
+      <div className="card p-0 overflow-hidden mt-4">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -202,9 +309,7 @@ export default function CastawayGrid({
                       {/* Tribe */}
                       <td className="py-3 px-4 hidden sm:table-cell">
                         {player.tribe ? (
-                          <span className="text-xs font-medium px-2 py-0.5 rounded bg-accent-orange/10 border border-accent-orange/20 text-accent-orange">
-                            {player.tribe}
-                          </span>
+                          <TribeBadge tribe={player.tribe} color={player.tribe_color} />
                         ) : (
                           <span className="text-text-muted/30 text-xs">—</span>
                         )}
@@ -434,6 +539,171 @@ export default function CastawayGrid({
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Toolbar ────────────────────────────────────────────────────────────────
+
+function Toolbar({
+  players,
+  tribes,
+  filterTribe,
+  setFilterTribe,
+  filterTier,
+  setFilterTier,
+  filterStatus,
+  setFilterStatus,
+  showSpoilers,
+  setShowSpoilers,
+  viewMode,
+  setViewMode,
+}: {
+  players: CastawayRow[];
+  tribes: [string, string][];
+  filterTribe: string;
+  setFilterTribe: (v: string) => void;
+  filterTier: string;
+  setFilterTier: (v: string) => void;
+  filterStatus: string;
+  setFilterStatus: (v: string) => void;
+  showSpoilers: boolean;
+  setShowSpoilers: React.Dispatch<React.SetStateAction<boolean>>;
+  viewMode: ViewMode;
+  setViewMode: (v: ViewMode) => void;
+}) {
+  const hasTribeColors = tribes.some(([, c]) => c !== "#FF6B00");
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-text-muted text-xs">{players.length} castaways</p>
+        <div className="flex items-center gap-2">
+          {/* View toggle */}
+          {tribes.length > 0 && (
+            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`px-3 py-1.5 transition-colors ${
+                  viewMode === "grid"
+                    ? "bg-accent-orange/10 text-accent-orange border-r border-accent-orange/20"
+                    : "text-text-muted hover:text-text-primary border-r border-border"
+                }`}
+              >
+                ☰ Grid
+              </button>
+              <button
+                onClick={() => setViewMode("tribes")}
+                className={`px-3 py-1.5 transition-colors ${
+                  viewMode === "tribes"
+                    ? "bg-accent-orange/10 text-accent-orange"
+                    : "text-text-muted hover:text-text-primary"
+                }`}
+              >
+                ⬛ Tribes
+              </button>
+            </div>
+          )}
+
+          {/* Spoiler toggle */}
+          <button
+            onClick={() => setShowSpoilers((s) => !s)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              showSpoilers
+                ? "border-accent-orange/40 text-accent-orange bg-accent-orange/10"
+                : "border-border text-text-muted hover:border-accent-orange/40 hover:text-text-primary"
+            }`}
+          >
+            <span>{showSpoilers ? "🔓" : "🔒"}</span>
+            <span>{showSpoilers ? "Hide Spoilers" : "Reveal Spoilers"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter rows */}
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {/* Tribe filter */}
+        {tribes.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-text-muted">Tribe:</span>
+            <button
+              onClick={() => setFilterTribe("All")}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                filterTribe === "All"
+                  ? "border-accent-orange text-accent-orange bg-accent-orange/10"
+                  : "border-border text-text-muted hover:border-accent-orange/40"
+              }`}
+            >
+              All
+            </button>
+            {tribes.map(([tribe, color]) => (
+              <button
+                key={tribe}
+                onClick={() => setFilterTribe(tribe)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors font-medium ${
+                  filterTribe === tribe ? "opacity-100" : "opacity-60 hover:opacity-90"
+                }`}
+                style={
+                  filterTribe === tribe
+                    ? {
+                        borderColor: color,
+                        backgroundColor: `${color}20`,
+                        color,
+                      }
+                    : {
+                        borderColor: `${color}60`,
+                        color,
+                      }
+                }
+              >
+                {tribe}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Tier filter */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-text-muted">Tier:</span>
+          {["All", "S", "A", "B", "C", "D"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterTier(t)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                filterTier === t
+                  ? "border-accent-orange text-accent-orange bg-accent-orange/10"
+                  : "border-border text-text-muted hover:border-accent-orange/40"
+              }`}
+            >
+              {t === "All" ? "All" : `Tier ${t}`}
+            </button>
+          ))}
+        </div>
+
+        {/* Status filter — only useful when spoilers on */}
+        {showSpoilers && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-text-muted">Status:</span>
+            {[
+              { key: "All", label: "All" },
+              { key: "active", label: "🔥 Active" },
+              { key: "out", label: "🪦 Voted Out" },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setFilterStatus(key)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  filterStatus === key
+                    ? "border-accent-orange text-accent-orange bg-accent-orange/10"
+                    : "border-border text-text-muted hover:border-accent-orange/40"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -12,6 +12,8 @@ type PlayerPick = {
   slug: string | null;
   isActive: boolean;
   points: number;
+  tribe: string | null;
+  tribeColor: string | null;
 };
 
 interface StandingsRow {
@@ -345,6 +347,13 @@ function RosterChips({
               : "bg-bg-surface/40 border-border/40 opacity-55"
           }`}
         >
+          {pick.tribe && pick.tribeColor && (
+            <span
+              className="inline-block w-2 h-2 rounded-full shrink-0"
+              style={{ backgroundColor: pick.tribeColor }}
+              title={pick.tribe}
+            />
+          )}
           <span className={pick.isActive ? "text-text-primary" : "text-text-muted"}>
             {pick.playerName}
           </span>
