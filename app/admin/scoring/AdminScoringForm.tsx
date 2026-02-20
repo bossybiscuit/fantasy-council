@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { DEFAULT_SCORING } from "@/lib/scoring";
-import type { Season, Episode, Player } from "@/types/database";
+import type { Season, Episode, Player, SeasonPrediction } from "@/types/database";
+import SeasonPredictionsGrader from "../../(platform)/leagues/[leagueId]/admin/season-predictions/SeasonPredictionsGrader";
 
 interface ScoringEvent {
   episode_id: string;
@@ -12,11 +13,24 @@ interface ScoringEvent {
   category: string;
 }
 
+interface League {
+  id: string;
+  name: string;
+  season_id: string;
+}
+
+interface Team {
+  id: string;
+  name: string;
+  user_id: string | null;
+}
+
 interface AdminScoringFormProps {
   seasons: Season[];
   episodes: Episode[];
   players: Player[];
   scoringEvents: ScoringEvent[];
+  leagues: League[];
 }
 
 export default function AdminScoringForm({
@@ -24,8 +38,39 @@ export default function AdminScoringForm({
   episodes,
   players,
   scoringEvents,
+  leagues,
 }: AdminScoringFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"episode" | "season">(
+    searchParams.get("tab") === "season" ? "season" : "episode"
+  );
+
+  function switchTab(tab: "episode" | "season") {
+    setActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    router.replace(url.pathname + url.search, { scroll: false });
+  }
+
+  // Season predictions state
+  const [selectedLeagueId, setSelectedLeagueId] = useState("");
+  const [predTeams, setPredTeams] = useState<Team[]>([]);
+  const [predPredictions, setPredPredictions] = useState<SeasonPrediction[]>([]);
+  const [predLoading, setPredLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedLeagueId) return;
+    setPredLoading(true);
+    Promise.all([
+      fetch(`/api/leagues/${selectedLeagueId}/teams`).then((r) => r.json()),
+      fetch(`/api/leagues/${selectedLeagueId}/season-predictions`).then((r) => r.json()),
+    ]).then(([teamsData, predictionsData]) => {
+      setPredTeams(teamsData.teams || []);
+      setPredPredictions(Array.isArray(predictionsData) ? predictionsData : []);
+      setPredLoading(false);
+    });
+  }, [selectedLeagueId]);
 
   const activeSeason = seasons[0] || null;
   const [selectedSeasonId, setSelectedSeasonId] = useState(activeSeason?.id || "");
@@ -206,9 +251,72 @@ export default function AdminScoringForm({
   return (
     <div>
       <PageHeader
-        title="Score Episode"
-        subtitle="Applies results across all leagues for this season"
+        title="Scoring"
+        subtitle="Score episodes and grade season predictions"
       />
+
+      {/* Tab toggle */}
+      <div className="flex gap-1 p-1 rounded-lg bg-bg-surface border border-border mb-6">
+        <button
+          type="button"
+          onClick={() => switchTab("episode")}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "episode"
+              ? "bg-bg-card text-text-primary shadow-sm"
+              : "text-text-muted hover:text-text-primary"
+          }`}
+        >
+          Episode Scoring
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab("season")}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "season"
+              ? "bg-bg-card text-text-primary shadow-sm"
+              : "text-text-muted hover:text-text-primary"
+          }`}
+        >
+          Season Predictions
+        </button>
+      </div>
+
+      {activeTab === "season" && (
+        <div>
+          <div className="card mb-6">
+            <label className="label">Select League</label>
+            <select
+              className="input"
+              value={selectedLeagueId}
+              onChange={(e) => setSelectedLeagueId(e.target.value)}
+            >
+              <option value="">— Choose a league —</option>
+              {leagues.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {selectedLeagueId && predLoading && (
+            <p className="text-text-muted text-sm text-center py-8">Loading...</p>
+          )}
+
+          {selectedLeagueId && !predLoading && (
+            <SeasonPredictionsGrader
+              leagueId={selectedLeagueId}
+              teams={predTeams}
+              predictions={predPredictions}
+              isLocked={true}
+            />
+          )}
+
+          {!selectedLeagueId && (
+            <p className="text-text-muted text-sm text-center py-8">Select a league to grade its season predictions.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === "episode" && (<>
 
       {/* Season + Episode Selectors */}
       <div className="card mb-6 space-y-4">
@@ -448,6 +556,7 @@ export default function AdminScoringForm({
           </button>
         </form>
       )}
+      </>)}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import AdminScoringForm from "./AdminScoringForm";
 
@@ -24,19 +25,27 @@ export default async function AdminScoringPage() {
     .select("*")
     .order("name");
 
-  // Fetch existing scoring events for pre-fill (distinct per episode+league to reconstruct episode data)
-  // We use a single representative league per episode for pre-fill (they all get the same results)
+  // Fetch existing scoring events for pre-fill
   const { data: scoringEvents } = await supabase
     .from("scoring_events")
     .select("episode_id, player_id, category")
     .order("created_at");
 
+  // Fetch all leagues for the season predictions tab
+  const { data: leagues } = await supabase
+    .from("leagues")
+    .select("id, name, season_id")
+    .order("name");
+
   return (
-    <AdminScoringForm
-      seasons={seasons || []}
-      episodes={episodes || []}
-      players={players || []}
-      scoringEvents={scoringEvents || []}
-    />
+    <Suspense>
+      <AdminScoringForm
+        seasons={seasons || []}
+        episodes={episodes || []}
+        players={players || []}
+        scoringEvents={scoringEvents || []}
+        leagues={leagues || []}
+      />
+    </Suspense>
   );
 }
