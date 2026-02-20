@@ -60,7 +60,6 @@ export type Database = {
           name: string;
           tribe: string | null;
           tribe_color: string | null;
-          tier: "S" | "A" | "B" | "C" | "D" | null;
           suggested_value: number;
           bio: string | null;
           img_url: string | null;
@@ -79,7 +78,6 @@ export type Database = {
           name: string;
           tribe?: string | null;
           tribe_color?: string | null;
-          tier?: "S" | "A" | "B" | "C" | "D" | null;
           suggested_value?: number;
           bio?: string | null;
           img_url?: string | null;
@@ -96,7 +94,6 @@ export type Database = {
           name?: string;
           tribe?: string | null;
           tribe_color?: string | null;
-          tier?: "S" | "A" | "B" | "C" | "D" | null;
           suggested_value?: number;
           bio?: string | null;
           img_url?: string | null;

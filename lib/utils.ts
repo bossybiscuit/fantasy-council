@@ -48,22 +48,6 @@ export function calculateRosterSize(
   return { rosterSize, remainder };
 }
 
-export function getTierBadgeClass(tier: string | null): string {
-  switch (tier) {
-    case "S":
-      return "badge-tier-s";
-    case "A":
-      return "badge-tier-a";
-    case "B":
-      return "badge-tier-b";
-    case "C":
-      return "badge-tier-c";
-    case "D":
-      return "badge-tier-d";
-    default:
-      return "badge-tier-d";
-  }
-}
 
 export function getSnakeDraftOrder(
   numTeams: number,

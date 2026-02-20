@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 type Params = { params: Promise<{ leagueId: string }> };
 
 // GET /api/leagues/[leagueId]/players
-// Returns all players for the league's season, ordered by tier then name.
+// Returns all players for the league's season, ordered by name.
 // Any authenticated league member can call this.
 export async function GET(_req: NextRequest, { params }: Params) {
   const { leagueId } = await params;
@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const { data: players, error } = await supabase
     .from("players")
-    .select("id, name, tribe, tier, suggested_value, img_url, is_active")
+    .select("id, name, tribe, tribe_color, suggested_value, img_url, is_active")
     .eq("season_id", league.season_id)
     .order("name", { ascending: true });
 

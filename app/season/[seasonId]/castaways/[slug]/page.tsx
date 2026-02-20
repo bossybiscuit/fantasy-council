@@ -1,7 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
 import TribeBadge from "@/components/ui/TribeBadge";
-import { getTierBadgeClass } from "@/lib/utils";
 import { CHALLENGE_CATEGORIES, MILESTONE_CATEGORIES } from "@/lib/scoring";
 import CumulativeChart from "@/components/ui/CumulativeChart";
 import Link from "next/link";
@@ -202,9 +201,6 @@ export default async function CastawayDetailPage({
             </div>
 
             <div className="flex flex-wrap gap-2 mb-3">
-              {player.tier && (
-                <span className={getTierBadgeClass(player.tier)}>Tier {player.tier}</span>
-              )}
               {player.tribe && (
                 <TribeBadge tribe={player.tribe} color={player.tribe_color} />
               )}

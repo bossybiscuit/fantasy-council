@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { season_id, name, tribe, tier, suggested_value, bio, img_url } = body;
+  const { season_id, name, tribe, suggested_value, bio, img_url } = body;
 
   if (!season_id || !name) {
     return NextResponse.json(
@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
       season_id,
       name: name.trim(),
       tribe: tribe || null,
-      tier: tier || null,
       suggested_value: suggested_value || 10,
       bio: bio || null,
       img_url: img_url || null,

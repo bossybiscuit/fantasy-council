@@ -8,7 +8,6 @@ import type { EpisodeTeamScore, Team, Profile } from "@/types/database";
 type PlayerPick = {
   playerId: string;
   playerName: string;
-  tier: string | null;
   slug: string | null;
   isActive: boolean;
   points: number;

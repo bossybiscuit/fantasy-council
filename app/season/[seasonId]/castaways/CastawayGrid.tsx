@@ -4,7 +4,6 @@ import React, { useState, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
 import TribeBadge from "@/components/ui/TribeBadge";
-import { getTierBadgeClass } from "@/lib/utils";
 import type { EpisodeStat } from "./page";
 
 type CastawayRow = {
@@ -12,7 +11,6 @@ type CastawayRow = {
   name: string;
   tribe: string | null;
   tribe_color: string | null;
-  tier: string | null;
   img_url: string | null;
   is_active: boolean;
   slug: string | null;
@@ -26,9 +24,7 @@ type CastawayRow = {
   episode_stats: EpisodeStat[];
 };
 
-const TIER_ORDER: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
-
-type SortKey = "points" | "tier" | "tribe" | "name";
+type SortKey = "points" | "tribe" | "name";
 type ViewMode = "grid" | "tribes";
 
 export default function CastawayGrid({
@@ -46,7 +42,6 @@ export default function CastawayGrid({
 
   // Filters
   const [filterTribe, setFilterTribe] = useState<string>("All");
-  const [filterTier, setFilterTier] = useState<string>("All");
   const [filterStatus, setFilterStatus] = useState<string>("All");
 
   // Unique tribes (preserving order by first occurrence, sorted alpha)
@@ -61,22 +56,16 @@ export default function CastawayGrid({
   const filtered = useMemo(() => {
     return players.filter((p) => {
       if (filterTribe !== "All" && p.tribe !== filterTribe) return false;
-      if (filterTier !== "All" && p.tier !== filterTier) return false;
-      if (filterStatus === "active" && !p.is_active) return false;
+        if (filterStatus === "active" && !p.is_active) return false;
       if (filterStatus === "out" && p.is_active) return false;
       return true;
     });
-  }, [players, filterTribe, filterTier, filterStatus]);
+  }, [players, filterTribe, filterStatus]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
       let cmp = 0;
-      if (sort === "points") cmp = b.total_pts - a.total_pts;
-      else if (sort === "tier") {
-        const ta = TIER_ORDER[a.tier || ""] ?? 99;
-        const tb = TIER_ORDER[b.tier || ""] ?? 99;
-        cmp = ta !== tb ? ta - tb : b.total_pts - a.total_pts;
-      } else if (sort === "tribe") {
+      if (sort === "points") cmp = b.total_pts - a.total_pts; else if (sort === "tribe") {
         cmp = (a.tribe || "zzz").localeCompare(b.tribe || "zzz");
         if (cmp === 0) cmp = b.total_pts - a.total_pts;
       } else if (sort === "name") {
@@ -91,7 +80,7 @@ export default function CastawayGrid({
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSort(key);
-      setSortDir(key === "tier" || key === "name" ? "asc" : "desc");
+      setSortDir(key === "name" ? "asc" : "desc");
     }
   }
 
@@ -131,10 +120,7 @@ export default function CastawayGrid({
           players={players}
           tribes={tribes}
           filterTribe={filterTribe}
-          setFilterTribe={setFilterTribe}
-          filterTier={filterTier}
-          setFilterTier={setFilterTier}
-          filterStatus={filterStatus}
+          setFilterTribe={setFilterTribe}          filterStatus={filterStatus}
           setFilterStatus={setFilterStatus}
           showSpoilers={showSpoilers}
           setShowSpoilers={setShowSpoilers}
@@ -168,11 +154,6 @@ export default function CastawayGrid({
                         <p className="text-sm font-medium text-text-primary truncate">
                           {player.name}
                         </p>
-                        {player.tier && (
-                          <span className={`${getTierBadgeClass(player.tier)} text-[10px]`}>
-                            T{player.tier}
-                          </span>
-                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-accent-gold font-bold text-sm">{player.total_pts}</p>
@@ -199,8 +180,6 @@ export default function CastawayGrid({
         tribes={tribes}
         filterTribe={filterTribe}
         setFilterTribe={setFilterTribe}
-        filterTier={filterTier}
-        setFilterTier={setFilterTier}
         filterStatus={filterStatus}
         setFilterStatus={setFilterStatus}
         showSpoilers={showSpoilers}
@@ -226,12 +205,6 @@ export default function CastawayGrid({
                   onClick={() => handleSort("tribe")}
                 >
                   Tribe <SortIcon col="tribe" />
-                </th>
-                <th
-                  className={`${thClass} cursor-pointer hover:text-text-primary hidden md:table-cell`}
-                  onClick={() => handleSort("tier")}
-                >
-                  Tier <SortIcon col="tier" />
                 </th>
                 {showSpoilers && (
                   <th className={`${thClass} hidden lg:table-cell`}>Status</th>
@@ -310,17 +283,6 @@ export default function CastawayGrid({
                       <td className="py-3 px-4 hidden sm:table-cell">
                         {player.tribe ? (
                           <TribeBadge tribe={player.tribe} color={player.tribe_color} />
-                        ) : (
-                          <span className="text-text-muted/30 text-xs">—</span>
-                        )}
-                      </td>
-
-                      {/* Tier */}
-                      <td className="py-3 px-4 hidden md:table-cell">
-                        {player.tier ? (
-                          <span className={getTierBadgeClass(player.tier)}>
-                            Tier {player.tier}
-                          </span>
                         ) : (
                           <span className="text-text-muted/30 text-xs">—</span>
                         )}
@@ -550,10 +512,7 @@ function Toolbar({
   players,
   tribes,
   filterTribe,
-  setFilterTribe,
-  filterTier,
-  setFilterTier,
-  filterStatus,
+  setFilterTribe,  filterStatus,
   setFilterStatus,
   showSpoilers,
   setShowSpoilers,
@@ -563,10 +522,7 @@ function Toolbar({
   players: CastawayRow[];
   tribes: [string, string][];
   filterTribe: string;
-  setFilterTribe: (v: string) => void;
-  filterTier: string;
-  setFilterTier: (v: string) => void;
-  filterStatus: string;
+  setFilterTribe: (v: string) => void;  filterStatus: string;
   setFilterStatus: (v: string) => void;
   showSpoilers: boolean;
   setShowSpoilers: React.Dispatch<React.SetStateAction<boolean>>;
@@ -662,24 +618,6 @@ function Toolbar({
             ))}
           </div>
         )}
-
-        {/* Tier filter */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-text-muted">Tier:</span>
-          {["All", "S", "A", "B", "C", "D"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setFilterTier(t)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                filterTier === t
-                  ? "border-accent-orange text-accent-orange bg-accent-orange/10"
-                  : "border-border text-text-muted hover:border-accent-orange/40"
-              }`}
-            >
-              {t === "All" ? "All" : `Tier ${t}`}
-            </button>
-          ))}
-        </div>
 
         {/* Status filter — only useful when spoilers on */}
         {showSpoilers && (

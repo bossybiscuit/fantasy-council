@@ -3,10 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/ui/PageHeader";
-import { getTierBadgeClass } from "@/lib/utils";
 import type { Player, Season } from "@/types/database";
-
-const TIERS = ["S", "A", "B", "C", "D"] as const;
 
 export default function AdminPlayersPage() {
   const supabase = createClient();
@@ -90,7 +87,7 @@ export default function AdminPlayersPage() {
   async function bulkImport() {
     if (!selectedSeason || !bulkText.trim()) return;
     setLoading(true);
-    // Format: Name | Tribe | Tier | Value
+    // Format: Name | Tribe | Value
     const lines = bulkText.trim().split("\n");
     for (const line of lines) {
       const parts = line.split("|").map((p) => p.trim());
@@ -99,7 +96,6 @@ export default function AdminPlayersPage() {
         season_id: selectedSeason,
         name: parts[0],
         tribe: parts[1] || null,
-        tier: (parts[2] as any) || null,
         suggested_value: Number(parts[3]) || 10,
       });
     }
@@ -162,7 +158,7 @@ export default function AdminPlayersPage() {
         <div className="card mb-6 border-accent-gold/20">
           <h3 className="section-title mb-2">Bulk Import</h3>
           <p className="text-text-muted text-xs mb-3">
-            One player per line: <code className="text-accent-orange">Name | Tribe | Tier (S/A/B/C/D) | Value</code>
+            One player per line: <code className="text-accent-orange">Name | Tribe | Value</code>
           </p>
           <textarea
             className="input h-40 font-mono text-sm"
@@ -210,26 +206,6 @@ export default function AdminPlayersPage() {
             </div>
           </div>
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="label">Tier</label>
-              <select
-                className="input"
-                value={editing.tier || ""}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    tier: (e.target.value as Player["tier"]) || null,
-                  })
-                }
-              >
-                <option value="">No tier</option>
-                {TIERS.map((t) => (
-                  <option key={t} value={t}>
-                    Tier {t}
-                  </option>
-                ))}
-              </select>
-            </div>
             <div>
               <label className="label">Suggested Value</label>
               <input
@@ -299,7 +275,6 @@ export default function AdminPlayersPage() {
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-text-muted font-medium">Name</th>
                 <th className="text-left py-3 px-4 text-text-muted font-medium">Tribe</th>
-                <th className="text-left py-3 px-4 text-text-muted font-medium">Tier</th>
                 <th className="text-right py-3 px-4 text-text-muted font-medium">Value</th>
                 <th className="text-left py-3 px-4 text-text-muted font-medium">Status</th>
                 <th className="text-right py-3 px-4 text-text-muted font-medium">Actions</th>
@@ -317,15 +292,6 @@ export default function AdminPlayersPage() {
                     {player.name}
                   </td>
                   <td className="py-3 px-4 text-text-muted">{player.tribe || "—"}</td>
-                  <td className="py-3 px-4">
-                    {player.tier ? (
-                      <span className={getTierBadgeClass(player.tier)}>
-                        {player.tier}
-                      </span>
-                    ) : (
-                      <span className="text-text-muted">—</span>
-                    )}
-                  </td>
                   <td className="py-3 px-4 text-right text-accent-gold">
                     {player.suggested_value}
                   </td>

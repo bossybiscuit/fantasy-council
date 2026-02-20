@@ -40,13 +40,12 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const [playersResult, picksResult, teamsResult] = await Promise.all([
     db
       .from("players")
-      .select("id, name, tribe, tier, suggested_value, img_url")
+      .select("id, name, tribe, tribe_color, suggested_value, img_url")
       .eq("season_id", league.season_id)
-      .order("tier", { ascending: true })
       .order("name", { ascending: true }),
     db
       .from("draft_picks")
-      .select("id, team_id, player_id, players(id, name, tribe, tier), commissioner_pick")
+      .select("id, team_id, player_id, players(id, name, tribe, tribe_color), commissioner_pick")
       .eq("league_id", leagueId),
     db
       .from("teams")

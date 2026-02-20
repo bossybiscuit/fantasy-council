@@ -41,7 +41,6 @@ export default async function DraftPage({
     .from("players")
     .select("*")
     .eq("season_id", season.id)
-    .order("tier", { ascending: true })
     .order("name", { ascending: true });
 
   const { data: draftPicks } = await supabase

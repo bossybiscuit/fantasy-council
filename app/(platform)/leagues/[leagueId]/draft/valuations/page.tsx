@@ -8,7 +8,6 @@ type Player = {
   id: string;
   name: string;
   tribe: string | null;
-  tier: string | null;
   suggested_value: number;
   img_url: string | null;
 };
@@ -31,7 +30,6 @@ export default function ValuationsPage({
   const [saving, setSaving] = useState<string | null>(null); // player_id currently saving
   const [filterSearch, setFilterSearch] = useState("");
   const [filterTribe, setFilterTribe] = useState("");
-  const [filterTier, setFilterTier] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
 
   function showFlash(msg: string) {
@@ -93,7 +91,6 @@ export default function ValuationsPage({
   const filtered = players.filter((p) => {
     if (filterSearch && !p.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
     if (filterTribe && p.tribe !== filterTribe) return false;
-    if (filterTier && p.tier !== filterTier) return false;
     return true;
   });
 
@@ -122,16 +119,6 @@ export default function ValuationsPage({
               <option key={t} value={t!}>{t}</option>
             ))}
           </select>
-          <select
-            className="input text-sm py-1.5 w-auto"
-            value={filterTier}
-            onChange={(e) => setFilterTier(e.target.value)}
-          >
-            <option value="">All Tiers</option>
-            {["S", "A", "B", "C", "D"].map((t) => (
-              <option key={t} value={t}>Tier {t}</option>
-            ))}
-          </select>
           <input
             type="text"
             className="input flex-1 min-w-32 text-sm py-1.5"
@@ -149,8 +136,7 @@ export default function ValuationsPage({
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-text-muted font-medium">Player</th>
                 <th className="text-left py-3 px-4 text-text-muted font-medium">Tribe</th>
-                <th className="text-left py-3 px-4 text-text-muted font-medium">Tier</th>
-                <th className="text-right py-3 px-4 text-text-muted font-medium">Suggested</th>
+                      <th className="text-right py-3 px-4 text-text-muted font-medium">Suggested</th>
                 <th className="text-right py-3 px-4 text-text-muted font-medium">My Value</th>
                 <th className="text-right py-3 px-4 text-text-muted font-medium">Max Bid</th>
                 <th className="py-3 px-4" />
@@ -159,7 +145,7 @@ export default function ValuationsPage({
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-text-muted text-sm">
+                  <td colSpan={6} className="py-10 text-center text-text-muted text-sm">
                     {players.length === 0 ? "Loading players…" : "No players match"}
                   </td>
                 </tr>
@@ -217,9 +203,6 @@ function ValuationRow({
         </div>
       </td>
       <td className="py-3 px-4 text-text-muted">{player.tribe || "—"}</td>
-      <td className="py-3 px-4">
-        <span className="text-text-muted">—</span>
-      </td>
       <td className="py-3 px-4 text-right text-accent-gold">${player.suggested_value}</td>
       <td className="py-3 px-4 text-right">
         <input

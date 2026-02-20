@@ -29,7 +29,6 @@ type Player = {
   id: string;
   name: string;
   tribe: string | null;
-  tier: string | null;
   suggested_value: number;
   img_url: string | null;
 };
@@ -39,7 +38,7 @@ type Pick = {
   team_id: string;
   player_id: string;
   commissioner_pick: boolean;
-  players: { id: string; name: string; tribe: string | null; tier: string | null } | null;
+  players: { id: string; name: string; tribe: string | null } | null;
 };
 
 export default function AdminTeamsPage({
@@ -503,7 +502,6 @@ export default function AdminTeamsPage({
               <div className="p-3 rounded-lg bg-accent-orange/10 border border-accent-orange/30 text-sm text-accent-orange">
                 Selected: <strong>{selectedPlayer.name}</strong>
                 {selectedPlayer.tribe && ` · ${selectedPlayer.tribe}`}
-                {selectedPlayer.tier && ` · Tier ${selectedPlayer.tier}`}
                 {" — click a team below to assign"}
               </div>
             )}

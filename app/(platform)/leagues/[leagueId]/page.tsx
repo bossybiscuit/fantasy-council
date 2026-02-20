@@ -125,7 +125,7 @@ export default async function LeagueHomePage({
   // Draft picks with player data for roster previews
   const { data: draftPicksRaw } = await supabase
     .from("draft_picks")
-    .select("team_id, player_id, players(id, name, tier, slug, is_active, tribe, tribe_color)")
+    .select("team_id, player_id, players(id, name, slug, is_active, tribe, tribe_color)")
     .eq("league_id", leagueId);
 
   // All scoring events to compute per-player point contributions per team
@@ -194,7 +194,6 @@ export default async function LeagueHomePage({
             return {
               playerId: dp.player_id,
               playerName: player?.name || "Unknown",
-              tier: player?.tier || null,
               slug: player?.slug || null,
               isActive: player?.is_active ?? true,
               points: playerPointsMap.get(`${team.id}:${dp.player_id}`) || 0,

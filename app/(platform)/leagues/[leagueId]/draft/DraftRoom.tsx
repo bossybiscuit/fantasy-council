@@ -18,8 +18,6 @@ interface DraftRoomProps {
   isCommissioner: boolean;
 }
 
-// Tier priority for auto-skip: S is best, then A, B, C, D
-const TIER_PRIORITY: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
 
 export default function DraftRoom({
   league,
@@ -32,7 +30,6 @@ export default function DraftRoom({
 }: DraftRoomProps) {
   const router = useRouter();
   const [filterTribe, setFilterTribe] = useState("");
-  const [filterTier, setFilterTier] = useState("");
   const [filterSearch, setFilterSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +83,6 @@ export default function DraftRoom({
   const tribes = [...new Set(players.map((p) => p.tribe).filter(Boolean))];
   const filteredPlayers = availablePlayers.filter((p) => {
     if (filterTribe && p.tribe !== filterTribe) return false;
-    if (filterTier && p.tier !== filterTier) return false;
     if (filterSearch && !p.name.toLowerCase().includes(filterSearch.toLowerCase()))
       return false;
     return true;
@@ -139,33 +135,31 @@ export default function DraftRoom({
 
   async function autoSkipPick() {
     if (!currentTeam || !isCommissioner) return;
-    // Pick the highest-tier available player (S > A > B > C > D), then by name
-    const best = [...availablePlayers].sort((a, b) => {
-      const ta = TIER_PRIORITY[a.tier ?? "D"] ?? 4;
-      const tb = TIER_PRIORITY[b.tier ?? "D"] ?? 4;
-      if (ta !== tb) return ta - tb;
-      return a.name.localeCompare(b.name);
-    })[0];
-    if (best) await snakePick(best.id);
+    // Auto-skip: pick best available by suggested_value desc, then name
+    const autoPlayer = availablePlayers
+      .slice()
+      .sort((a, b) => (b.suggested_value ?? 0) - (a.suggested_value ?? 0) || a.name.localeCompare(b.name))[0];
+    if (!autoPlayer) return;
+    await snakePick(autoPlayer.id);
   }
 
   async function auctionPick(playerId: string) {
+    if (!isCommissioner) return;
     setLoading(true);
     setError(null);
-
-    const winnerTeam = teams[auctionWinnerIdx];
+    const winningTeam = teams[auctionWinnerIdx];
     const res = await fetch("/api/draft/pick", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         league_id: league.id,
-        team_id: winnerTeam.id,
+        team_id: winningTeam.id,
         player_id: playerId,
-        pick_number: currentPickNum,
         amount_paid: auctionBid,
+        pick_number: draftPicks.length + 1,
+        round: 1,
       }),
     });
-
     const data = await res.json();
     if (!res.ok) {
       setError(data.error);
@@ -283,18 +277,6 @@ export default function DraftRoom({
                 {tribes.map((t) => (
                   <option key={t} value={t!}>
                     {t}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input text-sm py-1.5 w-auto"
-                value={filterTier}
-                onChange={(e) => setFilterTier(e.target.value)}
-              >
-                <option value="">All Tiers</option>
-                {["S", "A", "B", "C", "D"].map((t) => (
-                  <option key={t} value={t}>
-                    Tier {t}
                   </option>
                 ))}
               </select>
