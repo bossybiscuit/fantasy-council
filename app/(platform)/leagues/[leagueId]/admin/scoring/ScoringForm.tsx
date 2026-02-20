@@ -18,13 +18,14 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
     episodes.find((e) => !e.is_scored)?.id || episodes[episodes.length - 1]?.id || ""
   );
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Form state
   const [tribeRewardWinners, setTribeRewardWinners] = useState<string[]>([]);
   const [individualRewardWinner, setIndividualRewardWinner] = useState("");
-  const [tribeImmunityWinner, setTribeImmunityWinner] = useState("");
+  const [tribeImmunityWinners, setTribeImmunityWinners] = useState<string[]>([]);
   const [individualImmunityWinner, setIndividualImmunityWinner] = useState("");
   const [tribeImmunitySecond, setTribeImmunitySecond] = useState("");
   const [episodeTitleSpeaker, setEpisodeTitleSpeaker] = useState("");
@@ -52,8 +53,6 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
     setError(null);
     setSuccess(null);
 
-    // Validate winner differential if set
-    // (This is a soft warning — the server will handle full validation)
     if (winnerPlayer && !isFinalThree) {
       setError("Must mark Final Three before declaring a winner");
       setLoading(false);
@@ -68,7 +67,7 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
         episode_id: selectedEpisodeId,
         tribe_reward_winners: tribeRewardWinners,
         individual_reward_winner: individualRewardWinner || null,
-        tribe_immunity_winner: tribeImmunityWinner || null,
+        tribe_immunity_winners: tribeImmunityWinners,
         individual_immunity_winner: individualImmunityWinner || null,
         tribe_immunity_second: tribeImmunitySecond || null,
         episode_title_speaker: episodeTitleSpeaker || null,
@@ -87,6 +86,47 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
       setError(data.error);
     } else {
       setSuccess(`Episode scored! ${data.events_count} scoring events created.`);
+      router.refresh();
+    }
+  }
+
+  async function handleReset() {
+    if (!selectedEpisodeId) return;
+    if (
+      !confirm(
+        "Reset all scoring for this episode? This clears events, team scores, and prediction results. Voted-out players will need to be manually re-activated."
+      )
+    )
+      return;
+
+    setResetting(true);
+    setError(null);
+    setSuccess(null);
+
+    const res = await fetch("/api/scoring", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ league_id: league.id, episode_id: selectedEpisodeId }),
+    });
+
+    const data = await res.json();
+    setResetting(false);
+
+    if (!res.ok) {
+      setError(data.error);
+    } else {
+      setSuccess("Episode scoring cleared. Re-enter the results below.");
+      setTribeRewardWinners([]);
+      setIndividualRewardWinner("");
+      setTribeImmunityWinners([]);
+      setIndividualImmunityWinner("");
+      setTribeImmunitySecond("");
+      setEpisodeTitleSpeaker("");
+      setVotedOutPlayers([]);
+      setIsMerge(false);
+      setIsFinalThree(false);
+      setFinalThreePlayers([]);
+      setWinnerPlayer("");
       router.refresh();
     }
   }
@@ -116,9 +156,19 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
           ))}
         </select>
         {selectedEpisode?.is_scored && (
-          <p className="text-yellow-400 text-xs mt-2">
-            ⚠️ This episode is already scored. Re-submitting will recalculate all scores.
-          </p>
+          <div className="flex items-center justify-between mt-2 gap-4">
+            <p className="text-yellow-400 text-xs">
+              ⚠️ This episode is already scored. Re-submitting will recalculate all scores.
+            </p>
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={resetting}
+              className="text-xs text-red-400 hover:text-red-300 border border-red-400/30 hover:border-red-400/60 rounded px-2 py-1 shrink-0 transition-colors disabled:opacity-40"
+            >
+              {resetting ? "Clearing…" : "Reset Episode"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -169,6 +219,25 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
           </div>
         </div>
 
+        {/* Tribe Immunity — multiselect */}
+        <div className="card">
+          <h3 className="section-title mb-3">Tribe Immunity Winners ({DEFAULT_SCORING.TRIBE_IMMUNITY_WIN}pt each)</h3>
+          <p className="text-xs text-text-muted mb-3">Select all members of the tribe that won immunity</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto scrollbar-hide">
+            {activePlayers.map((p) => (
+              <label key={p.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-bg-surface">
+                <input
+                  type="checkbox"
+                  checked={tribeImmunityWinners.includes(p.id)}
+                  onChange={() => toggleInArray(tribeImmunityWinners, p.id, setTribeImmunityWinners)}
+                  className="accent-accent-orange"
+                />
+                <span className="text-sm text-text-primary">{p.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Single Selects */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <SingleSelect
@@ -176,12 +245,6 @@ export default function ScoringForm({ league, players, episodes }: ScoringFormPr
             players={activePlayers}
             value={individualRewardWinner}
             onChange={setIndividualRewardWinner}
-          />
-          <SingleSelect
-            label={`Tribe Immunity Winner (${DEFAULT_SCORING.TRIBE_IMMUNITY_WIN}pt)`}
-            players={activePlayers}
-            value={tribeImmunityWinner}
-            onChange={setTribeImmunityWinner}
           />
           <SingleSelect
             label={`Individual Immunity Winner (${DEFAULT_SCORING.INDIVIDUAL_IMMUNITY_WIN}pt)`}

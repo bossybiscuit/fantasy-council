@@ -469,6 +469,31 @@ export type Database = {
           }
         ];
       };
+      title_picks: {
+        Row: {
+          id: string;
+          league_id: string;
+          episode_id: string;
+          team_id: string;
+          player_id: string | null;
+          points_earned: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          league_id: string;
+          episode_id: string;
+          team_id: string;
+          player_id?: string | null;
+          points_earned?: number;
+          created_at?: string;
+        };
+        Update: {
+          player_id?: string | null;
+          points_earned?: number;
+        };
+        Relationships: [];
+      };
       episode_team_scores: {
         Row: {
           id: string;
@@ -574,3 +599,4 @@ export type ScoringEvent =
 export type Prediction = Database["public"]["Tables"]["predictions"]["Row"];
 export type EpisodeTeamScore =
   Database["public"]["Tables"]["episode_team_scores"]["Row"];
+export type TitlePick = Database["public"]["Tables"]["title_picks"]["Row"];

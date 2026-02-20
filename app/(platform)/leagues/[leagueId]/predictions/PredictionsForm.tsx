@@ -10,6 +10,7 @@ interface PredictionsFormProps {
   teamId: string;
   players: Player[];
   existingPredictions: Prediction[];
+  existingTitlePickPlayerId: string | null;
 }
 
 export default function PredictionsForm({
@@ -18,6 +19,7 @@ export default function PredictionsForm({
   teamId,
   players,
   existingPredictions,
+  existingTitlePickPlayerId,
 }: PredictionsFormProps) {
   const router = useRouter();
 
@@ -28,6 +30,9 @@ export default function PredictionsForm({
   }
 
   const [allocations, setAllocations] = useState<Record<string, number>>(initialAllocations);
+  const [titlePickPlayerId, setTitlePickPlayerId] = useState<string>(
+    existingTitlePickPlayerId || ""
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -55,30 +60,72 @@ export default function PredictionsForm({
       .filter(([, pts]) => pts > 0)
       .map(([player_id, points_allocated]) => ({ player_id, points_allocated }));
 
-    const res = await fetch("/api/predictions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        league_id: leagueId,
-        episode_id: episodeId,
-        team_id: teamId,
-        allocations: allocationList,
+    // Save vote predictions and title pick in parallel
+    const [predRes, titleRes] = await Promise.all([
+      fetch("/api/predictions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          league_id: leagueId,
+          episode_id: episodeId,
+          team_id: teamId,
+          allocations: allocationList,
+        }),
       }),
-    });
+      fetch("/api/title-picks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          league_id: leagueId,
+          episode_id: episodeId,
+          player_id: titlePickPlayerId || null,
+        }),
+      }),
+    ]);
 
-    const data = await res.json();
     setLoading(false);
 
-    if (!res.ok) {
-      setError(data.error);
-    } else {
-      setSuccess(true);
-      router.refresh();
+    const predData = await predRes.json();
+    if (!predRes.ok) {
+      setError(predData.error);
+      return;
     }
+    const titleData = await titleRes.json();
+    if (!titleRes.ok) {
+      setError(titleData.error);
+      return;
+    }
+
+    setSuccess(true);
+    router.refresh();
   }
 
   return (
     <div className="card">
+      {/* Title Pick — above the allocations */}
+      <div className="mb-6">
+        <h2 className="section-title mb-1">Episode Title Pick</h2>
+        <p className="text-xs text-text-muted mb-3">
+          Who says the episode title? Worth{" "}
+          <strong className="text-accent-gold">3 pts</strong> if correct.
+        </p>
+        <select
+          className="input text-sm"
+          value={titlePickPlayerId}
+          onChange={(e) => setTitlePickPlayerId(e.target.value)}
+        >
+          <option value="">— No pick —</option>
+          {players.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+              {p.tribe ? ` (${p.tribe})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="torch-divider mb-6" />
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="section-title">Allocate Points</h2>
         <div

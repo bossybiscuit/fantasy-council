@@ -11,7 +11,7 @@ interface ScoringInput {
   episode_id: string;
   tribe_reward_winners: string[];
   individual_reward_winner: string | null;
-  tribe_immunity_winner: string | null;
+  tribe_immunity_winners: string[];      // changed: array (multi-tribe)
   individual_immunity_winner: string | null;
   tribe_immunity_second: string | null;
   episode_title_speaker: string | null;
@@ -29,29 +29,22 @@ type ScoringEventInput = {
   note?: string;
 };
 
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+async function verifyCommissioner(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  league_id: string
+) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return { user: null, league: null };
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const body: ScoringInput = await request.json();
-  const { league_id, episode_id } = body;
-
-  // Verify commissioner or super admin
   const { data: league } = await supabase
     .from("leagues")
     .select("*")
     .eq("id", league_id)
     .single();
 
-  if (!league) {
-    return NextResponse.json({ error: "League not found" }, { status: 404 });
-  }
+  if (!league) return { user, league: null };
 
   if (league.commissioner_id !== user.id) {
     const { data: profile } = await supabase
@@ -59,11 +52,20 @@ export async function POST(request: NextRequest) {
       .select("is_super_admin")
       .eq("id", user.id)
       .single();
-
-    if (!profile?.is_super_admin) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-    }
+    if (!profile?.is_super_admin) return { user, league: null };
   }
+
+  return { user, league };
+}
+
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const body: ScoringInput = await request.json();
+  const { league_id, episode_id } = body;
+
+  const { user, league } = await verifyCommissioner(supabase, league_id);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!league) return NextResponse.json({ error: "Not authorized" }, { status: 403 });
 
   const config = getScoringValues(league.scoring_config);
   const events: ScoringEventInput[] = [];
@@ -85,8 +87,8 @@ export async function POST(request: NextRequest) {
   for (const pid of body.tribe_reward_winners) addEvent(pid, "tribe_reward");
   if (body.individual_reward_winner)
     addEvent(body.individual_reward_winner, "individual_reward");
-  if (body.tribe_immunity_winner)
-    addEvent(body.tribe_immunity_winner, "tribe_immunity");
+  for (const pid of (body.tribe_immunity_winners || []))
+    addEvent(pid, "tribe_immunity");
   if (body.individual_immunity_winner)
     addEvent(body.individual_immunity_winner, "individual_immunity");
   if (body.tribe_immunity_second)
@@ -161,7 +163,7 @@ export async function POST(request: NextRequest) {
       .in("id", body.voted_out_players);
   }
 
-  // Resolve predictions: award points to teams that predicted the boot
+  // Resolve vote predictions: award points to teams that predicted the boot
   for (const votedOutId of body.voted_out_players) {
     const { data: preds } = await supabase
       .from("predictions")
@@ -177,7 +179,6 @@ export async function POST(request: NextRequest) {
         .update({ points_earned: earned })
         .eq("id", pred.id);
 
-      // Add prediction scoring event
       await supabase.from("scoring_events").insert({
         league_id,
         episode_id,
@@ -187,6 +188,32 @@ export async function POST(request: NextRequest) {
         points: earned,
         note: "Correct vote prediction",
       });
+    }
+  }
+
+  // Resolve title pick predictions
+  // First reset all title picks for this episode+league
+  await supabase
+    .from("title_picks")
+    .update({ points_earned: 0 })
+    .eq("league_id", league_id)
+    .eq("episode_id", episode_id);
+
+  if (body.episode_title_speaker) {
+    const { data: correctPicks } = await supabase
+      .from("title_picks")
+      .select("team_id")
+      .eq("league_id", league_id)
+      .eq("episode_id", episode_id)
+      .eq("player_id", body.episode_title_speaker);
+
+    for (const pick of correctPicks || []) {
+      await supabase
+        .from("title_picks")
+        .update({ points_earned: 3 })
+        .eq("league_id", league_id)
+        .eq("episode_id", episode_id)
+        .eq("team_id", pick.team_id);
     }
   }
 
@@ -204,6 +231,60 @@ export async function POST(request: NextRequest) {
     .eq("id", episode_id);
 
   return NextResponse.json({ success: true, events_count: events.length });
+}
+
+// DELETE — reset (un-score) an episode
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+  const { league_id, episode_id } = await request.json();
+
+  if (!league_id || !episode_id) {
+    return NextResponse.json({ error: "Missing league_id or episode_id" }, { status: 400 });
+  }
+
+  const { user, league } = await verifyCommissioner(supabase, league_id);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!league) return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+
+  // Delete scoring events
+  await supabase
+    .from("scoring_events")
+    .delete()
+    .eq("league_id", league_id)
+    .eq("episode_id", episode_id);
+
+  // Delete episode team scores
+  await supabase
+    .from("episode_team_scores")
+    .delete()
+    .eq("league_id", league_id)
+    .eq("episode_id", episode_id);
+
+  // Reset title picks earned points
+  await supabase
+    .from("title_picks")
+    .update({ points_earned: 0 })
+    .eq("league_id", league_id)
+    .eq("episode_id", episode_id);
+
+  // Reset vote prediction earned points
+  await supabase
+    .from("predictions")
+    .update({ points_earned: 0 })
+    .eq("league_id", league_id)
+    .eq("episode_id", episode_id);
+
+  // Unmark episode as scored
+  await supabase
+    .from("episodes")
+    .update({ is_scored: false, is_merge: false, is_finale: false })
+    .eq("id", episode_id);
+
+  // Recalculate all remaining scored episodes so cumulative totals stay correct
+  // Pass a dummy episode_id that won't be in the scored list so nothing extra is added
+  await recalculateScores(supabase, league_id, episode_id, league.season_id);
+
+  return NextResponse.json({ success: true });
 }
 
 async function recalculateScores(
@@ -277,11 +358,23 @@ async function recalculateScores(
         .eq("episode_id", ep.id)
         .eq("team_id", team.id);
 
-      const predictionPoints = (preds || []).reduce(
+      const votePredPoints = (preds || []).reduce(
         (sum: number, p: any) => sum + (p.points_earned || 0),
         0
       );
 
+      // Title pick points
+      const { data: titlePick } = await supabase
+        .from("title_picks")
+        .select("points_earned")
+        .eq("league_id", league_id)
+        .eq("episode_id", ep.id)
+        .eq("team_id", team.id)
+        .maybeSingle();
+
+      const titlePickPoints = titlePick?.points_earned || 0;
+
+      const predictionPoints = votePredPoints + titlePickPoints;
       const total = challengePoints + milestonePoints + predictionPoints;
       cumulative += total;
 

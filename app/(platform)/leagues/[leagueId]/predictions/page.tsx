@@ -65,6 +65,17 @@ export default async function PredictionsPage({
         .eq("team_id", myTeam.id)
     : { data: [] };
 
+  // Get existing title pick for next episode
+  const { data: existingTitlePick } = nextEpisode
+    ? await supabase
+        .from("title_picks")
+        .select("player_id")
+        .eq("league_id", leagueId)
+        .eq("episode_id", nextEpisode.id)
+        .eq("team_id", myTeam.id)
+        .maybeSingle()
+    : { data: null };
+
   // Get past predictions (scored)
   const { data: pastPredictions } = await supabase
     .from("predictions")
@@ -132,6 +143,7 @@ export default async function PredictionsPage({
           teamId={myTeam.id}
           players={players}
           existingPredictions={existingPredictions || []}
+          existingTitlePickPlayerId={existingTitlePick?.player_id ?? null}
         />
       )}
 
