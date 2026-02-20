@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
 import { calculatePredictionAccuracy } from "@/lib/utils";
@@ -19,7 +19,10 @@ export default async function TeamPage({
 
   if (!user) redirect("/login");
 
-  const { data: team } = await supabase
+  // Use service client for all data fetches to bypass RLS
+  const db = createServiceClient();
+
+  const { data: team } = await db
     .from("teams")
     .select("*, profiles(*)")
     .eq("id", teamId)
@@ -27,7 +30,7 @@ export default async function TeamPage({
 
   if (!team) redirect(`/leagues/${leagueId}`);
 
-  const { data: league } = await supabase
+  const { data: league } = await db
     .from("leagues")
     .select("*, seasons(*)")
     .eq("id", leagueId)
@@ -36,7 +39,7 @@ export default async function TeamPage({
   if (!league) redirect("/dashboard");
 
   // Get draft picks with player info
-  const { data: picks } = await supabase
+  const { data: picks } = await db
     .from("draft_picks")
     .select("*, players(*)")
     .eq("league_id", leagueId)
@@ -45,7 +48,7 @@ export default async function TeamPage({
 
   // Get all scored episodes for this season
   const season = league.seasons as any;
-  const { data: scoredEpisodes } = await supabase
+  const { data: scoredEpisodes } = await db
     .from("episodes")
     .select("*")
     .eq("season_id", season.id)
@@ -56,23 +59,23 @@ export default async function TeamPage({
   const playerIds = (picks || []).map((p) => p.player_id);
 
   const { data: scoringEvents } = playerIds.length > 0
-    ? await supabase
+    ? await db
         .from("scoring_events")
         .select("*")
         .eq("league_id", leagueId)
         .in("player_id", playerIds)
     : { data: [] };
 
-  // Get episode team scores (cumulative)
-  const { data: episodeScores } = await supabase
+  // Get episode team scores (cumulative), ordered by episode number
+  const { data: episodeScores } = await db
     .from("episode_team_scores")
     .select("*, episodes(episode_number, title)")
     .eq("league_id", leagueId)
     .eq("team_id", teamId)
-    .order("episodes(episode_number)");
+    .order("episode_number", { foreignTable: "episodes" });
 
   // Get predictions with player + episode info
-  const { data: predictions } = await supabase
+  const { data: predictions } = await db
     .from("predictions")
     .select("*, players(name), episodes(episode_number, title)")
     .eq("league_id", leagueId)

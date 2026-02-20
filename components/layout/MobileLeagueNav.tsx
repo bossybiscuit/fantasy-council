@@ -70,7 +70,16 @@ export default function MobileLeagueNav({
   ];
 
   function isActive(href: string) {
-    return pathname === href || (href !== base && pathname.startsWith(href));
+    if (pathname === href) return true;
+    if (href === base) return false;
+    if (!pathname.startsWith(href)) return false;
+    // Don't match if a more-specific link also matches
+    return !allLinks.some(
+      (other) =>
+        other.href !== href &&
+        other.href.startsWith(href) &&
+        pathname.startsWith(other.href)
+    );
   }
 
   return (

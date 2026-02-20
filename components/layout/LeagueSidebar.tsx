@@ -54,9 +54,18 @@ export default function LeagueSidebar({
         <div className="torch-divider" />
         <nav className="space-y-1 mt-3">
           {links.map((link) => {
-            const isActive =
-              pathname === link.href ||
-              (link.href !== base && pathname.startsWith(link.href));
+            const isActive = (() => {
+              if (pathname === link.href) return true;
+              if (link.href === base) return false;
+              if (!pathname.startsWith(link.href)) return false;
+              // Don't match if a more-specific link also matches
+              return !links.some(
+                (other) =>
+                  other.href !== link.href &&
+                  other.href.startsWith(link.href) &&
+                  pathname.startsWith(other.href)
+              );
+            })();
             return (
               <Link
                 key={link.href}
