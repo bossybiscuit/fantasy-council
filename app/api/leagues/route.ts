@@ -12,6 +12,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Only super admins can create leagues
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_super_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.is_super_admin) {
+    return NextResponse.json(
+      { error: "Only admins can create leagues" },
+      { status: 403 }
+    );
+  }
+
   const body = await request.json();
   const { season_id, name, draft_type, num_teams, budget, scoring_config } = body;
 

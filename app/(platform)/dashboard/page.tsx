@@ -42,9 +42,11 @@ export default async function DashboardPage() {
             <Link href="/leagues/join" className="btn-secondary">
               Join an Alliance
             </Link>
-            <Link href="/leagues/new" className="btn-primary">
-              🔥 Create a League
-            </Link>
+            {profile?.is_super_admin && (
+              <Link href="/leagues/new" className="btn-primary">
+                🔥 Create a League
+              </Link>
+            )}
           </div>
         }
       />
@@ -60,12 +62,12 @@ export default async function DashboardPage() {
                 href={`/leagues/${league.id}`}
                 className="card hover:border-accent-orange/30 hover:shadow-ember transition-all block"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-text-primary">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-text-primary truncate">
                       {league.name}
                     </h3>
-                    <p className="text-xs text-text-muted mt-0.5">
+                    <p className="text-xs text-text-muted mt-0.5 truncate">
                       {season?.name}
                     </p>
                   </div>
@@ -75,9 +77,9 @@ export default async function DashboardPage() {
                 <div className="torch-divider my-3" />
 
                 <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Your Tribe</span>
-                    <span className="text-text-primary font-medium">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-text-muted shrink-0">Your Tribe</span>
+                    <span className="text-text-primary font-medium truncate text-right">
                       {team.name}
                     </span>
                   </div>
@@ -102,8 +104,8 @@ export default async function DashboardPage() {
         <EmptyState
           icon="🔥"
           title="You haven't joined a tribe yet"
-          description="Form a new alliance or join one with a tribal code to enter the game."
-          action={{ label: "Create a League", href: "/leagues/new" }}
+          description="Ask your commissioner for an invite code to enter the game."
+          action={{ label: "Join a League", href: "/leagues/join" }}
         />
       )}
 
@@ -143,12 +145,12 @@ function JoinForm() {
       <input
         type="text"
         name="code"
-        className="input flex-1"
+        className="input flex-1 min-w-0"
         placeholder="Enter 6-character invite code"
         maxLength={6}
         style={{ textTransform: "uppercase" }}
       />
-      <button type="submit" className="btn-secondary">
+      <button type="submit" className="btn-secondary shrink-0">
         Join
       </button>
     </form>

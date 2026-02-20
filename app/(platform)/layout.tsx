@@ -25,9 +25,9 @@ export default async function PlatformLayout({
     .single();
 
   return (
-    <div className="min-h-screen bg-bg-base">
+    <div className="min-h-screen bg-bg-base overflow-x-hidden">
       <Navbar profile={profile} />
-      <main>{children}</main>
+      <main className="overflow-x-hidden">{children}</main>
     </div>
   );
 }

@@ -153,7 +153,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   const updates: Record<string, unknown> = {};
-  if (name !== undefined) updates.name = name.trim();
+  if (name !== undefined) {
+    const trimmedName = name.trim();
+    // Check uniqueness within this league (case-insensitive, exclude current team)
+    const { data: conflict } = await db
+      .from("teams")
+      .select("id")
+      .eq("league_id", leagueId)
+      .ilike("name", trimmedName)
+      .neq("id", teamId)
+      .maybeSingle();
+    if (conflict) {
+      return NextResponse.json(
+        { error: "Another team in this league already has that name" },
+        { status: 409 }
+      );
+    }
+    updates.name = trimmedName;
+  }
   // userId can be a string (assign) or null (kick/unassign) — both valid for admins
   if (userId !== undefined && isAdmin) updates.user_id = userId;
 
