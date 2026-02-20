@@ -177,6 +177,7 @@ export default function LeagueSettingsPage({
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [rosterSize, setRosterSize] = useState<number>(3);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -190,6 +191,7 @@ export default function LeagueSettingsPage({
         if (data) {
           setLeague(data);
           setConfig((data.scoring_config as any) || {});
+          setRosterSize(data.roster_size ?? 3);
         }
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,7 +241,7 @@ export default function LeagueSettingsPage({
     setLoading(true);
     const { error } = await supabase
       .from("leagues")
-      .update({ scoring_config: config })
+      .update({ scoring_config: config, roster_size: rosterSize })
       .eq("id", leagueId);
     setLoading(false);
     if (!error) {
@@ -294,6 +296,25 @@ export default function LeagueSettingsPage({
           {toast.type === "success" ? "🔥 " : "⚠️ "}{toast.msg}
         </div>
       )}
+
+      {/* ── League Configuration ──────────────────────────────────────────── */}
+      <div className="card mb-6">
+        <h3 className="section-title mb-4">League Configuration</h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-text-primary font-medium">Roster Size</p>
+            <p className="text-text-muted text-xs mt-0.5">
+              Number of players per team in the draft. Commissioners can assign extra players beyond this limit via Manage Teams.
+            </p>
+          </div>
+          <Stepper
+            value={rosterSize}
+            onChange={setRosterSize}
+            min={1}
+            max={30}
+          />
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border overflow-x-auto">

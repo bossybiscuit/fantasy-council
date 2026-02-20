@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://thecouncil.live";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://fantasy-council.vercel.app";
 
 type Team = {
   id: string;
