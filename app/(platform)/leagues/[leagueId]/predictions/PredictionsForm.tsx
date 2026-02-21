@@ -157,7 +157,7 @@ export default function PredictionsForm({
 
         {success && (
           <div className="mb-4 p-3 rounded-lg bg-green-900/20 border border-green-700/30 text-green-400 text-sm">
-            ✓ Predictions saved! You can update them until the deadline.
+            🔥 Votes cast! You can update them until the deadline.
           </div>
         )}
 
@@ -222,9 +222,9 @@ export default function PredictionsForm({
           className="btn-primary w-full mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading
-            ? "Submitting..."
+            ? "Casting your vote..."
             : totalAllocated === 10
-            ? "Submit Predictions"
+            ? "Cast Your Vote 🗳️"
             : `Allocate ${remaining} more point${remaining !== 1 ? "s" : ""}`}
         </button>
       </div>

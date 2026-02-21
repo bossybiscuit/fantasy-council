@@ -122,7 +122,7 @@ export default async function PredictionsPage({
                   {formatDate(nextEpisode.prediction_deadline)}
                 </p>
                 {isPastDeadline && (
-                  <p className="text-xs text-red-400">Locked</p>
+                  <p className="text-xs text-red-400">The tribe has spoken — votes locked</p>
                 )}
               </div>
             )}
@@ -184,9 +184,9 @@ export default async function PredictionsPage({
                         </td>
                         <td className="py-3 px-4 text-right">
                           {pred.points_earned > 0 ? (
-                            <span className="text-green-400">✓ Correct</span>
+                            <span className="text-green-400">🔥 Voted out</span>
                           ) : pred.locked_at ? (
-                            <span className="text-red-400">✗ Miss</span>
+                            <span className="text-red-400">✗ Survived</span>
                           ) : (
                             <span className="text-text-muted">Pending</span>
                           )}

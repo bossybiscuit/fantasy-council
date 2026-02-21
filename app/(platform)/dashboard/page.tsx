@@ -105,7 +105,7 @@ export default async function DashboardPage() {
           icon="🔥"
           title="You haven't joined a tribe yet"
           description="Ask your commissioner for an invite code to enter the game."
-          action={{ label: "Join a League", href: "/leagues/join" }}
+          action={{ label: "Find Your Tribe", href: "/leagues/join" }}
         />
       )}
 

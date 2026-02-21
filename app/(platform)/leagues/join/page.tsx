@@ -242,7 +242,7 @@ function JoinLeagueContent() {
                 disabled={joining || !canSubmit}
                 className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {joining ? "Joining…" : "Claim My Seat 🔥"}
+                {joining ? "Joining…" : "Claim My Tribe 🔥"}
               </button>
             </div>
           </form>

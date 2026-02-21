@@ -208,7 +208,7 @@ export default function AdminScoringForm({
       setError(data.error);
     } else {
       setSuccess(
-        `Episode scored across ${data.leagues_count} league${data.leagues_count !== 1 ? "s" : ""}! ${data.events_count} total scoring events created.`
+        `The tribe has spoken. Scored across ${data.leagues_count} league${data.leagues_count !== 1 ? "s" : ""} — ${data.events_count} events recorded.`
       );
       router.refresh();
     }
@@ -552,7 +552,7 @@ export default function AdminScoringForm({
             disabled={loading || !selectedEpisodeId}
             className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Scoring all leagues…" : "Submit Episode Results (All Leagues)"}
+            {loading ? "Tallying the votes…" : "Votes Are Final 🗳️ (All Leagues)"}
           </button>
         </form>
       )}

@@ -35,7 +35,7 @@ export default function LoginPage() {
   return (
     <div className="card ember-glow">
       <h2 className="text-xl font-bold text-text-primary mb-6 text-center">
-        Sign In
+        Return to Camp
       </h2>
 
       {error && (
@@ -80,7 +80,7 @@ export default function LoginPage() {
           disabled={loading}
           className="btn-primary w-full mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Signing in..." : "Sign In"}
+          {loading ? "Returning to camp..." : "Return to Camp"}
         </button>
       </form>
 

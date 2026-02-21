@@ -549,7 +549,7 @@ export default function LeagueSettingsPage({
             disabled={loading}
             className="btn-primary px-8 disabled:opacity-50"
           >
-            {loading ? "Saving…" : "Save Scoring Settings"}
+            {loading ? "Saving…" : "The Council Has Spoken"}
           </button>
         </div>
       </div>

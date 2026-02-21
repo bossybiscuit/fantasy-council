@@ -207,7 +207,7 @@ export default function DraftRoom({
                 disabled={loading || teams.length < 2}
                 className="btn-primary"
               >
-                {loading ? "Starting…" : "🔥 Begin the Draft"}
+                {loading ? "Starting…" : "🔥 The Game Is Afoot"}
               </button>
             )}
             {isDraftActive && (
@@ -353,7 +353,7 @@ export default function DraftRoom({
                           disabled={loading}
                           className="btn-primary text-xs py-1 px-3"
                         >
-                          {loading ? "..." : isCommissionerPickingForOther ? "Pick for them" : "Pick"}
+                          {loading ? "..." : isCommissionerPickingForOther ? "Lock In for them" : "Lock In"}
                         </button>
                       )
                     ) : (
@@ -373,7 +373,7 @@ export default function DraftRoom({
               {filteredPlayers.length === 0 && (
                 <div className="text-center py-8 text-text-muted text-sm">
                   {draftedPlayerIds.size === players.length
-                    ? "All players drafted!"
+                    ? "All castaways have been claimed."
                     : "No players match filter"}
                 </div>
               )}
@@ -446,7 +446,7 @@ export default function DraftRoom({
                     </div>
                   ))}
                   {roster.length === 0 && (
-                    <p className="text-text-muted text-xs italic">No picks yet</p>
+                    <p className="text-text-muted text-xs italic">No castaways yet</p>
                   )}
                 </div>
               </div>

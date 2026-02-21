@@ -61,7 +61,7 @@ export default function Navbar({ profile }: NavbarProps) {
               </span>
             )}
             <button onClick={handleSignOut} className="btn-secondary text-xs py-1.5 px-3">
-              Sign Out
+              Snuff My Torch
             </button>
           </div>
         </div>

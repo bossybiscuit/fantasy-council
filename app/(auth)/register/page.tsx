@@ -124,7 +124,7 @@ export default function RegisterPage() {
           disabled={loading}
           className="btn-primary w-full mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Creating account..." : "Create Account"}
+          {loading ? "Lighting my torch..." : "Light My Torch"}
         </button>
       </form>
 
@@ -136,7 +136,7 @@ export default function RegisterPage() {
           href="/login"
           className="text-accent-orange hover:text-orange-400 font-medium"
         >
-          Sign in
+          Return to camp
         </Link>
       </p>
     </div>

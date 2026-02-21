@@ -361,7 +361,7 @@ export default function NewLeaguePage() {
                 disabled={loading}
                 className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Starting…" : "🔥 Light the Torch"}
+                {loading ? "Igniting…" : "🔥 Ignite the League"}
               </button>
             </div>
           </div>

@@ -160,7 +160,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents, 
     if (!res.ok) {
       setError(data.error);
     } else {
-      setSuccess(`Episode scored! ${data.events_count} scoring events created.`);
+      setSuccess(`The tribe has spoken. Episode scored — ${data.events_count} events recorded.`);
       router.refresh();
     }
   }
@@ -458,7 +458,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents, 
           disabled={loading || !selectedEpisodeId}
           className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Calculating scores..." : "Submit Episode Results"}
+          {loading ? "Tallying the votes..." : "Votes Are Final 🗳️"}
         </button>
       </form>
       </>)}
