@@ -52,17 +52,23 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("pick_number");
 
-  // Get this team's draft valuations (my_value per player)
-  const { data: valuationsData } = await db
-    .from("draft_valuations")
-    .select("player_id, my_value")
-    .eq("league_id", leagueId)
-    .eq("team_id", teamId);
-
-  const valuationMap = new Map<string, number>();
-  for (const v of valuationsData || []) {
-    valuationMap.set(v.player_id, v.my_value);
-  }
+  // Attach each pick's display value from draft_valuations, falling back to suggested_value
+  const picksWithValues = await Promise.all(
+    (picks || []).map(async (pick) => {
+      const { data: valuation } = await db
+        .from("draft_valuations")
+        .select("my_value")
+        .eq("league_id", leagueId)
+        .eq("team_id", teamId)
+        .eq("player_id", pick.player_id)
+        .maybeSingle();
+      const player = pick.players as any;
+      return {
+        ...pick,
+        displayValue: valuation?.my_value ?? player?.suggested_value ?? 0,
+      };
+    })
+  );
 
   // Get all scored episodes for this season
   const season = league.seasons as any;
@@ -74,7 +80,7 @@ export default async function TeamPage({
     .order("episode_number");
 
   // Get scoring events for each player on this team
-  const playerIds = (picks || []).map((p) => p.player_id);
+  const playerIds = picksWithValues.map((p) => p.player_id);
 
   const { data: scoringEvents } = playerIds.length > 0
     ? await db
@@ -105,7 +111,7 @@ export default async function TeamPage({
   const totalEarned = (predictions || []).reduce((sum, p) => sum + (p.points_earned || 0), 0);
   const predAccuracy = calculatePredictionAccuracy(totalAllocated, totalEarned);
 
-  const activePlayers = (picks || []).filter((p) => (p.players as any)?.is_active).length;
+  const activePlayers = picksWithValues.filter((p) => (p.players as any)?.is_active).length;
 
   // Points per player across all episodes
   const playerPoints = new Map<string, number>();
@@ -120,15 +126,9 @@ export default async function TeamPage({
   // profile fetched separately above
   const isOwner = (team as any).user_id === user.id;
 
-  // Budget based on current draft_valuations (falls back to suggested_value)
+  // Budget based on displayValue (my_value ?? suggested_value) for each pick
   const budgetTotal = (league as any).budget ?? 0;
-  const totalSpent = (picks || []).reduce((sum, pick) => {
-    const player = pick.players as any;
-    const value = valuationMap.has(pick.player_id)
-      ? valuationMap.get(pick.player_id)!
-      : (player?.suggested_value ?? 0);
-    return sum + value;
-  }, 0);
+  const totalSpent = picksWithValues.reduce((sum, pick) => sum + pick.displayValue, 0);
   const budgetRemaining = budgetTotal - totalSpent;
 
   return (
@@ -197,14 +197,11 @@ export default async function TeamPage({
       {/* Roster */}
       <div className="card mb-6">
         <h2 className="section-title mb-4">Roster</h2>
-        {picks && picks.length > 0 ? (
+        {picksWithValues.length > 0 ? (
           <div className="space-y-2">
-            {(picks as any[]).sort((a, b) => (playerPoints.get(b.player_id) || 0) - (playerPoints.get(a.player_id) || 0)).map((pick) => {
+            {picksWithValues.sort((a, b) => (playerPoints.get(b.player_id) || 0) - (playerPoints.get(a.player_id) || 0)).map((pick) => {
               const player = pick.players as any;
               const pts = playerPoints.get(pick.player_id) || 0;
-              const myValue = valuationMap.has(pick.player_id)
-                ? valuationMap.get(pick.player_id)!
-                : (player?.suggested_value ?? null);
               return (
                 <Link
                   key={pick.id}
@@ -218,9 +215,7 @@ export default async function TeamPage({
                         <span className="text-sm font-medium text-text-primary">
                           {player?.name || "Unknown"}
                         </span>
-                        {myValue != null && (
-                          <span className="text-xs text-accent-gold">${myValue}</span>
-                        )}
+                        <span className="text-xs text-accent-gold">${pick.displayValue}</span>
                         {!player?.is_active && (
                           <span className="text-xs text-red-400">Voted Out</span>
                         )}
