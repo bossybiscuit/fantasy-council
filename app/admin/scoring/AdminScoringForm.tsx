@@ -330,29 +330,15 @@ export default function AdminScoringForm({
             Episode Scoring
           </p>
 
-          {/* Idol Activity */}
+          {/* Episode Title Speaker */}
           <div className="card">
-            <h3 className="section-title mb-4">Idol Activity</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <SingleSelect
-                label={`Found Idol (${DEFAULT_SCORING.FOUND_IDOL}pt)`}
-                players={activePlayers}
-                value={foundIdolPlayer}
-                onChange={setFoundIdolPlayer}
-              />
-              <SingleSelect
-                label={`Played Idol Successfully (${DEFAULT_SCORING.SUCCESSFUL_IDOL_PLAY}pt)`}
-                players={activePlayers}
-                value={successfulIdolPlayPlayer}
-                onChange={setSuccessfulIdolPlayPlayer}
-              />
-              <SingleSelect
-                label={`Episode Title Speaker (${DEFAULT_SCORING.EPISODE_TITLE_SPEAKER}pt)`}
-                players={activePlayers}
-                value={episodeTitleSpeaker}
-                onChange={setEpisodeTitleSpeaker}
-              />
-            </div>
+            <h3 className="section-title mb-4">Episode Title Speaker</h3>
+            <SingleSelect
+              label={`Episode Title Speaker (${DEFAULT_SCORING.EPISODE_TITLE_SPEAKER}pt)`}
+              players={activePlayers}
+              value={episodeTitleSpeaker}
+              onChange={setEpisodeTitleSpeaker}
+            />
           </div>
 
           {/* Tribe Reward */}
@@ -556,6 +542,25 @@ export default function AdminScoringForm({
                     </span>
                   </label>
                 ))}
+            </div>
+          </div>
+
+          {/* Idol Activity */}
+          <div className="card">
+            <h3 className="section-title mb-4">Idol Activity</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SingleSelect
+                label={`Found Idol (${DEFAULT_SCORING.FOUND_IDOL}pt)`}
+                players={activePlayers}
+                value={foundIdolPlayer}
+                onChange={setFoundIdolPlayer}
+              />
+              <SingleSelect
+                label={`Played Idol Successfully (${DEFAULT_SCORING.SUCCESSFUL_IDOL_PLAY}pt)`}
+                players={activePlayers}
+                value={successfulIdolPlayPlayer}
+                onChange={setSuccessfulIdolPlayPlayer}
+              />
             </div>
           </div>
 
