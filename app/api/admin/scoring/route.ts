@@ -6,12 +6,12 @@ import type { ScoringCategory } from "@/types/database";
 interface AdminScoringInput {
   season_id: string;
   episode_id: string;
-  tribe_reward_winners: string[];
-  individual_reward_winner: string | null;
+  found_idol_players: string[];
+  successful_idol_play_players: string[];
   tribe_immunity_winners: string[];
-  individual_immunity_winner: string | null;
-  tribe_immunity_second: string | null;
-  episode_title_speaker: string | null;
+  tribe_immunity_second: string[];
+  individual_reward_winner: string | null;
+  votes_received_players: string[];
   voted_out_players: string[];
   is_merge: boolean;
   is_final_three: boolean;
@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
     };
 
     // Challenge events
-    for (const pid of body.tribe_reward_winners) addEvent(pid, "tribe_reward");
-    if (body.individual_reward_winner) addEvent(body.individual_reward_winner, "individual_reward");
+    for (const pid of body.found_idol_players) addEvent(pid, "found_idol");
+    for (const pid of body.successful_idol_play_players) addEvent(pid, "successful_idol_play");
     for (const pid of body.tribe_immunity_winners) addEvent(pid, "tribe_immunity");
-    if (body.individual_immunity_winner) addEvent(body.individual_immunity_winner, "individual_immunity");
-    if (body.tribe_immunity_second) addEvent(body.tribe_immunity_second, "second_place_immunity");
-    if (body.episode_title_speaker) addEvent(body.episode_title_speaker, "episode_title");
+    for (const pid of body.tribe_immunity_second) addEvent(pid, "second_place_immunity");
+    if (body.individual_reward_winner) addEvent(body.individual_reward_winner, "individual_reward");
+    for (const pid of body.votes_received_players) addEvent(pid, "votes_received");
 
     // Merge bonus
     for (const pid of mergePlayers) addEvent(pid, "merge");
@@ -166,31 +166,6 @@ export async function POST(request: NextRequest) {
           points: earned,
           note: "Correct vote prediction",
         });
-      }
-    }
-
-    // Resolve title picks
-    await supabase
-      .from("title_picks")
-      .update({ points_earned: 0 })
-      .eq("league_id", league.id)
-      .eq("episode_id", episode_id);
-
-    if (body.episode_title_speaker) {
-      const { data: correctPicks } = await supabase
-        .from("title_picks")
-        .select("team_id")
-        .eq("league_id", league.id)
-        .eq("episode_id", episode_id)
-        .eq("player_id", body.episode_title_speaker);
-
-      for (const pick of correctPicks || []) {
-        await supabase
-          .from("title_picks")
-          .update({ points_earned: 3 })
-          .eq("league_id", league.id)
-          .eq("episode_id", episode_id)
-          .eq("team_id", pick.team_id);
       }
     }
 
@@ -305,7 +280,7 @@ async function recalculateScores(supabase: any, league_id: string, episode_id: s
     }
   }
 
-  const challengeCats = new Set(["tribe_reward", "individual_reward", "tribe_immunity", "individual_immunity", "second_place_immunity", "episode_title"]);
+  const challengeCats = new Set(["individual_reward", "tribe_immunity", "second_place_immunity", "found_idol", "successful_idol_play", "votes_received"]);
   const milestoneCats = new Set(["merge", "final_three", "winner"]);
 
   for (const team of teams) {

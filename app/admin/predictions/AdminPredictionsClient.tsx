@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AdminSeasonPredictionsPanel from "./AdminSeasonPredictionsPanel";
 
 interface League {
   id: string;
@@ -40,6 +41,7 @@ interface AdminPredictionsClientProps {
 }
 
 export default function AdminPredictionsClient({ leagues }: AdminPredictionsClientProps) {
+  const [activeTab, setActiveTab] = useState<"episode" | "season">("episode");
   const [selectedLeagueId, setSelectedLeagueId] = useState(leagues[0]?.id || "");
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -89,9 +91,8 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
     const ep = episodes.find((e) => e.id === selectedEpisodeId);
     if (ep?.prediction_deadline) {
       const d = new Date(ep.prediction_deadline);
-      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
       setDeadlineInput(local);
     } else {
       setDeadlineInput("");
@@ -205,10 +206,41 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
   return (
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold text-text-primary mb-2">Predictions</h1>
-      <p className="text-text-muted text-sm mb-8">
-        Manage prediction deadlines and score episodes for any league.
+      <p className="text-text-muted text-sm mb-6">
+        Manage prediction deadlines, score episodes, and grade season predictions.
       </p>
 
+      {/* ── Tab toggle ── */}
+      <div className="flex gap-1 p-1 rounded-lg bg-bg-surface border border-border mb-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab("episode")}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "episode"
+              ? "bg-bg-card text-text-primary shadow-sm"
+              : "text-text-muted hover:text-text-primary"
+          }`}
+        >
+          Episode Predictions
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("season")}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "season"
+              ? "bg-bg-card text-text-primary shadow-sm"
+              : "text-text-muted hover:text-text-primary"
+          }`}
+        >
+          Season Predictions
+        </button>
+      </div>
+
+      {/* ── Season Predictions tab ── */}
+      {activeTab === "season" && <AdminSeasonPredictionsPanel />}
+
+      {activeTab === "episode" && (
+      <>
       {/* ── League selector ── */}
       <div className="card mb-6">
         <label className="label">League</label>
@@ -295,11 +327,18 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
                   </button>
                 </div>
 
-                {storedDeadline && (
+                {storedDeadline && selectedEp?.prediction_deadline && (
                   <p className="text-xs text-text-muted">
                     Current:{" "}
                     <span className="text-text-primary">
-                      {storedDeadline.toLocaleString()}
+                      {new Date(selectedEp.prediction_deadline).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        timeZone: "UTC",
+                      })}{" "}
+                      at{" "}
+                      {storedDeadline.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                     </span>{" "}
                     — {isLocked ? "predictions are locked" : "predictions still open"}
                   </p>
@@ -467,6 +506,8 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
             No episodes found for this league. Add episodes in the Seasons panel.
           </p>
         </div>
+      )}
+      </>
       )}
     </div>
   );

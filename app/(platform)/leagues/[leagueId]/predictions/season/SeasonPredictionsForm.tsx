@@ -4,70 +4,75 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SeasonPrediction } from "@/types/database";
 
-interface Category {
+export interface ImageOption {
+  label: string;
+  value: string;
+  image_url: string;
+}
+
+export interface Category {
   key: string;
   label: string;
   description: string;
   options: string[] | null;
+  imageOptions?: ImageOption[];
   points: number | null;
 }
 
 export const SEASON_CATEGORIES: Category[] = [
   {
-    key: "free_rice",
+    key: "rice",
     label: "Rice",
-    description: "Will the tribe get Free Rice or have to Earn Rice?",
+    description: "Free Rice or Earn Rice?",
     options: ["Free Rice", "Earn Rice"],
-    points: 5,
-  },
-  {
-    key: "shot_in_dark",
-    label: "Shot in the Dark",
-    description: "Will someone play their Shot in the Dark?",
-    options: ["Shot in the Dark", "No Shot in the Dark"],
-    points: 5,
-  },
-  {
-    key: "advantage_type",
-    label: "Advantage Type",
-    description: "Which type of advantage will appear this season?",
-    options: ["Pinball Wizard", "Obstacle Course", "Simmotion"],
-    points: 5,
-  },
-  {
-    key: "idol_nullifier",
-    label: "Idol Nullifier",
-    description: "What is the Idol Nullifier? (Commissioner will verify)",
-    options: null,
-    points: 5,
-  },
-  {
-    key: "tribe_switch",
-    label: "Tribe Switch",
-    description: "Will there be a Tribe Switch this season?",
-    options: ["Yes, Tribe Switch", "No Tribe Switch"],
-    points: 5,
-  },
-  {
-    key: "necklace_type",
-    label: "Immunity Necklace",
-    description: "What type of immunity necklace will it be?",
-    options: ["Tooth Necklace", "Bird Necklace"],
     points: 5,
   },
   {
     key: "camp_supplies",
     label: "Camp Supplies",
-    description: "How will the tribe receive camp supplies?",
+    description: "Camp Supplies — Given or Earned?",
     options: ["Camp Supplies Given", "Camp Supplies Earned"],
     points: 5,
   },
   {
-    key: "season_long",
-    label: "Season Long Prediction",
-    description: "Make a bold prediction for the season (commissioner scores manually)",
+    key: "shot_in_the_dark",
+    label: "Shot in the Dark",
+    description: "Will the Shot in the Dark exist this season?",
+    options: ["Yes", "No"],
+    points: 5,
+  },
+  {
+    key: "final_immunity",
+    label: "Final Immunity Challenge",
+    description: "What will the final immunity challenge be?",
+    options: ["Pinball Wizard", "Obstacle Course", "Simmotion"],
+    points: 5,
+  },
+  {
+    key: "tribe_swap",
+    label: "Tribe Swap",
+    description: "Will there be a tribe swap?",
+    options: ["Yes", "No"],
+    points: 5,
+  },
+  {
+    key: "immunity_necklace",
+    label: "Immunity Necklace",
+    description: "What will the immunity necklace look like?",
     options: null,
-    points: null,
+    imageOptions: [
+      {
+        label: "Tooth Necklace",
+        value: "tooth_necklace",
+        image_url: "/images/predictions/tooth.PNG",
+      },
+      {
+        label: "Bird Necklace",
+        value: "bird_necklace",
+        image_url: "/images/predictions/bird.PNG",
+      },
+    ],
+    points: 5,
   },
 ];
 
@@ -92,7 +97,6 @@ export default function SeasonPredictionsForm({
   }
 
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers);
-  const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -108,7 +112,6 @@ export default function SeasonPredictionsForm({
   async function saveAnswer(category: string, answer: string) {
     if (isLocked) return;
 
-    setSaving((s) => ({ ...s, [category]: true }));
     setErrors((e) => ({ ...e, [category]: "" }));
 
     const res = await fetch(`/api/leagues/${leagueId}/season-predictions`, {
@@ -116,8 +119,6 @@ export default function SeasonPredictionsForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ category, answer }),
     });
-
-    setSaving((s) => ({ ...s, [category]: false }));
 
     if (!res.ok) {
       const data = await res.json();
@@ -159,7 +160,6 @@ export default function SeasonPredictionsForm({
         const pred = predMap.get(cat.key);
         const currentAnswer = answers[cat.key] ?? "";
         const isGraded = pred?.is_correct !== null && pred?.is_correct !== undefined;
-        const isSaving = saving[cat.key];
         const wasSaved = saved[cat.key];
         const err = errors[cat.key];
 
@@ -200,8 +200,63 @@ export default function SeasonPredictionsForm({
               </div>
             </div>
 
-            {/* Option pills or text input */}
-            {cat.options ? (
+            {/* Image option cards (immunity necklace) */}
+            {cat.imageOptions ? (
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                {cat.imageOptions.map((opt) => {
+                  const isSelected = currentAnswer === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => {
+                        if (!isLocked) {
+                          setAnswers((a) => ({ ...a, [cat.key]: opt.value }));
+                          saveAnswer(cat.key, opt.value);
+                        }
+                      }}
+                      className={`rounded-xl overflow-hidden border-2 transition-all text-left disabled:cursor-default ${
+                        isSelected
+                          ? isGraded
+                            ? pred!.is_correct
+                              ? "border-green-500"
+                              : "border-red-500"
+                            : "border-accent-orange shadow-[0_0_12px_rgba(234,88,12,0.3)]"
+                          : "border-border hover:border-accent-orange/40"
+                      }`}
+                    >
+                      {/* Image with placeholder fallback */}
+                      <div className="aspect-[4/3] bg-bg-surface relative overflow-hidden">
+                        {/* Placeholder always behind */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-bg-card gap-1">
+                          <span className="text-xl">📷</span>
+                          <span className="text-[10px] text-text-muted">Image coming soon</span>
+                        </div>
+                        <img
+                          src={opt.image_url}
+                          alt={opt.label}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      </div>
+                      <div className="px-3 py-2 bg-bg-surface border-t border-border">
+                        <span
+                          className={`text-sm font-medium ${
+                            isSelected ? "text-accent-orange" : "text-text-primary"
+                          }`}
+                        >
+                          {opt.label}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : cat.options ? (
+              /* Text pill options */
               <div className="flex flex-wrap gap-2 mt-3">
                 {cat.options.map((opt) => {
                   const isSelected = currentAnswer === opt;
@@ -234,46 +289,12 @@ export default function SeasonPredictionsForm({
                   );
                 })}
               </div>
-            ) : (
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="text"
-                  value={currentAnswer}
-                  disabled={isLocked}
-                  placeholder={cat.key === "season_long" ? "Your bold prediction..." : "Your answer..."}
-                  onChange={(e) => setAnswers((a) => ({ ...a, [cat.key]: e.target.value }))}
-                  onBlur={() => {
-                    if (!isLocked && currentAnswer !== (pred?.answer ?? "")) {
-                      saveAnswer(cat.key, currentAnswer);
-                    }
-                  }}
-                  className="input text-sm flex-1 disabled:opacity-60"
-                />
-                {!isLocked && (
-                  <button
-                    type="button"
-                    onClick={() => saveAnswer(cat.key, currentAnswer)}
-                    disabled={isSaving}
-                    className="btn-secondary text-xs px-3 disabled:opacity-50"
-                  >
-                    {isSaving ? "..." : "Save"}
-                  </button>
-                )}
-              </div>
-            )}
+            ) : null}
 
-            {pred?.answer && !cat.options && isLocked && (
-              <p className="text-xs text-text-muted mt-2">Your answer: <span className="text-text-primary">{pred.answer}</span></p>
-            )}
+            {wasSaved && <p className="text-xs text-green-400 mt-2">✓ Saved</p>}
+            {err && <p className="text-xs text-red-400 mt-2">{err}</p>}
 
-            {wasSaved && (
-              <p className="text-xs text-green-400 mt-2">✓ Saved</p>
-            )}
-            {err && (
-              <p className="text-xs text-red-400 mt-2">{err}</p>
-            )}
-
-            {/* Commissioner grading panel */}
+            {/* Commissioner grading — regular options */}
             {isCommissioner && isLocked && cat.options && !isGraded && (
               <div className="mt-3 pt-3 border-t border-border">
                 <p className="text-xs text-text-muted mb-2">Grade this category:</p>
@@ -296,26 +317,29 @@ export default function SeasonPredictionsForm({
               </div>
             )}
 
-            {/* Commissioner manual grading for text inputs */}
-            {isCommissioner && isLocked && !cat.options && cat.key !== "season_long" && !isGraded && (
+            {/* Commissioner grading — image options */}
+            {isCommissioner && isLocked && cat.imageOptions && !isGraded && (
               <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-text-muted mb-2">Set correct answer to auto-grade all teams:</p>
+                <p className="text-xs text-text-muted mb-2">Grade this category:</p>
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={gradeInputs[cat.key] ?? ""}
-                    onChange={(e) => setGradeInputs((g) => ({ ...g, [cat.key]: e.target.value }))}
-                    placeholder="Correct answer..."
-                    className="input text-xs flex-1"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => gradeCategory(cat.key, gradeInputs[cat.key] ?? "")}
-                    disabled={!gradeInputs[cat.key] || grading[cat.key]}
-                    className="btn-secondary text-xs px-3 disabled:opacity-50"
-                  >
-                    Grade
-                  </button>
+                  {cat.imageOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setGradeInputs((g) => ({ ...g, [cat.key]: opt.value }));
+                        gradeCategory(cat.key, opt.value);
+                      }}
+                      disabled={grading[cat.key]}
+                      className={`px-3 py-1 rounded border text-xs transition-colors disabled:opacity-50 ${
+                        gradeInputs[cat.key] === opt.value
+                          ? "border-accent-gold bg-accent-gold/10 text-accent-gold"
+                          : "border-accent-gold/30 text-accent-gold hover:bg-accent-gold/10"
+                      }`}
+                    >
+                      ✓ {opt.label}
+                    </button>
+                  ))}
                 </div>
                 {gradeSuccess[cat.key] && (
                   <p className="text-xs text-green-400 mt-2">✓ Graded!</p>

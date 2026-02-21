@@ -5,6 +5,7 @@ import { PlayerAvatar } from "@/components/ui/PlayerCard";
 import { calculatePredictionAccuracy } from "@/lib/utils";
 import Link from "next/link";
 import RenameTeam from "./RenameTeam";
+import OtherTribes from "./OtherTribes";
 
 export const dynamic = "force-dynamic";
 
@@ -126,6 +127,84 @@ export default async function TeamPage({
   // Total team points
   const totalPoints = (episodeScores || []).reduce((sum, s) => sum + s.total_points, 0);
   const latestScore = episodeScores?.[episodeScores.length - 1];
+
+  // Other teams in the league
+  const { data: otherTeams } = await db
+    .from("teams")
+    .select("id, name, user_id")
+    .eq("league_id", leagueId)
+    .neq("id", teamId)
+    .order("name");
+
+  // Fetch draft picks for all other teams
+  const otherTeamIds = (otherTeams || []).map((t) => t.id);
+  const [{ data: otherPicks }, { data: otherScores }, { data: otherScoringEvents }, { data: otherProfiles }] =
+    await Promise.all([
+      otherTeamIds.length > 0
+        ? db.from("draft_picks").select("team_id, player_id, players(id, name, tribe, tribe_color, is_active, img_url)").in("team_id", otherTeamIds)
+        : Promise.resolve({ data: [] }),
+      otherTeamIds.length > 0
+        ? db.from("episode_team_scores").select("team_id, cumulative_total, rank").in("team_id", otherTeamIds).order("episode_number", { foreignTable: "episodes" })
+        : Promise.resolve({ data: [] }),
+      otherTeamIds.length > 0
+        ? db.from("scoring_events").select("team_id, player_id, points").eq("league_id", leagueId).in("team_id", otherTeamIds)
+        : Promise.resolve({ data: [] }),
+      (otherTeams || []).filter((t) => t.user_id).length > 0
+        ? db.from("profiles").select("id, display_name, username").in("id", (otherTeams || []).filter((t) => t.user_id).map((t) => t.user_id!))
+        : Promise.resolve({ data: [] }),
+    ]);
+
+  // Build profile map
+  const profileMap: Record<string, string> = {};
+  for (const p of otherProfiles || []) {
+    profileMap[p.id] = p.display_name || p.username || "Unknown";
+  }
+
+  // Build player pts map per team
+  const otherPlayerPtsMap: Record<string, Record<string, number>> = {};
+  for (const ev of otherScoringEvents || []) {
+    if (!ev.team_id) continue;
+    if (!otherPlayerPtsMap[ev.team_id]) otherPlayerPtsMap[ev.team_id] = {};
+    otherPlayerPtsMap[ev.team_id][ev.player_id] =
+      (otherPlayerPtsMap[ev.team_id][ev.player_id] || 0) + ev.points;
+  }
+
+  // Build latest score/rank per team
+  const otherLatestScoreMap: Record<string, { totalPts: number; rank: number | null }> = {};
+  for (const t of otherTeamIds) otherLatestScoreMap[t] = { totalPts: 0, rank: null };
+  for (const s of otherScores || []) {
+    otherLatestScoreMap[s.team_id] = {
+      totalPts: (s as any).cumulative_total ?? 0,
+      rank: (s as any).rank ?? null,
+    };
+  }
+
+  // Assemble other teams data
+  const otherTeamsData = (otherTeams || []).map((t) => {
+    const picks = (otherPicks || []).filter((p) => p.team_id === t.id);
+    const teamPtsMap = otherPlayerPtsMap[t.id] || {};
+    const players = picks.map((pick) => {
+      const player = pick.players as any;
+      return {
+        id: player?.id ?? pick.player_id,
+        name: player?.name ?? "?",
+        tribe: player?.tribe ?? null,
+        tribe_color: player?.tribe_color ?? null,
+        is_active: player?.is_active ?? true,
+        img_url: player?.img_url ?? null,
+        pts: teamPtsMap[pick.player_id] ?? 0,
+      };
+    }).sort((a, b) => b.pts - a.pts);
+    const scoreInfo = otherLatestScoreMap[t.id] || { totalPts: 0, rank: null };
+    return {
+      id: t.id,
+      name: t.name,
+      ownerName: t.user_id ? (profileMap[t.user_id] ?? null) : null,
+      totalPts: scoreInfo.totalPts,
+      rank: scoreInfo.rank,
+      players,
+    };
+  }).sort((a, b) => b.totalPts - a.totalPts);
 
   // profile fetched separately above
   const isOwner = (team as any).user_id === user.id;
@@ -366,6 +445,9 @@ export default async function TeamPage({
           </div>
         </div>
       )}
+
+      {/* Other teams in the league */}
+      {otherTeamsData.length > 0 && <OtherTribes teams={otherTeamsData} />}
     </div>
   );
 }

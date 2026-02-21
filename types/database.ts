@@ -651,7 +651,10 @@ export type ScoringCategory =
   | "idol_play"
   | "advantage"
   | "custom_bonus"
-  | "tribal_vote_correct";
+  | "tribal_vote_correct"
+  | "found_idol"
+  | "successful_idol_play"
+  | "votes_received";
 
 // Convenience row types
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];

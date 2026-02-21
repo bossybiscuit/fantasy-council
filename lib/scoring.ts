@@ -2,34 +2,27 @@ import type { Json, ScoringCategory } from "@/types/database";
 
 // Default scoring constants
 export const DEFAULT_SCORING = {
-  TRIBE_REWARD_WIN: 1,
-  INDIVIDUAL_REWARD_WIN: 2,
+  INDIVIDUAL_REWARD_WIN: 4,
   TRIBE_IMMUNITY_WIN: 2,
-  INDIVIDUAL_IMMUNITY_WIN: 4,
-  TRIBE_IMMUNITY_SECOND: 1,
+  TRIBE_IMMUNITY_SECOND: 2,
+  FOUND_IDOL: 5,
+  SUCCESSFUL_IDOL_PLAY: 5,
+  VOTES_RECEIVED: 1,
   MERGE_BONUS: 5,
   FINAL_THREE_BONUS: 10,
-  WINNER_BONUS: 30,
-  EPISODE_TITLE_SPEAKER: 3,
-  WINNER_DIFFERENTIAL: 20,
+  WINNER_BONUS: 20,
 } as const;
 
 export type ScoringConfig = {
-  TRIBE_REWARD_WIN?: number;
   INDIVIDUAL_REWARD_WIN?: number;
   TRIBE_IMMUNITY_WIN?: number;
-  INDIVIDUAL_IMMUNITY_WIN?: number;
   TRIBE_IMMUNITY_SECOND?: number;
+  FOUND_IDOL?: number;
+  SUCCESSFUL_IDOL_PLAY?: number;
+  VOTES_RECEIVED?: number;
   MERGE_BONUS?: number;
   FINAL_THREE_BONUS?: number;
   WINNER_BONUS?: number;
-  EPISODE_TITLE_SPEAKER?: number;
-  enable_confessionals?: boolean;
-  enable_idols?: boolean;
-  enable_advantages?: boolean;
-  CONFESSIONAL_POINT?: number;
-  IDOL_PLAY_POINT?: number;
-  ADVANTAGE_POINT?: number;
 };
 
 export function getScoringValues(
@@ -47,30 +40,24 @@ export function getCategoryPoints(
   config: ReturnType<typeof getScoringValues>
 ): number {
   switch (category) {
-    case "tribe_reward":
-      return config.TRIBE_REWARD_WIN;
     case "individual_reward":
       return config.INDIVIDUAL_REWARD_WIN;
     case "tribe_immunity":
       return config.TRIBE_IMMUNITY_WIN;
-    case "individual_immunity":
-      return config.INDIVIDUAL_IMMUNITY_WIN;
     case "second_place_immunity":
       return config.TRIBE_IMMUNITY_SECOND;
+    case "found_idol":
+      return config.FOUND_IDOL;
+    case "successful_idol_play":
+      return config.SUCCESSFUL_IDOL_PLAY;
+    case "votes_received":
+      return config.VOTES_RECEIVED;
     case "merge":
       return config.MERGE_BONUS;
     case "final_three":
       return config.FINAL_THREE_BONUS;
     case "winner":
       return config.WINNER_BONUS;
-    case "episode_title":
-      return config.EPISODE_TITLE_SPEAKER;
-    case "confessional":
-      return config.CONFESSIONAL_POINT ?? 1;
-    case "idol_play":
-      return config.IDOL_PLAY_POINT ?? 3;
-    case "advantage":
-      return config.ADVANTAGE_POINT ?? 2;
     default:
       return 0;
   }
@@ -92,15 +79,18 @@ export const CATEGORY_LABELS: Record<ScoringCategory, string> = {
   advantage: "Advantage Used",
   custom_bonus: "Custom Bonus",
   tribal_vote_correct: "Correct Tribal Vote",
+  found_idol: "Found Idol",
+  successful_idol_play: "Successful Idol Play",
+  votes_received: "Votes Received at Tribal",
 };
 
 export const CHALLENGE_CATEGORIES: ScoringCategory[] = [
-  "tribe_reward",
   "individual_reward",
   "tribe_immunity",
-  "individual_immunity",
   "second_place_immunity",
-  "episode_title",
+  "found_idol",
+  "successful_idol_play",
+  "votes_received",
 ];
 
 export const MILESTONE_CATEGORIES: ScoringCategory[] = [

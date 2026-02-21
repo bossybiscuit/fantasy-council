@@ -31,12 +31,6 @@ export default async function AdminScoringPage() {
     .select("episode_id, player_id, category")
     .order("created_at");
 
-  // Fetch all leagues for the season predictions tab
-  const { data: leagues } = await supabase
-    .from("leagues")
-    .select("id, name, season_id")
-    .order("name");
-
   return (
     <Suspense>
       <AdminScoringForm
@@ -44,7 +38,6 @@ export default async function AdminScoringPage() {
         episodes={episodes || []}
         players={players || []}
         scoringEvents={scoringEvents || []}
-        leagues={leagues || []}
       />
     </Suspense>
   );

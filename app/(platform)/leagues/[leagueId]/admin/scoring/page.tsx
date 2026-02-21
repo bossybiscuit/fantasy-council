@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import ScoringForm from "./ScoringForm";
 
 export default async function ScoringPage({
@@ -58,23 +58,6 @@ export default async function ScoringPage({
     .select("episode_id, player_id, category")
     .eq("league_id", leagueId);
 
-  // Check if locked (Episode 1 scored) — needed for season predictions grading
-  const { data: ep1 } = await supabase
-    .from("episodes")
-    .select("is_scored")
-    .eq("season_id", season.id)
-    .eq("episode_number", 1)
-    .maybeSingle();
-
-  const isLocked = ep1?.is_scored === true;
-
-  // Fetch teams + season predictions for the grading tab (use service client for RLS bypass)
-  const db = createServiceClient();
-  const [{ data: teams }, { data: predictions }] = await Promise.all([
-    db.from("teams").select("id, name, user_id").eq("league_id", leagueId).order("created_at"),
-    db.from("season_predictions").select("*").eq("league_id", leagueId),
-  ]);
-
   return (
     <Suspense>
       <ScoringForm
@@ -82,9 +65,6 @@ export default async function ScoringPage({
         players={players || []}
         episodes={episodes || []}
         scoringEvents={scoringEvents || []}
-        teams={teams || []}
-        predictions={predictions || []}
-        isLocked={isLocked}
       />
     </Suspense>
   );

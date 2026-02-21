@@ -6,13 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/ui/PageHeader";
 import { DEFAULT_SCORING } from "@/lib/scoring";
 
-type TabId = "challenges" | "milestones" | "optional" | "title";
+type TabId = "challenges" | "milestones" | "optional";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "challenges", label: "Challenge Points" },
   { id: "milestones", label: "Milestone Points" },
   { id: "optional", label: "Optional Scoring" },
-  { id: "title", label: "Episode Title" },
 ];
 
 // ── Point Stepper ─────────────────────────────────────────────────────────────
@@ -219,9 +218,9 @@ export default function LeagueSettingsPage({
   function validate(): boolean {
     const errors = new Set<string>();
     const numericKeys = [
-      "TRIBE_REWARD_WIN", "INDIVIDUAL_REWARD_WIN", "TRIBE_IMMUNITY_WIN",
-      "INDIVIDUAL_IMMUNITY_WIN", "TRIBE_IMMUNITY_SECOND", "MERGE_BONUS",
-      "FINAL_THREE_BONUS", "WINNER_BONUS", "EPISODE_TITLE_SPEAKER", "WINNER_DIFFERENTIAL",
+      "INDIVIDUAL_REWARD_WIN", "TRIBE_IMMUNITY_WIN", "TRIBE_IMMUNITY_SECOND",
+      "FOUND_IDOL", "SUCCESSFUL_IDOL_PLAY", "VOTES_RECEIVED",
+      "MERGE_BONUS", "FINAL_THREE_BONUS", "WINNER_BONUS",
     ];
     for (const key of numericKeys) {
       if (val(key, 0) < 0) errors.add(key);
@@ -277,8 +276,6 @@ export default function LeagueSettingsPage({
   }
 
   if (!league) return <div className="text-text-muted p-8">Loading...</div>;
-
-  const winnerDiff = val("WINNER_DIFFERENTIAL", DEFAULT_SCORING.WINNER_DIFFERENTIAL);
 
   return (
     <div className="pb-28">
@@ -340,20 +337,20 @@ export default function LeagueSettingsPage({
       {activeTab === "challenges" && (
         <div>
           <ScoreRow
-            icon="🏆"
-            label="Tribe Reward Win"
-            description="Awarded to each member of the winning tribe in a reward challenge."
-            value={val("TRIBE_REWARD_WIN", DEFAULT_SCORING.TRIBE_REWARD_WIN)}
-            onChange={(v) => set("TRIBE_REWARD_WIN", v)}
-            hasError={validationErrors.has("TRIBE_REWARD_WIN")}
+            icon="🏺"
+            label="Found Idol"
+            description="Awarded when a castaway finds a hidden immunity idol."
+            value={val("FOUND_IDOL", DEFAULT_SCORING.FOUND_IDOL)}
+            onChange={(v) => set("FOUND_IDOL", v)}
+            hasError={validationErrors.has("FOUND_IDOL")}
           />
           <ScoreRow
-            icon="⚔️"
-            label="Individual Reward Win"
-            description="Awarded to the sole winner of an individual reward challenge."
-            value={val("INDIVIDUAL_REWARD_WIN", DEFAULT_SCORING.INDIVIDUAL_REWARD_WIN)}
-            onChange={(v) => set("INDIVIDUAL_REWARD_WIN", v)}
-            hasError={validationErrors.has("INDIVIDUAL_REWARD_WIN")}
+            icon="✨"
+            label="Successful Idol Play"
+            description="Awarded when a castaway successfully plays a hidden immunity idol."
+            value={val("SUCCESSFUL_IDOL_PLAY", DEFAULT_SCORING.SUCCESSFUL_IDOL_PLAY)}
+            onChange={(v) => set("SUCCESSFUL_IDOL_PLAY", v)}
+            hasError={validationErrors.has("SUCCESSFUL_IDOL_PLAY")}
           />
           <ScoreRow
             icon="🛡️"
@@ -364,20 +361,28 @@ export default function LeagueSettingsPage({
             hasError={validationErrors.has("TRIBE_IMMUNITY_WIN")}
           />
           <ScoreRow
-            icon="👑"
-            label="Individual Immunity Win"
-            description="Awarded to the holder of the individual immunity necklace."
-            value={val("INDIVIDUAL_IMMUNITY_WIN", DEFAULT_SCORING.INDIVIDUAL_IMMUNITY_WIN)}
-            onChange={(v) => set("INDIVIDUAL_IMMUNITY_WIN", v)}
-            hasError={validationErrors.has("INDIVIDUAL_IMMUNITY_WIN")}
-          />
-          <ScoreRow
             icon="🥈"
             label="Tribe Immunity Second Place"
             description="Awarded to each member of the second-place tribe in three-tribe seasons."
             value={val("TRIBE_IMMUNITY_SECOND", DEFAULT_SCORING.TRIBE_IMMUNITY_SECOND)}
             onChange={(v) => set("TRIBE_IMMUNITY_SECOND", v)}
             hasError={validationErrors.has("TRIBE_IMMUNITY_SECOND")}
+          />
+          <ScoreRow
+            icon="⚔️"
+            label="Individual Reward Win"
+            description="Awarded to the sole winner of an individual reward challenge."
+            value={val("INDIVIDUAL_REWARD_WIN", DEFAULT_SCORING.INDIVIDUAL_REWARD_WIN)}
+            onChange={(v) => set("INDIVIDUAL_REWARD_WIN", v)}
+            hasError={validationErrors.has("INDIVIDUAL_REWARD_WIN")}
+          />
+          <ScoreRow
+            icon="🗳️"
+            label="Votes Received at Tribal"
+            description="Awarded to each castaway who receives a vote at tribal council."
+            value={val("VOTES_RECEIVED", DEFAULT_SCORING.VOTES_RECEIVED)}
+            onChange={(v) => set("VOTES_RECEIVED", v)}
+            hasError={validationErrors.has("VOTES_RECEIVED")}
           />
         </div>
       )}
@@ -408,21 +413,6 @@ export default function LeagueSettingsPage({
             value={val("WINNER_BONUS", DEFAULT_SCORING.WINNER_BONUS)}
             onChange={(v) => set("WINNER_BONUS", v)}
             hasError={validationErrors.has("WINNER_BONUS")}
-          />
-          <ScoreRow
-            icon="📏"
-            label="Winner Differential Required"
-            description="Minimum point gap the winning fantasy team must have over the runner-up."
-            value={winnerDiff}
-            onChange={(v) => set("WINNER_DIFFERENTIAL", v)}
-            hasError={validationErrors.has("WINNER_DIFFERENTIAL")}
-            note={
-              <p className="text-xs text-accent-gold/80">
-                ⚠️ If the winner does not have a{" "}
-                <strong className="text-accent-gold">{winnerDiff}-point</strong> lead over the
-                runner-up, the system will flag it for review before saving.
-              </p>
-            }
           />
         </div>
       )}
@@ -514,26 +504,6 @@ export default function LeagueSettingsPage({
         </div>
       )}
 
-      {/* ── Tab: Episode Title ─────────────────────────────────────────────── */}
-      {activeTab === "title" && (
-        <div>
-          <ScoreRow
-            icon="🎙️"
-            label="Episode Title Speaker Points"
-            description='Awarded to the castaway whose quote becomes the episode title (e.g. "I want to play like a lion, not a mouse").'
-            value={val("EPISODE_TITLE_SPEAKER", DEFAULT_SCORING.EPISODE_TITLE_SPEAKER)}
-            onChange={(v) => set("EPISODE_TITLE_SPEAKER", v)}
-            hasError={validationErrors.has("EPISODE_TITLE_SPEAKER")}
-          />
-          <div className="mt-4 p-4 rounded-lg bg-bg-surface border border-border flex gap-3 items-start">
-            <span className="text-lg shrink-0 mt-0.5">ℹ️</span>
-            <p className="text-text-muted text-sm">
-              The commissioner assigns the episode title speaker manually each week in the{" "}
-              <strong className="text-text-primary">Score Episode</strong> panel.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* ── Fixed Save Bar ─────────────────────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-bg-base/95 backdrop-blur-sm px-6 py-4">

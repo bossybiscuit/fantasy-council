@@ -193,7 +193,6 @@ export default function CastawayGrid({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className={thClass} style={{ width: 40 }}>#</th>
                 <th
                   className={`${thClass} cursor-pointer hover:text-text-primary`}
                   onClick={() => handleSort("name")}
@@ -242,11 +241,6 @@ export default function CastawayGrid({
                           : "hover:bg-bg-surface"
                       }`}
                     >
-                      {/* Rank */}
-                      <td className="py-3 px-4 text-text-muted text-xs font-mono">
-                        {idx + 1}
-                      </td>
-
                       {/* Castaway */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
@@ -332,10 +326,10 @@ export default function CastawayGrid({
                     {/* ── Expanded stats row ── */}
                     {isSelected && (
                       <tr className="border-b border-border bg-bg-surface/50">
-                        <td colSpan={showSpoilers ? 8 : 7} className="px-4 pb-5 pt-3">
+                        <td colSpan={showSpoilers ? 7 : 6} className="px-4 pb-5 pt-3">
                           <div className="max-w-3xl">
                             {/* Bio + meta */}
-                            <div className="flex flex-wrap items-start gap-4 mb-4">
+                            <div className="flex flex-wrap items-center gap-4 mb-4">
                               {player.img_url && (
                                 <img
                                   src={player.img_url}
@@ -486,18 +480,6 @@ export default function CastawayGrid({
                               </p>
                             )}
 
-                            {/* Full profile link */}
-                            {player.slug && (
-                              <div className="mt-3">
-                                <Link
-                                  href={`/season/${seasonId}/castaways/${player.slug}`}
-                                  className="text-xs text-accent-orange hover:underline"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  View full profile →
-                                </Link>
-                              </div>
-                            )}
                           </div>
                         </td>
                       </tr>
