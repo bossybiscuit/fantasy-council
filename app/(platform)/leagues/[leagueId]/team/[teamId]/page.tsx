@@ -54,8 +54,11 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("pick_number");
 
-  // Get ALL valuations for this team in one query, then build a lookup map
-  const { data: valuationsData } = await db
+  // Get ALL valuations for this team in one query, then build a lookup map.
+  // Use the user auth client (supabase), not the service client — service client
+  // returns empty rows for draft_valuations due to schema/policy interaction.
+  // This mirrors the GET /api/leagues/[leagueId]/valuations endpoint which works correctly.
+  const { data: valuationsData } = await supabase
     .from("draft_valuations")
     .select("player_id, my_value, max_bid")
     .eq("league_id", leagueId)
