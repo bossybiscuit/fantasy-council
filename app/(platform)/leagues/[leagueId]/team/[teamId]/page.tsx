@@ -54,19 +54,7 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("pick_number");
 
-  // User's private valuations (auth client — service client silently returns empty for this table)
-  const { data: valuationsData } = await supabase
-    .from("draft_valuations")
-    .select("player_id, my_value")
-    .eq("league_id", leagueId)
-    .eq("team_id", teamId);
-
-  const valuationMap: Record<string, number> = {};
-  for (const v of valuationsData || []) {
-    valuationMap[v.player_id] = v.my_value;
-  }
-
-  // League-level value overrides set by the commissioner (same source as the players API)
+  // League-level player values set by the commissioner
   const { data: leagueValues } = await db
     .from("league_player_values")
     .select("player_id, value")
@@ -77,16 +65,12 @@ export default async function TeamPage({
     leagueValueMap[v.player_id] = v.value;
   }
 
-  // Three-tier fallback: draft_valuations.my_value → league_player_values.value → players.suggested_value
+  // Display value: league_player_values.value → players.suggested_value
   const picksWithValues = (picks || []).map((pick) => {
     const player = pick.players as any;
     return {
       ...pick,
-      displayValue:
-        valuationMap[pick.player_id] ??
-        leagueValueMap[pick.player_id] ??
-        player?.suggested_value ??
-        0,
+      displayValue: leagueValueMap[pick.player_id] ?? player?.suggested_value ?? 0,
     };
   });
 
