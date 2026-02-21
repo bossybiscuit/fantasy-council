@@ -54,13 +54,10 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("pick_number");
 
-  // Get ALL valuations for this team in one query, then build a lookup map.
-  // Use the user auth client (supabase), not the service client — service client
-  // returns empty rows for draft_valuations due to schema/policy interaction.
-  // This mirrors the GET /api/leagues/[leagueId]/valuations endpoint which works correctly.
+  // User's private valuations (auth client — service client silently returns empty for this table)
   const { data: valuationsData } = await supabase
     .from("draft_valuations")
-    .select("player_id, my_value, max_bid")
+    .select("player_id, my_value")
     .eq("league_id", leagueId)
     .eq("team_id", teamId);
 
@@ -69,12 +66,27 @@ export default async function TeamPage({
     valuationMap[v.player_id] = v.my_value;
   }
 
-  // Merge — use my_value if it exists, fall back to suggested_value
+  // League-level value overrides set by the commissioner (same source as the players API)
+  const { data: leagueValues } = await db
+    .from("league_player_values")
+    .select("player_id, value")
+    .eq("league_id", leagueId);
+
+  const leagueValueMap: Record<string, number> = {};
+  for (const v of leagueValues || []) {
+    leagueValueMap[v.player_id] = v.value;
+  }
+
+  // Three-tier fallback: draft_valuations.my_value → league_player_values.value → players.suggested_value
   const picksWithValues = (picks || []).map((pick) => {
     const player = pick.players as any;
     return {
       ...pick,
-      displayValue: valuationMap[pick.player_id] ?? player?.suggested_value ?? 0,
+      displayValue:
+        valuationMap[pick.player_id] ??
+        leagueValueMap[pick.player_id] ??
+        player?.suggested_value ??
+        0,
     };
   });
 
@@ -139,28 +151,8 @@ export default async function TeamPage({
   const totalSpent = picksWithValues.reduce((sum, pick) => sum + pick.displayValue, 0);
   const budgetRemaining = budgetTotal - totalSpent;
 
-  // ── DEBUG PANEL (remove after fix) ──────────────────────────────────────────
-  const _debug = {
-    userId: user.id,
-    teamIdFromUrl: teamId,
-    teamUserIdFromDb: (team as any).user_id,
-    userOwnsTeam: (team as any).user_id === user.id,
-    valuationsDataRaw: valuationsData,
-    valuationsCount: valuationsData?.length ?? "null",
-    picksCount: picks?.length ?? 0,
-    firstPickPlayerId: picks?.[0]?.player_id ?? "none",
-    valuationMapKeys: Object.keys(valuationMap),
-  };
-  // ─────────────────────────────────────────────────────────────────────────────
-
   return (
     <div>
-      {/* TEMP DEBUG — remove after fix */}
-      <div className="mb-4 p-4 rounded-lg bg-yellow-900/20 border border-yellow-700/40 text-xs font-mono text-yellow-300 whitespace-pre-wrap overflow-x-auto">
-        <strong className="text-yellow-200">DEBUG (temp):</strong>{"\n"}
-        {JSON.stringify(_debug, null, 2)}
-      </div>
-
       <PageHeader
         title={team.name}
         subtitle={`Managed by ${profile?.display_name || profile?.username || "Unknown"}`}
