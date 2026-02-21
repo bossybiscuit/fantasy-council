@@ -5,10 +5,12 @@ export const DEFAULT_SCORING = {
   TRIBE_REWARD_WIN: 1,
   TRIBE_IMMUNITY_WIN: 2,
   TRIBE_IMMUNITY_SECOND: 1,
-  INDIVIDUAL_REWARD_WIN: 4,
+  INDIVIDUAL_IMMUNITY_WIN: 4,
+  INDIVIDUAL_REWARD_WIN: 2,
   VOTES_RECEIVED: 1,
   FOUND_IDOL: 5,
   SUCCESSFUL_IDOL_PLAY: 5,
+  EPISODE_TITLE_SPEAKER: 3,
   MERGE_BONUS: 5,
   FINAL_THREE_BONUS: 10,
   WINNER_BONUS: 20,
@@ -18,10 +20,12 @@ export type ScoringConfig = {
   TRIBE_REWARD_WIN?: number;
   TRIBE_IMMUNITY_WIN?: number;
   TRIBE_IMMUNITY_SECOND?: number;
+  INDIVIDUAL_IMMUNITY_WIN?: number;
   INDIVIDUAL_REWARD_WIN?: number;
   VOTES_RECEIVED?: number;
   FOUND_IDOL?: number;
   SUCCESSFUL_IDOL_PLAY?: number;
+  EPISODE_TITLE_SPEAKER?: number;
   MERGE_BONUS?: number;
   FINAL_THREE_BONUS?: number;
   WINNER_BONUS?: number;
@@ -48,12 +52,16 @@ export function getCategoryPoints(
       return config.TRIBE_IMMUNITY_WIN;
     case "second_place_immunity":
       return config.TRIBE_IMMUNITY_SECOND;
+    case "individual_immunity":
+      return config.INDIVIDUAL_IMMUNITY_WIN;
     case "individual_reward":
       return config.INDIVIDUAL_REWARD_WIN;
     case "found_idol":
       return config.FOUND_IDOL;
     case "successful_idol_play":
       return config.SUCCESSFUL_IDOL_PLAY;
+    case "episode_title":
+      return config.EPISODE_TITLE_SPEAKER;
     case "votes_received":
       return config.VOTES_RECEIVED;
     case "merge":
@@ -91,10 +99,12 @@ export const CATEGORY_LABELS: Record<ScoringCategory, string> = {
 export const CHALLENGE_CATEGORIES: ScoringCategory[] = [
   "tribe_reward",
   "individual_reward",
+  "individual_immunity",
   "tribe_immunity",
   "second_place_immunity",
   "found_idol",
   "successful_idol_play",
+  "episode_title",
   "votes_received",
 ];
 

@@ -56,11 +56,6 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
   const [teamPreds, setTeamPreds] = useState<TeamPred[]>([]);
   const [loadingPreds, setLoadingPreds] = useState(false);
 
-  const [votedOutPlayerId, setVotedOutPlayerId] = useState("");
-  const [titleSpeakerPlayerId, setTitleSpeakerPlayerId] = useState("");
-  const [scoring, setScoring] = useState(false);
-  const [scoreResult, setScoreResult] = useState<{ ok: boolean; message: string } | null>(null);
-
   // Fetch episodes + players when league changes
   useEffect(() => {
     if (!selectedLeagueId) return;
@@ -69,8 +64,6 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
     setPlayers([]);
     setTeams([]);
     setSelectedEpisodeId("");
-    setScoreResult(null);
-
     fetch(`/api/admin/predictions?league_id=${selectedLeagueId}`)
       .then((r) => r.json())
       .then((d) => {
@@ -98,9 +91,6 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
       setDeadlineInput("");
     }
     setDeadlineSaved(false);
-    setScoreResult(null);
-    setVotedOutPlayerId("");
-    setTitleSpeakerPlayerId("");
   }, [selectedEpisodeId, episodes]);
 
   // Fetch submission status when episode changes
@@ -157,51 +147,6 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
       );
     }
   }
-
-  async function scorePredictions() {
-    if (!selectedLeagueId || !selectedEpisodeId || !votedOutPlayerId) return;
-    if (
-      !confirm(
-        "Score predictions for this episode? This will award points and mark the episode as scored."
-      )
-    )
-      return;
-
-    setScoring(true);
-    setScoreResult(null);
-
-    const res = await fetch("/api/admin/predictions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        league_id: selectedLeagueId,
-        episode_id: selectedEpisodeId,
-        voted_out_player_id: votedOutPlayerId,
-        title_speaker_player_id: titleSpeakerPlayerId || null,
-      }),
-    });
-
-    const data = await res.json();
-    setScoring(false);
-
-    if (!res.ok) {
-      setScoreResult({ ok: false, message: data.error || "Scoring failed" });
-    } else {
-      setScoreResult({
-        ok: true,
-        message: `The tribe has spoken. ${data.predictions_scored} predictions scored.`,
-      });
-      // Mark episode as scored locally
-      setEpisodes((prev) =>
-        prev.map((e) =>
-          e.id === selectedEpisodeId ? { ...e, is_scored: true } : e
-        )
-      );
-    }
-  }
-
-  const activePlayers = players.filter((p) => p.is_active);
-  const allPlayers = players;
 
   return (
     <div className="max-w-3xl">
@@ -416,85 +361,6 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
                 </div>
               </div>
 
-              {/* ── Section B: Score Predictions ── */}
-              <div className="card">
-                <h2 className="section-title mb-1">Section B — Score Predictions</h2>
-                <p className="text-xs text-text-muted mb-4">
-                  After the episode airs, select who was voted out. This awards points to
-                  teams that predicted correctly and marks predictions as scored.
-                </p>
-
-                {selectedEp?.is_scored && (
-                  <div className="mb-4 p-3 rounded-lg bg-yellow-900/20 border border-yellow-700/30 text-yellow-400 text-xs">
-                    ⚠️ This episode is already scored. Re-scoring will overwrite existing
-                    prediction results.
-                  </div>
-                )}
-
-                {scoreResult && (
-                  <div
-                    className={`mb-4 p-3 rounded-lg text-sm ${
-                      scoreResult.ok
-                        ? "bg-green-900/20 border border-green-700/30 text-green-400"
-                        : "bg-red-900/20 border border-red-700/30 text-red-400"
-                    }`}
-                  >
-                    {scoreResult.message}
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="label text-xs">
-                      Voted Out Player <span className="text-red-400">*</span>
-                    </label>
-                    <select
-                      className="input text-sm"
-                      value={votedOutPlayerId}
-                      onChange={(e) => setVotedOutPlayerId(e.target.value)}
-                    >
-                      <option value="">— Select player —</option>
-                      {/* Show all players (incl. inactive) in case this is being run after inactivation */}
-                      {allPlayers.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                          {p.tribe ? ` (${p.tribe})` : ""}
-                          {!p.is_active ? " — eliminated" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="label text-xs">
-                      Episode Title Speaker{" "}
-                      <span className="text-text-muted font-normal">(optional — awards 3pts)</span>
-                    </label>
-                    <select
-                      className="input text-sm"
-                      value={titleSpeakerPlayerId}
-                      onChange={(e) => setTitleSpeakerPlayerId(e.target.value)}
-                    >
-                      <option value="">— None / skip title picks —</option>
-                      {activePlayers.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                          {p.tribe ? ` (${p.tribe})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={scorePredictions}
-                    disabled={scoring || !votedOutPlayerId}
-                    className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {scoring ? "Tallying the votes..." : "Score Predictions 🗳️"}
-                  </button>
-                </div>
-              </div>
             </>
           )}
         </>

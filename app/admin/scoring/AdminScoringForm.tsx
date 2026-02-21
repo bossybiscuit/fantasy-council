@@ -74,10 +74,12 @@ export default function AdminScoringForm({
 
   const [foundIdolPlayer, setFoundIdolPlayer] = useState("");
   const [successfulIdolPlayPlayer, setSuccessfulIdolPlayPlayer] = useState("");
+  const [episodeTitleSpeaker, setEpisodeTitleSpeaker] = useState("");
   const [tribeRewardWinners, setTribeRewardWinners] = useState<string[]>([]);
   const [tribeImmunityWinners, setTribeImmunityWinners] = useState<string[]>([]);
   const [tribeImmunitySecond, setTribeImmunitySecond] = useState<string[]>([]);
   const [individualRewardWinner, setIndividualRewardWinner] = useState("");
+  const [individualImmunityWinner, setIndividualImmunityWinner] = useState("");
   const [votesReceivedCounts, setVotesReceivedCounts] = useState<Record<string, number>>({});
   const [votedOutPlayers, setVotedOutPlayers] = useState<string[]>([]);
   const [isMerge, setIsMerge] = useState(false);
@@ -88,10 +90,12 @@ export default function AdminScoringForm({
   function clearForm() {
     setFoundIdolPlayer("");
     setSuccessfulIdolPlayPlayer("");
+    setEpisodeTitleSpeaker("");
     setTribeRewardWinners([]);
     setTribeImmunityWinners([]);
     setTribeImmunitySecond([]);
     setIndividualRewardWinner("");
+    setIndividualImmunityWinner("");
     setVotesReceivedCounts({});
     setVotedOutPlayers([]);
     setIsMerge(false);
@@ -114,10 +118,12 @@ export default function AdminScoringForm({
 
       setFoundIdolPlayer(firstByCategory("found_idol"));
       setSuccessfulIdolPlayPlayer(firstByCategory("successful_idol_play"));
+      setEpisodeTitleSpeaker(firstByCategory("episode_title"));
       setTribeRewardWinners(playersByCategory("tribe_reward"));
       setTribeImmunityWinners(playersByCategory("tribe_immunity"));
       setTribeImmunitySecond(playersByCategory("second_place_immunity"));
       setIndividualRewardWinner(firstByCategory("individual_reward"));
+      setIndividualImmunityWinner(firstByCategory("individual_immunity"));
       const votesCounts: Record<string, number> = {};
       for (const ev of epEvents.filter((e) => e.category === "votes_received")) {
         votesCounts[ev.player_id] = ev.points || 0;
@@ -175,10 +181,12 @@ export default function AdminScoringForm({
         episode_id: selectedEpisodeId,
         found_idol_players: foundIdolPlayer ? [foundIdolPlayer] : [],
         successful_idol_play_players: successfulIdolPlayPlayer ? [successfulIdolPlayPlayer] : [],
+        episode_title_speaker: episodeTitleSpeaker || null,
         tribe_reward_winners: tribeRewardWinners,
         tribe_immunity_winners: tribeImmunityWinners,
         tribe_immunity_second: tribeImmunitySecond,
         individual_reward_winner: individualRewardWinner || null,
+        individual_immunity_winner: individualImmunityWinner || null,
         votes_received_counts: votesReceivedCounts,
         voted_out_players: votedOutPlayers,
         is_merge: isMerge,
@@ -325,7 +333,7 @@ export default function AdminScoringForm({
           {/* Idol Activity */}
           <div className="card">
             <h3 className="section-title mb-4">Idol Activity</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <SingleSelect
                 label={`Found Idol (${DEFAULT_SCORING.FOUND_IDOL}pt)`}
                 players={activePlayers}
@@ -337,6 +345,12 @@ export default function AdminScoringForm({
                 players={activePlayers}
                 value={successfulIdolPlayPlayer}
                 onChange={setSuccessfulIdolPlayPlayer}
+              />
+              <SingleSelect
+                label={`Episode Title Speaker (${DEFAULT_SCORING.EPISODE_TITLE_SPEAKER}pt)`}
+                players={activePlayers}
+                value={episodeTitleSpeaker}
+                onChange={setEpisodeTitleSpeaker}
               />
             </div>
           </div>
@@ -402,15 +416,23 @@ export default function AdminScoringForm({
             </div>
           </div>
 
-          {/* Individual Reward */}
+          {/* Individual Reward + Immunity */}
           <div className="card">
-            <h3 className="section-title mb-4">Individual Reward</h3>
-            <SingleSelect
-              label={`Reward Winner (${DEFAULT_SCORING.INDIVIDUAL_REWARD_WIN}pt)`}
-              players={activePlayers}
-              value={individualRewardWinner}
-              onChange={setIndividualRewardWinner}
-            />
+            <h3 className="section-title mb-4">Individual Challenges</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SingleSelect
+                label={`Individual Reward Winner (${DEFAULT_SCORING.INDIVIDUAL_REWARD_WIN}pt)`}
+                players={activePlayers}
+                value={individualRewardWinner}
+                onChange={setIndividualRewardWinner}
+              />
+              <SingleSelect
+                label={`Individual Immunity Winner (${DEFAULT_SCORING.INDIVIDUAL_IMMUNITY_WIN}pt)`}
+                players={activePlayers}
+                value={individualImmunityWinner}
+                onChange={setIndividualImmunityWinner}
+              />
+            </div>
           </div>
 
           {/* Votes Received */}
