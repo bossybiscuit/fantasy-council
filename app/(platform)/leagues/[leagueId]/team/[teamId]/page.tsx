@@ -102,10 +102,10 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("episode_number", { foreignTable: "episodes" });
 
-  // Get predictions with player + episode info
+  // Get predictions with player + episode info (including is_scored to gate result display)
   const { data: predictions } = await db
     .from("predictions")
-    .select("*, players(name), episodes(episode_number, title)")
+    .select("*, players(name), episodes(episode_number, title, is_scored)")
     .eq("league_id", leagueId)
     .eq("team_id", teamId)
     .not("locked_at", "is", null)
@@ -345,15 +345,17 @@ export default async function TeamPage({
                         {pred.points_allocated}pts
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className={pred.points_earned > 0 ? "text-green-400 font-semibold" : "text-text-muted"}>
-                          {pred.points_earned}pts
+                        <span className={ep?.is_scored && pred.points_earned > 0 ? "text-green-400 font-semibold" : "text-text-muted"}>
+                          {ep?.is_scored ? `${pred.points_earned}pts` : "—"}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {pred.points_earned > 0 ? (
-                          <span className="text-green-400">✓</span>
+                        {!ep?.is_scored ? (
+                          <span className="text-accent-gold/60 italic text-xs">Awaiting Tribal Council...</span>
+                        ) : pred.points_earned > 0 ? (
+                          <span className="text-green-400 text-xs">✓ Right side of the vote</span>
                         ) : (
-                          <span className="text-red-400">✗</span>
+                          <span className="text-red-400 text-xs">✗ Wrong side of the vote</span>
                         )}
                       </td>
                     </tr>
