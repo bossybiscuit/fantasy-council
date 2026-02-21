@@ -76,10 +76,10 @@ export default async function PredictionsPage({
         .maybeSingle()
     : { data: null };
 
-  // Get past predictions (scored)
+  // Get past predictions with is_scored to gate result display
   const { data: pastPredictions } = await supabase
     .from("predictions")
-    .select("*, players(name), episodes(episode_number, title)")
+    .select("*, players(name), episodes(episode_number, title, is_scored)")
     .eq("league_id", leagueId)
     .eq("team_id", myTeam.id)
     .not("locked_at", "is", null)
@@ -165,7 +165,6 @@ export default async function PredictionsPage({
                 </thead>
                 <tbody>
                   {pastPredictions.map((pred) => {
-                    const hit = pred.points_earned > 0;
                     const ep = pred.episodes as any;
                     const player = pred.players as any;
                     return (
@@ -178,17 +177,17 @@ export default async function PredictionsPage({
                           {pred.points_allocated}pts
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <span className={hit ? "text-green-400 font-semibold" : "text-text-muted"}>
-                            {pred.points_earned}pts
+                          <span className={ep?.is_scored && pred.points_earned > 0 ? "text-green-400 font-semibold" : "text-text-muted"}>
+                            {ep?.is_scored ? `${pred.points_earned}pts` : "—"}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          {pred.points_earned > 0 ? (
-                            <span className="text-green-400">🔥 Voted out</span>
-                          ) : pred.locked_at ? (
-                            <span className="text-red-400">✗ Survived</span>
+                          {!ep?.is_scored ? (
+                            <span className="text-accent-gold/60 italic text-xs">Awaiting Tribal Council...</span>
+                          ) : pred.points_earned > 0 ? (
+                            <span className="text-green-400 text-xs">🔥 Voted out</span>
                           ) : (
-                            <span className="text-text-muted">Pending</span>
+                            <span className="text-red-400 text-xs">✗ Survived</span>
                           )}
                         </td>
                       </tr>
