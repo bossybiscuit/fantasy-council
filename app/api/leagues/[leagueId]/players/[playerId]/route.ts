@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export async function PATCH(
   req: Request,
@@ -40,8 +40,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid value" }, { status: 400 });
   }
 
-  // Upsert into league_player_values — per-league override, doesn't touch global players table
-  const { error } = await supabase
+  // Upsert into league_player_values — use service client to bypass RLS (auth already verified above)
+  const db = createServiceClient();
+  const { error } = await db
     .from("league_player_values")
     .upsert(
       {
