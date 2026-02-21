@@ -86,15 +86,15 @@ export default function LoginPage() {
 
       <div className="torch-divider mt-6" />
 
-      <p className="text-center text-sm text-text-muted mt-4">
-        No account?{" "}
+      <div className="mt-4 text-center">
+        <p className="text-sm text-text-muted mb-3">No account yet?</p>
         <Link
           href="/register"
-          className="text-accent-orange hover:text-orange-400 font-medium"
+          className="btn-secondary w-full block text-center"
         >
-          Create one
+          Create an Account
         </Link>
-      </p>
+      </div>
     </div>
   );
 }
