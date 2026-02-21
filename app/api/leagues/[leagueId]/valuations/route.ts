@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 type Params = { params: Promise<{ leagueId: string }> };
@@ -77,6 +78,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  revalidatePath(`/leagues/${leagueId}/team/${team.id}`);
 
   return NextResponse.json({ valuation });
 }

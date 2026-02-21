@@ -52,6 +52,18 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("pick_number");
 
+  // Get this team's draft valuations (my_value per player)
+  const { data: valuationsData } = await db
+    .from("draft_valuations")
+    .select("player_id, my_value")
+    .eq("league_id", leagueId)
+    .eq("team_id", teamId);
+
+  const valuationMap = new Map<string, number>();
+  for (const v of valuationsData || []) {
+    valuationMap.set(v.player_id, v.my_value);
+  }
+
   // Get all scored episodes for this season
   const season = league.seasons as any;
   const { data: scoredEpisodes } = await db
@@ -108,6 +120,17 @@ export default async function TeamPage({
   // profile fetched separately above
   const isOwner = (team as any).user_id === user.id;
 
+  // Budget based on current draft_valuations (falls back to suggested_value)
+  const budgetTotal = (league as any).budget ?? 0;
+  const totalSpent = (picks || []).reduce((sum, pick) => {
+    const player = pick.players as any;
+    const value = valuationMap.has(pick.player_id)
+      ? valuationMap.get(pick.player_id)!
+      : (player?.suggested_value ?? 0);
+    return sum + value;
+  }, 0);
+  const budgetRemaining = budgetTotal - totalSpent;
+
   return (
     <div>
       <PageHeader
@@ -147,9 +170,26 @@ export default async function TeamPage({
           <p className="text-text-muted text-xs mt-1">Pred. Accuracy</p>
         </div>
         {league.draft_type === "auction" && (
-          <div className="card text-center col-span-2 sm:col-span-1">
-            <p className="text-3xl font-bold text-accent-gold">${(team as any).budget_remaining ?? "—"}</p>
-            <p className="text-text-muted text-xs mt-1">Budget Left</p>
+          <div className="card col-span-2 sm:col-span-4">
+            <div className="flex flex-wrap gap-4 justify-center text-sm">
+              <span className="text-text-muted">
+                Budget: <strong className="text-text-primary">${budgetTotal} total</strong>
+              </span>
+              <span className="text-text-muted">·</span>
+              <span className="text-text-muted">
+                <strong className="text-accent-gold">${totalSpent} spent</strong>
+              </span>
+              <span className="text-text-muted">·</span>
+              <span className={budgetRemaining < 0 ? "text-red-400 font-semibold" : "text-text-muted"}>
+                <strong className={budgetRemaining < 0 ? "text-red-400" : "text-green-400"}>${Math.abs(budgetRemaining)}</strong>
+                {" "}{budgetRemaining < 0 ? "over" : "remaining"}
+              </span>
+            </div>
+            {budgetRemaining < 0 && (
+              <p className="text-xs text-red-400 text-center mt-2">
+                ⚠️ Over budget by ${Math.abs(budgetRemaining)}. Adjust your valuations.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -162,6 +202,9 @@ export default async function TeamPage({
             {(picks as any[]).sort((a, b) => (playerPoints.get(b.player_id) || 0) - (playerPoints.get(a.player_id) || 0)).map((pick) => {
               const player = pick.players as any;
               const pts = playerPoints.get(pick.player_id) || 0;
+              const myValue = valuationMap.has(pick.player_id)
+                ? valuationMap.get(pick.player_id)!
+                : (player?.suggested_value ?? null);
               return (
                 <Link
                   key={pick.id}
@@ -175,6 +218,9 @@ export default async function TeamPage({
                         <span className="text-sm font-medium text-text-primary">
                           {player?.name || "Unknown"}
                         </span>
+                        {myValue != null && (
+                          <span className="text-xs text-accent-gold">${myValue}</span>
+                        )}
                         {!player?.is_active && (
                           <span className="text-xs text-red-400">Voted Out</span>
                         )}
