@@ -139,8 +139,28 @@ export default async function TeamPage({
   const totalSpent = picksWithValues.reduce((sum, pick) => sum + pick.displayValue, 0);
   const budgetRemaining = budgetTotal - totalSpent;
 
+  // ── DEBUG PANEL (remove after fix) ──────────────────────────────────────────
+  const _debug = {
+    userId: user.id,
+    teamIdFromUrl: teamId,
+    teamUserIdFromDb: (team as any).user_id,
+    userOwnsTeam: (team as any).user_id === user.id,
+    valuationsDataRaw: valuationsData,
+    valuationsCount: valuationsData?.length ?? "null",
+    picksCount: picks?.length ?? 0,
+    firstPickPlayerId: picks?.[0]?.player_id ?? "none",
+    valuationMapKeys: Object.keys(valuationMap),
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
+
   return (
     <div>
+      {/* TEMP DEBUG — remove after fix */}
+      <div className="mb-4 p-4 rounded-lg bg-yellow-900/20 border border-yellow-700/40 text-xs font-mono text-yellow-300 whitespace-pre-wrap overflow-x-auto">
+        <strong className="text-yellow-200">DEBUG (temp):</strong>{"\n"}
+        {JSON.stringify(_debug, null, 2)}
+      </div>
+
       <PageHeader
         title={team.name}
         subtitle={`Managed by ${profile?.display_name || profile?.username || "Unknown"}`}
