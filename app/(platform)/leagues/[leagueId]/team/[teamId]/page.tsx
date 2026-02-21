@@ -6,6 +6,8 @@ import { calculatePredictionAccuracy } from "@/lib/utils";
 import Link from "next/link";
 import RenameTeam from "./RenameTeam";
 
+export const dynamic = "force-dynamic";
+
 export default async function TeamPage({
   params,
 }: {
@@ -52,23 +54,26 @@ export default async function TeamPage({
     .eq("team_id", teamId)
     .order("pick_number");
 
-  // Attach each pick's display value from draft_valuations, falling back to suggested_value
-  const picksWithValues = await Promise.all(
-    (picks || []).map(async (pick) => {
-      const { data: valuation } = await db
-        .from("draft_valuations")
-        .select("my_value")
-        .eq("league_id", leagueId)
-        .eq("team_id", teamId)
-        .eq("player_id", pick.player_id)
-        .maybeSingle();
-      const player = pick.players as any;
-      return {
-        ...pick,
-        displayValue: valuation?.my_value ?? player?.suggested_value ?? 0,
-      };
-    })
-  );
+  // Get ALL valuations for this team in one query, then build a lookup map
+  const { data: valuationsData } = await db
+    .from("draft_valuations")
+    .select("player_id, my_value, max_bid")
+    .eq("league_id", leagueId)
+    .eq("team_id", teamId);
+
+  const valuationMap: Record<string, number> = {};
+  for (const v of valuationsData || []) {
+    valuationMap[v.player_id] = v.my_value;
+  }
+
+  // Merge — use my_value if it exists, fall back to suggested_value
+  const picksWithValues = (picks || []).map((pick) => {
+    const player = pick.players as any;
+    return {
+      ...pick,
+      displayValue: valuationMap[pick.player_id] ?? player?.suggested_value ?? 0,
+    };
+  });
 
   // Get all scored episodes for this season
   const season = league.seasons as any;

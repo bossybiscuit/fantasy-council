@@ -80,6 +80,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   revalidatePath(`/leagues/${leagueId}/team/${team.id}`);
+  revalidatePath(`/leagues/${leagueId}/team`);
+  revalidatePath(`/leagues/${leagueId}`);
 
   return NextResponse.json({ valuation });
 }
