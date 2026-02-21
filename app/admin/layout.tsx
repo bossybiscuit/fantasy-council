@@ -46,6 +46,9 @@ export default async function AdminLayout({
             <Link href="/admin/scoring" className="text-sm text-text-muted hover:text-text-primary">
               Scoring
             </Link>
+            <Link href="/admin/predictions" className="text-sm text-text-muted hover:text-text-primary">
+              Predictions
+            </Link>
           </nav>
         </div>
       </div>

@@ -32,14 +32,13 @@ interface ScoringFormProps {
 export default function ScoringForm({ league, players, episodes, scoringEvents, teams, predictions, isLocked }: ScoringFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"episode" | "season" | "predictions">(() => {
+  const [activeTab, setActiveTab] = useState<"episode" | "season">(() => {
     const t = searchParams.get("tab");
     if (t === "season") return "season";
-    if (t === "predictions") return "predictions";
     return "episode";
   });
 
-  function switchTab(tab: "episode" | "season" | "predictions") {
+  function switchTab(tab: "episode" | "season") {
     setActiveTab(tab);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", tab);
@@ -223,17 +222,6 @@ export default function ScoringForm({ league, players, episodes, scoringEvents, 
         </button>
         <button
           type="button"
-          onClick={() => switchTab("predictions")}
-          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "predictions"
-              ? "bg-bg-card text-text-primary shadow-sm"
-              : "text-text-muted hover:text-text-primary"
-          }`}
-        >
-          Predictions
-        </button>
-        <button
-          type="button"
           onClick={() => switchTab("season")}
           className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
             activeTab === "season"
@@ -252,10 +240,6 @@ export default function ScoringForm({ league, players, episodes, scoringEvents, 
           predictions={predictions}
           isLocked={isLocked}
         />
-      )}
-
-      {activeTab === "predictions" && (
-        <PredictionsPanel leagueId={league.id} episodes={episodes} teams={teams} />
       )}
 
       {activeTab === "episode" && (<>
@@ -484,201 +468,6 @@ export default function ScoringForm({ league, players, episodes, scoringEvents, 
   );
 }
 
-interface TeamPredSummary {
-  team: { id: string; name: string };
-  predictions: { team_id: string; player_id: string; points_allocated: number; players: any }[];
-}
-
-function PredictionsPanel({
-  leagueId,
-  episodes,
-  teams,
-}: {
-  leagueId: string;
-  episodes: Episode[];
-  teams: { id: string; name: string; user_id: string | null }[];
-}) {
-  const [predEpisodeId, setPredEpisodeId] = useState(
-    episodes.find((e) => !e.is_scored)?.id || episodes[episodes.length - 1]?.id || ""
-  );
-  const [deadlineInput, setDeadlineInput] = useState("");
-  const [savingDeadline, setSavingDeadline] = useState(false);
-  const [deadlineSaved, setDeadlineSaved] = useState(false);
-  const [teamPreds, setTeamPreds] = useState<TeamPredSummary[]>([]);
-  const [loadingPreds, setLoadingPreds] = useState(false);
-
-  const selectedEp = episodes.find((e) => e.id === predEpisodeId) as any;
-
-  // Sync deadline input when episode changes
-  useEffect(() => {
-    const ep = episodes.find((e) => e.id === predEpisodeId) as any;
-    if (ep?.prediction_deadline) {
-      const d = new Date(ep.prediction_deadline);
-      // Convert to datetime-local format in local time
-      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16);
-      setDeadlineInput(local);
-    } else {
-      setDeadlineInput("");
-    }
-    setDeadlineSaved(false);
-  }, [predEpisodeId, episodes]);
-
-  // Fetch submissions when episode changes
-  useEffect(() => {
-    if (!predEpisodeId) return;
-    setLoadingPreds(true);
-    fetch(`/api/leagues/${leagueId}/predictions?episode_id=${predEpisodeId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setTeamPreds(d.teams || []);
-        setLoadingPreds(false);
-      })
-      .catch(() => setLoadingPreds(false));
-  }, [predEpisodeId, leagueId]);
-
-  async function saveDeadline() {
-    if (!predEpisodeId) return;
-    setSavingDeadline(true);
-    const res = await fetch(`/api/leagues/${leagueId}/episodes/${predEpisodeId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prediction_deadline: deadlineInput ? new Date(deadlineInput).toISOString() : null,
-      }),
-    });
-    setSavingDeadline(false);
-    if (res.ok) setDeadlineSaved(true);
-  }
-
-  const now = new Date();
-  const storedDeadline = selectedEp?.prediction_deadline
-    ? new Date(selectedEp.prediction_deadline)
-    : null;
-  const isLocked = storedDeadline ? now > storedDeadline : false;
-
-  return (
-    <div className="space-y-6">
-      {/* Episode selector */}
-      <div className="card">
-        <label className="label">Episode</label>
-        <select
-          className="input"
-          value={predEpisodeId}
-          onChange={(e) => setPredEpisodeId(e.target.value)}
-        >
-          {episodes.map((ep) => (
-            <option key={ep.id} value={ep.id}>
-              E{ep.episode_number} — {ep.title || "Untitled"}
-              {ep.is_scored ? " ✓" : ""}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Deadline setter */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="section-title">Prediction Deadline</h3>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full border font-medium ${
-              isLocked
-                ? "text-red-400 bg-red-400/10 border-red-400/20"
-                : "text-green-400 bg-green-400/10 border-green-400/20"
-            }`}
-          >
-            ● {isLocked ? "Locked" : "Open"}
-          </span>
-        </div>
-        <div className="flex gap-2 flex-wrap items-end">
-          <div className="flex-1 min-w-48">
-            <label className="label text-xs">Deadline (local time)</label>
-            <input
-              type="datetime-local"
-              className="input text-sm"
-              value={deadlineInput}
-              onChange={(e) => {
-                setDeadlineInput(e.target.value);
-                setDeadlineSaved(false);
-              }}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={saveDeadline}
-            disabled={savingDeadline}
-            className="btn-primary text-sm py-2 px-4 disabled:opacity-50"
-          >
-            {savingDeadline ? "Saving..." : deadlineSaved ? "Saved ✓" : "Save Deadline"}
-          </button>
-        </div>
-        {storedDeadline && (
-          <p className="text-xs text-text-muted mt-2">
-            Current: {storedDeadline.toLocaleString()} —{" "}
-            {isLocked ? "predictions are locked" : "predictions still open"}
-          </p>
-        )}
-      </div>
-
-      {/* Submissions overview */}
-      <div className="card">
-        <h3 className="section-title mb-4">Submission Status</h3>
-        {loadingPreds ? (
-          <p className="text-text-muted text-sm">Loading...</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-text-muted font-medium">Team</th>
-                  <th className="text-left py-3 px-4 text-text-muted font-medium">Players Predicted</th>
-                  <th className="text-right py-3 px-4 text-text-muted font-medium">Allocated</th>
-                  <th className="text-right py-3 px-4 text-text-muted font-medium">Submitted</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamPreds.map(({ team, predictions: preds }) => {
-                  const totalAllocated = preds.reduce((sum, p) => sum + p.points_allocated, 0);
-                  const hasSubmitted = preds.length > 0;
-                  return (
-                    <tr key={team.id} className="border-b border-border last:border-0">
-                      <td className="py-3 px-4 font-medium text-text-primary">{team.name}</td>
-                      <td className="py-3 px-4 text-text-muted text-xs">
-                        {hasSubmitted
-                          ? preds
-                              .map(
-                                (p) =>
-                                  `${(p.players as any)?.name || "?"}  (${p.points_allocated}pt)`
-                              )
-                              .join(", ")
-                          : <span className="italic">—</span>}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {hasSubmitted ? (
-                          <span className="text-text-primary">{totalAllocated}/10</span>
-                        ) : (
-                          <span className="text-text-muted">0/10</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {hasSubmitted ? (
-                          <span className="text-green-400 font-medium">✓ Yes</span>
-                        ) : (
-                          <span className="text-red-400">✗ Not yet</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function SingleSelect({
   label,
