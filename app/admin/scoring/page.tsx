@@ -28,7 +28,7 @@ export default async function AdminScoringPage() {
   // Fetch existing scoring events for pre-fill
   const { data: scoringEvents } = await supabase
     .from("scoring_events")
-    .select("episode_id, player_id, category")
+    .select("episode_id, player_id, category, points")
     .order("created_at");
 
   return (

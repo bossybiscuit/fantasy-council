@@ -8,10 +8,11 @@ interface AdminScoringInput {
   episode_id: string;
   found_idol_players: string[];
   successful_idol_play_players: string[];
+  tribe_reward_winners: string[];
   tribe_immunity_winners: string[];
   tribe_immunity_second: string[];
   individual_reward_winner: string | null;
-  votes_received_players: string[];
+  votes_received_counts: Record<string, number>;
   voted_out_players: string[];
   is_merge: boolean;
   is_final_three: boolean;
@@ -90,10 +91,13 @@ export async function POST(request: NextRequest) {
     // Challenge events
     for (const pid of body.found_idol_players) addEvent(pid, "found_idol");
     for (const pid of body.successful_idol_play_players) addEvent(pid, "successful_idol_play");
+    for (const pid of (body.tribe_reward_winners || [])) addEvent(pid, "tribe_reward");
     for (const pid of body.tribe_immunity_winners) addEvent(pid, "tribe_immunity");
     for (const pid of body.tribe_immunity_second) addEvent(pid, "second_place_immunity");
     if (body.individual_reward_winner) addEvent(body.individual_reward_winner, "individual_reward");
-    for (const pid of body.votes_received_players) addEvent(pid, "votes_received");
+    for (const [pid, votes] of Object.entries(body.votes_received_counts || {})) {
+      if (votes > 0) addEvent(pid, "votes_received", votes);
+    }
 
     // Merge bonus
     for (const pid of mergePlayers) addEvent(pid, "merge");
@@ -280,7 +284,7 @@ async function recalculateScores(supabase: any, league_id: string, episode_id: s
     }
   }
 
-  const challengeCats = new Set(["individual_reward", "tribe_immunity", "second_place_immunity", "found_idol", "successful_idol_play", "votes_received"]);
+  const challengeCats = new Set(["tribe_reward", "individual_reward", "tribe_immunity", "second_place_immunity", "found_idol", "successful_idol_play", "votes_received"]);
   const milestoneCats = new Set(["merge", "final_three", "winner"]);
 
   for (const team of teams) {

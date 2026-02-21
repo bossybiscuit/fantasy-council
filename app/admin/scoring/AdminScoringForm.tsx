@@ -10,6 +10,7 @@ interface ScoringEvent {
   episode_id: string;
   player_id: string;
   category: string;
+  points?: number;
 }
 
 interface AdminScoringFormProps {
@@ -73,10 +74,11 @@ export default function AdminScoringForm({
 
   const [foundIdolPlayer, setFoundIdolPlayer] = useState("");
   const [successfulIdolPlayPlayer, setSuccessfulIdolPlayPlayer] = useState("");
+  const [tribeRewardWinners, setTribeRewardWinners] = useState<string[]>([]);
   const [tribeImmunityWinners, setTribeImmunityWinners] = useState<string[]>([]);
   const [tribeImmunitySecond, setTribeImmunitySecond] = useState<string[]>([]);
   const [individualRewardWinner, setIndividualRewardWinner] = useState("");
-  const [votesReceivedPlayers, setVotesReceivedPlayers] = useState<string[]>([]);
+  const [votesReceivedCounts, setVotesReceivedCounts] = useState<Record<string, number>>({});
   const [votedOutPlayers, setVotedOutPlayers] = useState<string[]>([]);
   const [isMerge, setIsMerge] = useState(false);
   const [isFinalThree, setIsFinalThree] = useState(false);
@@ -86,10 +88,11 @@ export default function AdminScoringForm({
   function clearForm() {
     setFoundIdolPlayer("");
     setSuccessfulIdolPlayPlayer("");
+    setTribeRewardWinners([]);
     setTribeImmunityWinners([]);
     setTribeImmunitySecond([]);
     setIndividualRewardWinner("");
-    setVotesReceivedPlayers([]);
+    setVotesReceivedCounts({});
     setVotedOutPlayers([]);
     setIsMerge(false);
     setIsFinalThree(false);
@@ -111,10 +114,15 @@ export default function AdminScoringForm({
 
       setFoundIdolPlayer(firstByCategory("found_idol"));
       setSuccessfulIdolPlayPlayer(firstByCategory("successful_idol_play"));
+      setTribeRewardWinners(playersByCategory("tribe_reward"));
       setTribeImmunityWinners(playersByCategory("tribe_immunity"));
       setTribeImmunitySecond(playersByCategory("second_place_immunity"));
       setIndividualRewardWinner(firstByCategory("individual_reward"));
-      setVotesReceivedPlayers(playersByCategory("votes_received"));
+      const votesCounts: Record<string, number> = {};
+      for (const ev of epEvents.filter((e) => e.category === "votes_received")) {
+        votesCounts[ev.player_id] = ev.points || 0;
+      }
+      setVotesReceivedCounts(votesCounts);
       setVotedOutPlayers(playersByCategory("voted_out_prediction"));
       setIsMerge(ep.is_merge);
       setIsFinalThree(ep.is_finale);
@@ -138,6 +146,14 @@ export default function AdminScoringForm({
     setArr(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
   }
 
+  function toggleTribeInArray(arr: string[], ids: string[], allSelected: boolean, setArr: (v: string[]) => void) {
+    if (allSelected) {
+      setArr(arr.filter((x) => !ids.includes(x)));
+    } else {
+      setArr([...arr, ...ids.filter((id) => !arr.includes(id))]);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedEpisodeId || !selectedSeasonId) return;
@@ -159,10 +175,11 @@ export default function AdminScoringForm({
         episode_id: selectedEpisodeId,
         found_idol_players: foundIdolPlayer ? [foundIdolPlayer] : [],
         successful_idol_play_players: successfulIdolPlayPlayer ? [successfulIdolPlayPlayer] : [],
+        tribe_reward_winners: tribeRewardWinners,
         tribe_immunity_winners: tribeImmunityWinners,
         tribe_immunity_second: tribeImmunitySecond,
         individual_reward_winner: individualRewardWinner || null,
-        votes_received_players: votesReceivedPlayers,
+        votes_received_counts: votesReceivedCounts,
         voted_out_players: votedOutPlayers,
         is_merge: isMerge,
         is_final_three: isFinalThree,
@@ -324,12 +341,30 @@ export default function AdminScoringForm({
             </div>
           </div>
 
+          {/* Tribe Reward */}
+          <div className="card">
+            <h3 className="section-title mb-1">Tribe Reward</h3>
+            <p className="text-xs font-medium text-text-muted mb-3">
+              Reward Winners ({DEFAULT_SCORING.TRIBE_REWARD_WIN}pt each)
+            </p>
+            <TribePlayerGrid
+              tribeEntries={tribeEntries}
+              allPlayers={activePlayers}
+              selected={tribeRewardWinners}
+              onToggle={(id) => toggleInArray(tribeRewardWinners, id, setTribeRewardWinners)}
+              onToggleTribe={(ids, allSelected) =>
+                toggleTribeInArray(tribeRewardWinners, ids, allSelected, setTribeRewardWinners)
+              }
+              accentClass="accent-accent-orange"
+            />
+          </div>
+
           {/* Tribe Immunity */}
           <div className="card">
             <h3 className="section-title mb-4">Tribe Immunity</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="flex flex-col sm:flex-row gap-6">
               {/* Immunity Win */}
-              <div>
+              <div className="flex-1">
                 <p className="text-xs font-medium text-text-muted mb-3">
                   Immunity Win ({DEFAULT_SCORING.TRIBE_IMMUNITY_WIN}pt each)
                 </p>
@@ -338,12 +373,18 @@ export default function AdminScoringForm({
                   allPlayers={activePlayers}
                   selected={tribeImmunityWinners}
                   onToggle={(id) => toggleInArray(tribeImmunityWinners, id, setTribeImmunityWinners)}
+                  onToggleTribe={(ids, allSelected) =>
+                    toggleTribeInArray(tribeImmunityWinners, ids, allSelected, setTribeImmunityWinners)
+                  }
                   accentClass="accent-accent-orange"
                 />
               </div>
 
+              {/* Vertical divider */}
+              <div className="hidden sm:block border-l border-border" />
+
               {/* Immunity 2nd Place */}
-              <div>
+              <div className="flex-1">
                 <p className="text-xs font-medium text-text-muted mb-3">
                   Immunity 2nd ({DEFAULT_SCORING.TRIBE_IMMUNITY_SECOND}pt each)
                 </p>
@@ -352,6 +393,9 @@ export default function AdminScoringForm({
                   allPlayers={activePlayers}
                   selected={tribeImmunitySecond}
                   onToggle={(id) => toggleInArray(tribeImmunitySecond, id, setTribeImmunitySecond)}
+                  onToggleTribe={(ids, allSelected) =>
+                    toggleTribeInArray(tribeImmunitySecond, ids, allSelected, setTribeImmunitySecond)
+                  }
                   accentClass="accent-accent-orange"
                 />
               </div>
@@ -371,28 +415,95 @@ export default function AdminScoringForm({
 
           {/* Votes Received */}
           <div className="card">
-            <h3 className="section-title mb-2">
-              Votes Received at Tribal ({DEFAULT_SCORING.VOTES_RECEIVED}pt each)
+            <h3 className="section-title mb-1">
+              Votes Received at Tribal (+{DEFAULT_SCORING.VOTES_RECEIVED}pt per vote)
             </h3>
-            <p className="text-xs text-text-muted mb-3">Select players who received votes this episode</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-              {allSeasonPlayers
-                .filter((p) => p.is_active || votedOutPlayers.includes(p.id))
-                .map((p) => (
-                  <label
-                    key={p.id}
-                    className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={votesReceivedPlayers.includes(p.id)}
-                      onChange={() => toggleInArray(votesReceivedPlayers, p.id, setVotesReceivedPlayers)}
-                      className="accent-accent-orange"
-                    />
-                    <span className="text-sm text-text-primary">{p.name}</span>
-                  </label>
-                ))}
+            <p className="text-xs text-text-muted mb-4">Tally how many votes each player received this episode</p>
+            <div className="space-y-3">
+              {tribeEntries.length > 0 ? (
+                tribeEntries.map(([tribe, { players: tribePlayers, color }]) => (
+                  <div key={tribe}>
+                    <div className="flex items-center gap-2 mb-2">
+                      {color && <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}
+                      <span className="text-xs font-medium text-text-muted">{tribe}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {tribePlayers.map((p) => {
+                        const count = votesReceivedCounts[p.id] || 0;
+                        return (
+                          <div key={p.id} className="flex items-center gap-3 px-1.5 py-1 rounded hover:bg-bg-surface">
+                            <span className="text-sm text-text-primary flex-1">{p.name}</span>
+                            <div className="flex items-center gap-0 border border-border rounded-md overflow-hidden shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setVotesReceivedCounts((c) => ({ ...c, [p.id]: Math.max(0, (c[p.id] || 0) - 1) }))}
+                                className="px-2.5 py-1 text-text-muted hover:text-text-primary hover:bg-bg-surface transition-colors text-sm font-medium"
+                                disabled={count === 0}
+                              >
+                                −
+                              </button>
+                              <span className={`w-8 text-center text-sm tabular-nums ${count > 0 ? "text-accent-orange font-semibold" : "text-text-muted"}`}>
+                                {count}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setVotesReceivedCounts((c) => ({ ...c, [p.id]: (c[p.id] || 0) + 1 }))}
+                                className="px-2.5 py-1 text-text-muted hover:text-text-primary hover:bg-bg-surface transition-colors text-sm font-medium"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="space-y-1">
+                  {activePlayers.map((p) => {
+                    const count = votesReceivedCounts[p.id] || 0;
+                    return (
+                      <div key={p.id} className="flex items-center gap-3 px-1.5 py-1 rounded hover:bg-bg-surface">
+                        <span className="text-sm text-text-primary flex-1">{p.name}</span>
+                        <div className="flex items-center gap-0 border border-border rounded-md overflow-hidden shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setVotesReceivedCounts((c) => ({ ...c, [p.id]: Math.max(0, (c[p.id] || 0) - 1) }))}
+                            className="px-2.5 py-1 text-text-muted hover:text-text-primary hover:bg-bg-surface transition-colors text-sm font-medium"
+                            disabled={count === 0}
+                          >
+                            −
+                          </button>
+                          <span className={`w-8 text-center text-sm tabular-nums ${count > 0 ? "text-accent-orange font-semibold" : "text-text-muted"}`}>
+                            {count}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setVotesReceivedCounts((c) => ({ ...c, [p.id]: (c[p.id] || 0) + 1 }))}
+                            className="px-2.5 py-1 text-text-muted hover:text-text-primary hover:bg-bg-surface transition-colors text-sm font-medium"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+            {/* Summary */}
+            {(() => {
+              const totalVotes = Object.values(votesReceivedCounts).reduce((s, n) => s + n, 0);
+              const playersWithVotes = Object.values(votesReceivedCounts).filter((n) => n > 0).length;
+              return totalVotes > 0 ? (
+                <p className="text-xs text-text-muted mt-3 pt-3 border-t border-border">
+                  Total votes tallied: <span className="text-text-primary font-medium">{totalVotes}</span>
+                  {" · "}
+                  Players receiving votes: <span className="text-text-primary font-medium">{playersWithVotes}</span>
+                </p>
+              ) : null;
+            })()}
           </div>
 
           {/* Voted Out */}
@@ -582,46 +693,63 @@ function TribePlayerGrid({
   allPlayers,
   selected,
   onToggle,
+  onToggleTribe,
   accentClass,
 }: {
   tribeEntries: [string, { players: Player[]; color: string | null }][];
   allPlayers: Player[];
   selected: string[];
   onToggle: (id: string) => void;
+  onToggleTribe?: (ids: string[], allSelected: boolean) => void;
   accentClass: string;
 }) {
   if (tribeEntries.length > 0) {
     return (
       <div className="space-y-3">
-        {tribeEntries.map(([tribe, { players: tribePlayers, color }]) => (
-          <div key={tribe}>
-            <div className="flex items-center gap-2 mb-1.5">
-              {color && (
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: color }}
-                />
-              )}
-              <span className="text-xs font-medium text-text-muted">{tribe}</span>
+        {tribeEntries.map(([tribe, { players: tribePlayers, color }]) => {
+          const tribeIds = tribePlayers.map((p) => p.id);
+          const allSelected = tribeIds.length > 0 && tribeIds.every((id) => selected.includes(id));
+          return (
+            <div key={tribe}>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-2">
+                  {color && (
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                  )}
+                  <span className="text-xs font-medium text-text-muted">{tribe}</span>
+                </div>
+                {onToggleTribe && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleTribe(tribeIds, allSelected)}
+                    className="text-xs text-text-muted hover:text-text-primary transition-colors"
+                  >
+                    {allSelected ? "Deselect all" : "Select all"}
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {tribePlayers.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(p.id)}
+                      onChange={() => onToggle(p.id)}
+                      className={accentClass}
+                    />
+                    <span className="text-sm text-text-primary">{p.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-1">
-              {tribePlayers.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(p.id)}
-                    onChange={() => onToggle(p.id)}
-                    className={accentClass}
-                  />
-                  <span className="text-sm text-text-primary">{p.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }

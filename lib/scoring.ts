@@ -2,24 +2,26 @@ import type { Json, ScoringCategory } from "@/types/database";
 
 // Default scoring constants
 export const DEFAULT_SCORING = {
-  INDIVIDUAL_REWARD_WIN: 4,
+  TRIBE_REWARD_WIN: 1,
   TRIBE_IMMUNITY_WIN: 2,
-  TRIBE_IMMUNITY_SECOND: 2,
+  TRIBE_IMMUNITY_SECOND: 1,
+  INDIVIDUAL_REWARD_WIN: 4,
+  VOTES_RECEIVED: 1,
   FOUND_IDOL: 5,
   SUCCESSFUL_IDOL_PLAY: 5,
-  VOTES_RECEIVED: 1,
   MERGE_BONUS: 5,
   FINAL_THREE_BONUS: 10,
   WINNER_BONUS: 20,
 } as const;
 
 export type ScoringConfig = {
-  INDIVIDUAL_REWARD_WIN?: number;
+  TRIBE_REWARD_WIN?: number;
   TRIBE_IMMUNITY_WIN?: number;
   TRIBE_IMMUNITY_SECOND?: number;
+  INDIVIDUAL_REWARD_WIN?: number;
+  VOTES_RECEIVED?: number;
   FOUND_IDOL?: number;
   SUCCESSFUL_IDOL_PLAY?: number;
-  VOTES_RECEIVED?: number;
   MERGE_BONUS?: number;
   FINAL_THREE_BONUS?: number;
   WINNER_BONUS?: number;
@@ -40,12 +42,14 @@ export function getCategoryPoints(
   config: ReturnType<typeof getScoringValues>
 ): number {
   switch (category) {
-    case "individual_reward":
-      return config.INDIVIDUAL_REWARD_WIN;
+    case "tribe_reward":
+      return config.TRIBE_REWARD_WIN;
     case "tribe_immunity":
       return config.TRIBE_IMMUNITY_WIN;
     case "second_place_immunity":
       return config.TRIBE_IMMUNITY_SECOND;
+    case "individual_reward":
+      return config.INDIVIDUAL_REWARD_WIN;
     case "found_idol":
       return config.FOUND_IDOL;
     case "successful_idol_play":
@@ -85,6 +89,7 @@ export const CATEGORY_LABELS: Record<ScoringCategory, string> = {
 };
 
 export const CHALLENGE_CATEGORIES: ScoringCategory[] = [
+  "tribe_reward",
   "individual_reward",
   "tribe_immunity",
   "second_place_immunity",
