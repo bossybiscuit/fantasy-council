@@ -336,6 +336,13 @@ export default function CastawayGrid({
                           <div className="max-w-3xl">
                             {/* Bio + meta */}
                             <div className="flex flex-wrap items-start gap-4 mb-4">
+                              {player.img_url && (
+                                <img
+                                  src={player.img_url}
+                                  alt={player.name}
+                                  className="w-20 h-20 rounded-full object-cover border border-border shrink-0"
+                                />
+                              )}
                               <div className="flex-1 min-w-0">
                                 {player.previous_seasons &&
                                   player.previous_seasons.length > 0 && (
