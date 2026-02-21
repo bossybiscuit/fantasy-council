@@ -29,11 +29,10 @@ export default function LeagueSidebar({
     links.push({ href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" });
   }
 
-  if (league.draft_type === "auction") {
-    links.push({ href: `${base}/admin/players`, label: "Player Values", icon: "💲" });
-  }
-
   if (isCommissioner) {
+    if (league.draft_type === "auction") {
+      links.push({ href: `${base}/admin/players`, label: "Player Values", icon: "💲" });
+    }
     links.push(
       { href: `${base}/admin/teams`, label: "Manage Teams", icon: "👥" },
       { href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" }

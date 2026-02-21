@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const db = createServiceClient();
 
-  const [{ data: teams }, { data: preds }] = await Promise.all([
+  const [{ data: teams }, { data: preds }, { data: titlePicks }] = await Promise.all([
     db.from("teams").select("id, name").eq("league_id", leagueId).order("created_at"),
     db
       .from("predictions")
@@ -40,6 +40,11 @@ export async function GET(req: NextRequest, { params }: Params) {
       .eq("league_id", leagueId)
       .eq("episode_id", episodeId)
       .not("locked_at", "is", null),
+    db
+      .from("title_picks")
+      .select("team_id, player_id")
+      .eq("league_id", leagueId)
+      .eq("episode_id", episodeId),
   ]);
 
   // Group predictions by team_id
@@ -48,9 +53,16 @@ export async function GET(req: NextRequest, { params }: Params) {
     predsByTeam.get(p.team_id)?.push(p);
   }
 
+  // Map title picks by team_id (player_id only — client resolves name)
+  const titlePickByTeam = new Map<string, string>();
+  for (const tp of titlePicks || []) {
+    if (tp.player_id) titlePickByTeam.set(tp.team_id, tp.player_id);
+  }
+
   const result = (teams || []).map((team) => ({
     team,
     predictions: predsByTeam.get(team.id) || [],
+    title_pick_player_id: titlePickByTeam.get(team.id) ?? null,
   }));
 
   return NextResponse.json({ teams: result });

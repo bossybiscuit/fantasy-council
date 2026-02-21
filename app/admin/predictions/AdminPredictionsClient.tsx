@@ -32,6 +32,7 @@ interface Team {
 interface TeamPred {
   team: Team;
   predictions: { team_id: string; player_id: string; points_allocated: number; players: any }[];
+  title_pick_player_id: string | null;
 }
 
 interface AdminPredictionsClientProps {
@@ -318,16 +319,24 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
                               Team
                             </th>
                             <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">
-                              Players Predicted
+                              Vote Predictions
+                            </th>
+                            <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">
+                              Title Speaker
                             </th>
                             <th className="text-right py-2 px-3 text-text-muted font-medium text-xs">
-                              Submitted
+                              Status
                             </th>
                           </tr>
                         </thead>
                         <tbody>
-                          {teamPreds.map(({ team, predictions: preds }) => {
-                            const hasSubmitted = preds.length > 0;
+                          {teamPreds.map(({ team, predictions: preds, title_pick_player_id }) => {
+                            const hasVotePreds = preds.length > 0;
+                            const hasTitlePick = !!title_pick_player_id;
+                            const hasSubmitted = hasVotePreds || hasTitlePick;
+                            const titleSpeakerName = title_pick_player_id
+                              ? players.find((p) => p.id === title_pick_player_id)?.name ?? "?"
+                              : null;
                             return (
                               <tr
                                 key={team.id}
@@ -337,18 +346,23 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
                                   {team.name}
                                 </td>
                                 <td className="py-2 px-3 text-text-muted text-xs">
-                                  {hasSubmitted
+                                  {hasVotePreds
                                     ? preds
                                         .map(
                                           (p) =>
                                             `${(p.players as any)?.name ?? "?"} (${p.points_allocated}pt)`
                                         )
                                         .join(", ")
-                                    : "—"}
+                                    : <span className="italic text-text-muted/50">—</span>}
+                                </td>
+                                <td className="py-2 px-3 text-text-muted text-xs">
+                                  {hasTitlePick
+                                    ? titleSpeakerName
+                                    : <span className="italic text-text-muted/50">—</span>}
                                 </td>
                                 <td className="py-2 px-3 text-right text-xs">
                                   {hasSubmitted ? (
-                                    <span className="text-green-400 font-medium">✓ Yes</span>
+                                    <span className="text-green-400 font-medium">✓ Submitted</span>
                                   ) : (
                                     <span className="text-amber-400">⚠ Not yet</span>
                                   )}
