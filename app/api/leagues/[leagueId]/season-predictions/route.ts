@@ -115,18 +115,19 @@ export async function PATCH(
   const body = await req.json();
   // For option-based categories: provide correct_answer to auto-grade
   // For manual categories: provide { teamId, isCorrect, pointsEarned }
-  const { category, correct_answer, team_id, is_correct, points_earned } = body;
+  const { category, correct_answer, team_id, is_correct, points_earned, points } = body;
 
   if (!category) return NextResponse.json({ error: "category is required" }, { status: 400 });
 
   const serviceClient = createServiceClient();
 
   if (correct_answer !== undefined) {
+    const correctPoints = typeof points === "number" ? points : 5;
     // Auto-grade: set correct=true for matching answers, false for others
     const [correctRes, incorrectRes] = await Promise.all([
       serviceClient
         .from("season_predictions")
-        .update({ is_correct: true, points_earned: 5 })
+        .update({ is_correct: true, points_earned: correctPoints })
         .eq("league_id", leagueId)
         .eq("category", category)
         .eq("answer", correct_answer),

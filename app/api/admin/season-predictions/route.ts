@@ -66,18 +66,19 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { category, correct_answer, team_id, league_id, is_correct, points_earned } = body;
+  const { category, correct_answer, team_id, league_id, is_correct, points_earned, points } = body;
 
   if (!category) return NextResponse.json({ error: "category is required" }, { status: 400 });
 
   const db = createServiceClient();
 
   if (correct_answer !== undefined) {
+    const correctPoints = typeof points === "number" ? points : 5;
     // Platform-wide auto-grade: mark matching answers correct, others incorrect
     const [correctRes, incorrectRes] = await Promise.all([
       db
         .from("season_predictions")
-        .update({ is_correct: true, points_earned: 5 })
+        .update({ is_correct: true, points_earned: correctPoints })
         .eq("category", category)
         .eq("answer", correct_answer),
       db

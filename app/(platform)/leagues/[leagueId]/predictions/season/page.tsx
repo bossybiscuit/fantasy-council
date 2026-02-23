@@ -52,6 +52,13 @@ export default async function SeasonPredictionsPage({
     .eq("league_id", leagueId)
     .eq("team_id", myTeam.id);
 
+  // Fetch players for winner prediction dropdown
+  const { data: players } = await supabase
+    .from("players")
+    .select("id, name, tribe")
+    .eq("season_id", season.id)
+    .order("name");
+
   // Check if commissioner
   const isCommissioner = league.commissioner_id === user.id;
 
@@ -101,6 +108,7 @@ export default async function SeasonPredictionsPage({
         myPredictions={myPredictions || []}
         isLocked={isLocked}
         isCommissioner={isCommissioner}
+        players={(players || []).map((p) => ({ id: p.id, name: p.name, tribe: p.tribe }))}
       />
     </div>
   );

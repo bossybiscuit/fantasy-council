@@ -16,6 +16,7 @@ export interface Category {
   description: string;
   options: string[] | null;
   imageOptions?: ImageOption[];
+  playerPicker?: boolean;
   points: number | null;
 }
 
@@ -74,6 +75,14 @@ export const SEASON_CATEGORIES: Category[] = [
     ],
     points: 5,
   },
+  {
+    key: "winner",
+    label: "Season Winner",
+    description: "Who will be the Sole Survivor this season?",
+    options: null,
+    playerPicker: true,
+    points: 10,
+  },
 ];
 
 interface SeasonPredictionsFormProps {
@@ -81,6 +90,7 @@ interface SeasonPredictionsFormProps {
   myPredictions: SeasonPrediction[];
   isLocked: boolean;
   isCommissioner: boolean;
+  players: { id: string; name: string; tribe: string | null }[];
 }
 
 export default function SeasonPredictionsForm({
@@ -88,6 +98,7 @@ export default function SeasonPredictionsForm({
   myPredictions,
   isLocked,
   isCommissioner,
+  players,
 }: SeasonPredictionsFormProps) {
   const router = useRouter();
 
@@ -130,13 +141,13 @@ export default function SeasonPredictionsForm({
     }
   }
 
-  async function gradeCategory(category: string, correctAnswer: string) {
+  async function gradeCategory(category: string, correctAnswer: string, points: number) {
     setGrading((g) => ({ ...g, [category]: true }));
 
     const res = await fetch(`/api/leagues/${leagueId}/season-predictions`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category, correct_answer: correctAnswer }),
+      body: JSON.stringify({ category, correct_answer: correctAnswer, points }),
     });
 
     setGrading((g) => ({ ...g, [category]: false }));
@@ -289,6 +300,28 @@ export default function SeasonPredictionsForm({
                   );
                 })}
               </div>
+            ) : cat.playerPicker ? (
+              /* Player dropdown */
+              <div className="mt-3">
+                <select
+                  className="input text-sm"
+                  value={currentAnswer}
+                  disabled={isLocked}
+                  onChange={(e) => {
+                    if (!isLocked && e.target.value) {
+                      setAnswers((a) => ({ ...a, [cat.key]: e.target.value }));
+                      saveAnswer(cat.key, e.target.value);
+                    }
+                  }}
+                >
+                  <option value="">— Select a player —</option>
+                  {players.map((p) => (
+                    <option key={p.id} value={p.name}>
+                      {p.name}{p.tribe ? ` (${p.tribe})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
             ) : null}
 
             {wasSaved && <p className="text-xs text-green-400 mt-2">✓ Saved</p>}
@@ -303,7 +336,7 @@ export default function SeasonPredictionsForm({
                     <button
                       key={opt}
                       type="button"
-                      onClick={() => gradeCategory(cat.key, opt)}
+                      onClick={() => gradeCategory(cat.key, opt, cat.points ?? 5)}
                       disabled={grading[cat.key]}
                       className="px-3 py-1 rounded border border-accent-gold/30 text-accent-gold text-xs hover:bg-accent-gold/10 transition-colors disabled:opacity-50"
                     >
@@ -328,7 +361,7 @@ export default function SeasonPredictionsForm({
                       type="button"
                       onClick={() => {
                         setGradeInputs((g) => ({ ...g, [cat.key]: opt.value }));
-                        gradeCategory(cat.key, opt.value);
+                        gradeCategory(cat.key, opt.value, cat.points ?? 5);
                       }}
                       disabled={grading[cat.key]}
                       className={`px-3 py-1 rounded border text-xs transition-colors disabled:opacity-50 ${
@@ -341,6 +374,29 @@ export default function SeasonPredictionsForm({
                     </button>
                   ))}
                 </div>
+                {gradeSuccess[cat.key] && (
+                  <p className="text-xs text-green-400 mt-2">✓ Graded!</p>
+                )}
+              </div>
+            )}
+
+            {/* Commissioner grading — player picker */}
+            {isCommissioner && isLocked && cat.playerPicker && !isGraded && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-xs text-text-muted mb-2">Grade — select the winner:</p>
+                <select
+                  className="input text-sm"
+                  defaultValue=""
+                  disabled={grading[cat.key]}
+                  onChange={(e) => {
+                    if (e.target.value) gradeCategory(cat.key, e.target.value, cat.points ?? 10);
+                  }}
+                >
+                  <option value="">— Select winner —</option>
+                  {players.map((p) => (
+                    <option key={p.id} value={p.name}>{p.name}</option>
+                  ))}
+                </select>
                 {gradeSuccess[cat.key] && (
                   <p className="text-xs text-green-400 mt-2">✓ Graded!</p>
                 )}

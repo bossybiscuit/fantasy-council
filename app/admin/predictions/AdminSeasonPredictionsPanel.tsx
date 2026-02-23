@@ -56,12 +56,12 @@ export default function AdminSeasonPredictionsPanel() {
       .catch(() => setLoading(false));
   }
 
-  async function gradeCategory(category: string, correctAnswer: string) {
+  async function gradeCategory(category: string, correctAnswer: string, points: number) {
     setCategoryGrading((g) => ({ ...g, [category]: true }));
     const res = await fetch("/api/admin/season-predictions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ category, correct_answer: correctAnswer }),
+      body: JSON.stringify({ category, correct_answer: correctAnswer, points }),
     });
     setCategoryGrading((g) => ({ ...g, [category]: false }));
     if (res.ok) {
@@ -149,7 +149,7 @@ export default function AdminSeasonPredictionsPanel() {
       {SEASON_CATEGORIES.map((cat) => {
         const submitted = submissionCount(cat.key);
         const graded = gradedCount(cat.key);
-        const isTextCategory = !cat.options && !cat.imageOptions;
+        const isTextCategory = !cat.options && !cat.imageOptions && !cat.playerPicker;
 
         return (
           <div key={cat.key} className="card">
@@ -187,7 +187,7 @@ export default function AdminSeasonPredictionsPanel() {
                         type="button"
                         onClick={() => {
                           setCategoryAnswer((a) => ({ ...a, [cat.key]: opt }));
-                          gradeCategory(cat.key, opt);
+                          gradeCategory(cat.key, opt, cat.points ?? 5);
                         }}
                         disabled={categoryGrading[cat.key]}
                         className={`px-3 py-1.5 rounded-full text-sm border transition-colors disabled:opacity-50 ${
@@ -201,6 +201,54 @@ export default function AdminSeasonPredictionsPanel() {
                     );
                   })}
                 </div>
+                {categorySuccess[cat.key] && (
+                  <p className="text-xs text-green-400 mt-2">✓ Graded all teams platform-wide!</p>
+                )}
+              </div>
+            )}
+
+            {/* Auto-grade panel for player picker categories (winner) */}
+            {cat.playerPicker && (
+              <div className="mb-4 p-3 rounded-lg bg-bg-surface border border-border">
+                <p className="text-xs text-text-muted mb-2 font-medium">
+                  Select the winner (auto-grades all teams across all leagues):
+                </p>
+                {(() => {
+                  const uniqueAnswers = [
+                    ...new Set(
+                      teamList
+                        .map((t) => predMap[cat.key]?.[`${t.teamId}::${t.leagueId}`]?.answer)
+                        .filter(Boolean) as string[]
+                    ),
+                  ];
+                  return uniqueAnswers.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueAnswers.map((answer) => {
+                        const isSelected = categoryAnswer[cat.key] === answer;
+                        return (
+                          <button
+                            key={answer}
+                            type="button"
+                            onClick={() => {
+                              setCategoryAnswer((a) => ({ ...a, [cat.key]: answer }));
+                              gradeCategory(cat.key, answer, cat.points ?? 10);
+                            }}
+                            disabled={categoryGrading[cat.key]}
+                            className={`px-3 py-1.5 rounded-full text-sm border transition-colors disabled:opacity-50 ${
+                              isSelected
+                                ? "bg-accent-gold/10 border-accent-gold/50 text-accent-gold"
+                                : "border-border text-text-muted hover:border-accent-gold/40 hover:text-text-primary"
+                            }`}
+                          >
+                            {answer}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-text-muted italic">No submissions yet.</p>
+                  );
+                })()}
                 {categorySuccess[cat.key] && (
                   <p className="text-xs text-green-400 mt-2">✓ Graded all teams platform-wide!</p>
                 )}
@@ -222,7 +270,7 @@ export default function AdminSeasonPredictionsPanel() {
                         type="button"
                         onClick={() => {
                           setCategoryAnswer((a) => ({ ...a, [cat.key]: opt.value }));
-                          gradeCategory(cat.key, opt.value);
+                          gradeCategory(cat.key, opt.value, cat.points ?? 5);
                         }}
                         disabled={categoryGrading[cat.key]}
                         className={`rounded-xl overflow-hidden border-2 transition-all text-left disabled:opacity-50 ${
@@ -295,8 +343,8 @@ export default function AdminSeasonPredictionsPanel() {
                       {answerLabel || "—"}
                     </span>
 
-                    {/* Grade indicator for option-based (regular + image) */}
-                    {(cat.options || cat.imageOptions) && isGraded && (
+                    {/* Grade indicator for option-based (regular + image + playerPicker) */}
+                    {(cat.options || cat.imageOptions || cat.playerPicker) && isGraded && (
                       <span className={`text-sm shrink-0 ${pred!.is_correct ? "text-green-400" : "text-red-400"}`}>
                         {pred!.is_correct ? "✅" : "❌"}
                         {pred!.points_earned > 0 && (

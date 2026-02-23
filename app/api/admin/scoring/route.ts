@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getScoringValues, getCategoryPoints } from "@/lib/scoring";
 import type { ScoringCategory } from "@/types/database";
 
@@ -179,6 +179,34 @@ export async function POST(request: NextRequest) {
 
     // Recalculate episode team scores for this league
     await recalculateScores(supabase, league.id, episode_id, season_id);
+  }
+
+  // Auto-grade winner season predictions when a winner is declared
+  if (body.winner_player) {
+    const { data: winnerData } = await supabase
+      .from("players")
+      .select("name")
+      .eq("id", body.winner_player)
+      .single();
+
+    if (winnerData?.name) {
+      const serviceClient = createServiceClient();
+      const leagueIds = leagues.map((l) => l.id);
+      await Promise.all([
+        serviceClient
+          .from("season_predictions")
+          .update({ is_correct: true, points_earned: 10 })
+          .in("league_id", leagueIds)
+          .eq("category", "winner")
+          .eq("answer", winnerData.name),
+        serviceClient
+          .from("season_predictions")
+          .update({ is_correct: false, points_earned: 0 })
+          .in("league_id", leagueIds)
+          .eq("category", "winner")
+          .neq("answer", winnerData.name),
+      ]);
+    }
   }
 
   // Mark players voted out as inactive (global, only needs to happen once)

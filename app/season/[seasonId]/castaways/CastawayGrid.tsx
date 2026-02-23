@@ -329,21 +329,60 @@ export default function CastawayGrid({
                         <td colSpan={showSpoilers ? 7 : 6} className="px-4 pb-5 pt-3">
                           <div className="max-w-3xl">
                             {/* Bio + meta */}
-                            <div className="flex flex-wrap items-center gap-4 mb-4">
-                              {player.img_url && (
-                                <img
-                                  src={player.img_url}
-                                  alt={player.name}
-                                  className="w-20 h-20 rounded-full object-cover border border-border shrink-0"
-                                />
-                              )}
-                              <div className="flex-1 min-w-0">
+                            <div className="mb-4">
+                              {/* Row: photo + (bio on sm+) + stats */}
+                              <div className="flex items-center gap-4 mb-3">
+                                {player.img_url && (
+                                  <img
+                                    src={player.img_url}
+                                    alt={player.name}
+                                    className="w-20 h-20 rounded-full object-cover border border-border shrink-0"
+                                  />
+                                )}
+                                {/* Bio in the middle — sm+ only */}
+                                <div className="flex-1 min-w-0 hidden sm:block">
+                                  {player.previous_seasons &&
+                                    player.previous_seasons.length > 0 && (
+                                      <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                                        <span className="text-xs text-text-muted">Previously:</span>
+                                        {player.previous_seasons.map((s) => (
+                                          <span
+                                            key={s}
+                                            className="text-xs bg-bg-base border border-border px-1.5 py-0.5 rounded text-text-muted"
+                                          >
+                                            {s}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  {player.bio && (
+                                    <p className="text-text-muted text-sm leading-relaxed">
+                                      {player.bio}
+                                    </p>
+                                  )}
+                                </div>
+                                {/* Quick stats — pushed right on mobile */}
+                                <div className="flex gap-3 shrink-0 ml-auto sm:ml-0">
+                                  <div className="stat-tablet px-4 py-2">
+                                    <p className="stat-number text-sm text-gradient-fire">
+                                      {player.total_pts}
+                                    </p>
+                                    <p className="stat-label">pts</p>
+                                  </div>
+                                  <div className="stat-tablet px-4 py-2">
+                                    <p className="stat-number text-sm">
+                                      {player.episode_stats.length}
+                                    </p>
+                                    <p className="stat-label">eps</p>
+                                  </div>
+                                </div>
+                              </div>
+                              {/* Bio below — mobile only */}
+                              <div className="sm:hidden">
                                 {player.previous_seasons &&
                                   player.previous_seasons.length > 0 && (
                                     <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                                      <span className="text-xs text-text-muted">
-                                        Previously:
-                                      </span>
+                                      <span className="text-xs text-text-muted">Previously:</span>
                                       {player.previous_seasons.map((s) => (
                                         <span
                                           key={s}
@@ -359,22 +398,6 @@ export default function CastawayGrid({
                                     {player.bio}
                                   </p>
                                 )}
-                              </div>
-
-                              {/* Quick stats */}
-                              <div className="flex gap-3 shrink-0">
-                                <div className="stat-tablet px-4 py-2">
-                                  <p className="stat-number text-sm text-gradient-fire">
-                                    {player.total_pts}
-                                  </p>
-                                  <p className="stat-label">pts</p>
-                                </div>
-                                <div className="stat-tablet px-4 py-2">
-                                  <p className="stat-number text-sm">
-                                    {player.episode_stats.length}
-                                  </p>
-                                  <p className="stat-label">eps</p>
-                                </div>
                               </div>
                             </div>
 
