@@ -20,6 +20,8 @@ export default function AdminSeasonPredictionsPanel() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
+
   const [categoryAnswer, setCategoryAnswer] = useState<Record<string, string>>({});
   const [categoryGrading, setCategoryGrading] = useState<Record<string, boolean>>({});
   const [categorySuccess, setCategorySuccess] = useState<Record<string, boolean>>({});
@@ -119,12 +121,24 @@ export default function AdminSeasonPredictionsPanel() {
     return { teamId, leagueId, teamName: pred?.team_name ?? "?", leagueName: pred?.league_name ?? "?" };
   });
 
+  // Unique leagues for the dropdown
+  const leagues = [
+    ...new Map(
+      predictions.map((p) => [p.league_id, { id: p.league_id, name: p.league_name }])
+    ).values(),
+  ];
+
+  // Teams visible under the current league filter
+  const visibleTeams = selectedLeagueId
+    ? teamList.filter((t) => t.leagueId === selectedLeagueId)
+    : teamList;
+
   function submissionCount(category: string) {
-    return teamList.filter((t) => predMap[category]?.[`${t.teamId}::${t.leagueId}`]?.answer).length;
+    return visibleTeams.filter((t) => predMap[category]?.[`${t.teamId}::${t.leagueId}`]?.answer).length;
   }
 
   function gradedCount(category: string) {
-    return teamList.filter((t) => {
+    return visibleTeams.filter((t) => {
       const pred = predMap[category]?.[`${t.teamId}::${t.leagueId}`];
       return pred?.is_correct !== null && pred?.is_correct !== undefined;
     }).length;
@@ -142,9 +156,21 @@ export default function AdminSeasonPredictionsPanel() {
 
   return (
     <div className="space-y-6">
-      <p className="text-xs text-text-muted">
-        Grade season predictions platform-wide. Scoring a category applies to all teams across all leagues simultaneously.
-      </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <p className="text-xs text-text-muted">
+          Grade season predictions platform-wide. Scoring a category applies to all teams across all leagues simultaneously.
+        </p>
+        <select
+          className="input text-sm shrink-0"
+          value={selectedLeagueId}
+          onChange={(e) => setSelectedLeagueId(e.target.value)}
+        >
+          <option value="">All Leagues</option>
+          {leagues.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+      </div>
 
       {SEASON_CATEGORIES.map((cat) => {
         const submitted = submissionCount(cat.key);
@@ -167,8 +193,8 @@ export default function AdminSeasonPredictionsPanel() {
                 <p className="text-xs text-text-muted mt-0.5">{cat.description}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-xs text-text-muted">{submitted}/{teamList.length} submitted</p>
-                <p className="text-xs text-text-muted">{graded}/{teamList.length} graded</p>
+                <p className="text-xs text-text-muted">{submitted}/{visibleTeams.length} submitted</p>
+                <p className="text-xs text-text-muted">{graded}/{visibleTeams.length} graded</p>
               </div>
             </div>
 
@@ -315,7 +341,7 @@ export default function AdminSeasonPredictionsPanel() {
 
             {/* Team answers list */}
             <div className="space-y-2">
-              {teamList.map(({ teamId, leagueId, teamName, leagueName }) => {
+              {visibleTeams.map(({ teamId, leagueId, teamName, leagueName }) => {
                 const pred = predMap[cat.key]?.[`${teamId}::${leagueId}`];
                 const k = `${teamId}::${leagueId}::${cat.key}`;
                 const isGraded = pred?.is_correct !== null && pred?.is_correct !== undefined;
@@ -335,7 +361,9 @@ export default function AdminSeasonPredictionsPanel() {
                     {/* Team + league */}
                     <div className="shrink-0 w-44 min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">{teamName}</p>
-                      <p className="text-xs text-text-muted truncate">{leagueName}</p>
+                      {!selectedLeagueId && (
+                        <p className="text-xs text-text-muted truncate">{leagueName}</p>
+                      )}
                     </div>
 
                     {/* Answer */}
