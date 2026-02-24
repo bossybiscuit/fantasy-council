@@ -6,6 +6,7 @@ import { calculatePredictionAccuracy } from "@/lib/utils";
 import Link from "next/link";
 import RenameTeam from "./RenameTeam";
 import OtherTribes from "./OtherTribes";
+import PredictionHistory from "./PredictionHistory";
 
 export const dynamic = "force-dynamic";
 
@@ -397,53 +398,7 @@ export default async function TeamPage({
       )}
       {/* Prediction History */}
       {predictions && predictions.length > 0 && (
-        <div className="card mt-6">
-          <h2 className="section-title mb-4">Prediction History</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-text-muted font-medium">Episode</th>
-                  <th className="text-left py-3 px-4 text-text-muted font-medium">Player</th>
-                  <th className="text-right py-3 px-4 text-text-muted font-medium">Allocated</th>
-                  <th className="text-right py-3 px-4 text-text-muted font-medium">Earned</th>
-                  <th className="text-right py-3 px-4 text-text-muted font-medium">Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {predictions.map((pred) => {
-                  const ep = pred.episodes as any;
-                  const player = pred.players as any;
-                  return (
-                    <tr key={pred.id} className="border-b border-border">
-                      <td className="py-3 px-4 text-text-muted text-xs">
-                        E{ep?.episode_number} {ep?.title}
-                      </td>
-                      <td className="py-3 px-4 text-text-primary">{player?.name}</td>
-                      <td className="py-3 px-4 text-right text-text-muted">
-                        {pred.points_allocated}pts
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className={ep?.is_scored && pred.points_earned > 0 ? "text-green-400 font-semibold" : "text-text-muted"}>
-                          {ep?.is_scored ? `${pred.points_earned}pts` : "—"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {!ep?.is_scored ? (
-                          <span className="text-accent-gold/60 italic text-xs">Awaiting Tribal Council...</span>
-                        ) : pred.points_earned > 0 ? (
-                          <span className="text-green-400 text-xs">✓ Right side of the vote</span>
-                        ) : (
-                          <span className="text-red-400 text-xs">✗ Wrong side of the vote</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <PredictionHistory predictions={predictions as any} />
       )}
 
       {/* Other teams in the league */}
