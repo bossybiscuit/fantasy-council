@@ -66,7 +66,7 @@ export default function MobileLeagueNav({
       : { href: base, label: "League", icon: "🔥" },
     isCommissioner
       ? { href: `${base}/admin/settings`, label: "Admin", icon: "⚙️" }
-      : { href: base, label: "League", icon: "🔥" },
+      : { href: `${base}/predictions/season`, label: "Season", icon: "🌴" },
   ];
 
   function isActive(href: string) {
