@@ -338,6 +338,7 @@ export default function AdminScoringForm({
               players={activePlayers}
               value={episodeTitleSpeaker}
               onChange={setEpisodeTitleSpeaker}
+              extraOptions={[{ value: "jeff_probst", label: "Jeff Probst (Host)" }]}
             />
           </div>
 
@@ -806,11 +807,13 @@ function SingleSelect({
   players,
   value,
   onChange,
+  extraOptions,
 }: {
   label: string;
   players: Player[];
   value: string;
   onChange: (v: string) => void;
+  extraOptions?: { value: string; label: string }[];
 }) {
   return (
     <div>
@@ -821,6 +824,9 @@ function SingleSelect({
         onChange={(e) => onChange(e.target.value)}
       >
         <option value="">— None —</option>
+        {extraOptions?.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
         {players.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}

@@ -17,6 +17,7 @@ export interface Category {
   options: string[] | null;
   imageOptions?: ImageOption[];
   playerPicker?: boolean;
+  includeHost?: boolean;
   points: number | null;
 }
 
@@ -73,6 +74,15 @@ export const SEASON_CATEGORIES: Category[] = [
         image_url: "/images/predictions/bird.PNG",
       },
     ],
+    points: 5,
+  },
+  {
+    key: "episode_1_speaker",
+    label: "Episode 1 Title Speaker",
+    description: "Who will speak the first episode title?",
+    options: null,
+    playerPicker: true,
+    includeHost: true,
     points: 5,
   },
   {
@@ -315,6 +325,9 @@ export default function SeasonPredictionsForm({
                   }}
                 >
                   <option value="">— Select a player —</option>
+                  {cat.includeHost && (
+                    <option value="Jeff Probst">Jeff Probst (Host)</option>
+                  )}
                   {players.map((p) => (
                     <option key={p.id} value={p.name}>
                       {p.name}{p.tribe ? ` (${p.tribe})` : ""}
@@ -383,7 +396,7 @@ export default function SeasonPredictionsForm({
             {/* Commissioner grading — player picker */}
             {isCommissioner && isLocked && cat.playerPicker && !isGraded && (
               <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-text-muted mb-2">Grade — select the winner:</p>
+                <p className="text-xs text-text-muted mb-2">Grade — select the correct answer:</p>
                 <select
                   className="input text-sm"
                   defaultValue=""
@@ -392,7 +405,10 @@ export default function SeasonPredictionsForm({
                     if (e.target.value) gradeCategory(cat.key, e.target.value, cat.points ?? 10);
                   }}
                 >
-                  <option value="">— Select winner —</option>
+                  <option value="">— Select answer —</option>
+                  {cat.includeHost && (
+                    <option value="Jeff Probst">Jeff Probst (Host)</option>
+                  )}
                   {players.map((p) => (
                     <option key={p.id} value={p.name}>{p.name}</option>
                   ))}
