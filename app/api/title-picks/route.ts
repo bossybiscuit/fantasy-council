@@ -15,6 +15,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const isHostPick = player_id === "jeff_probst";
+  const resolvedPlayerId = isHostPick ? null : (player_id || null);
+
   // Find the team belonging to this user in this league
   const { data: team } = await supabase
     .from("teams")
@@ -25,14 +28,16 @@ export async function POST(request: NextRequest) {
 
   if (!team) return NextResponse.json({ error: "No team found" }, { status: 403 });
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("title_picks")
     .upsert(
       {
         league_id,
         episode_id,
         team_id: team.id,
-        player_id: player_id || null,
+        player_id: resolvedPlayerId,
+        is_host_pick: isHostPick,
         points_earned: 0,
       },
       { onConflict: "league_id,episode_id,team_id" }

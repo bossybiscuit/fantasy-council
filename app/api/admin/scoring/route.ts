@@ -179,6 +179,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Grade title picks for this episode
+    if (body.episode_title_speaker) {
+      const isHostSpeaker = body.episode_title_speaker === "jeff_probst";
+      const titlePickPts = getCategoryPoints("episode_title", config);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: titlePicks } = await (supabase as any)
+        .from("title_picks")
+        .select("id, player_id, is_host_pick")
+        .eq("league_id", league.id)
+        .eq("episode_id", episode_id);
+
+      for (const pick of titlePicks || []) {
+        const isCorrect = isHostSpeaker
+          ? pick.is_host_pick === true
+          : pick.player_id === body.episode_title_speaker;
+        await supabase
+          .from("title_picks")
+          .update({ points_earned: isCorrect ? titlePickPts : 0 })
+          .eq("id", pick.id);
+      }
+    }
+
     // Recalculate episode team scores for this league
     await recalculateScores(supabase, league.id, episode_id, season_id);
   }

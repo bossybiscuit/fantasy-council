@@ -113,6 +113,7 @@ export default function PredictionsForm({
           onChange={(e) => setTitlePickPlayerId(e.target.value)}
         >
           <option value="">— No pick —</option>
+          <option value="jeff_probst">Jeff Probst (Host)</option>
           {players.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
