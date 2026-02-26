@@ -164,12 +164,24 @@ export default async function LeagueHomePage({
       .select("team_id, points_allocated, points_earned")
       .eq("league_id", leagueId);
 
+    // Season prediction totals per team
+    const { data: seasonPredRows } = await supabase
+      .from("season_predictions")
+      .select("team_id, points_earned")
+      .eq("league_id", leagueId);
+
+    const seasonPredMap = new Map<string, number>();
+    for (const row of seasonPredRows || []) {
+      seasonPredMap.set(row.team_id, (seasonPredMap.get(row.team_id) || 0) + (row.points_earned || 0));
+    }
+
     standingsRows = teams
       .map((team) => {
         const currentScore =
           currentScores?.find((s) => s.team_id === team.id) || null;
         const previousScore =
           (previousScores as any[])?.find((s) => s.team_id === team.id) || null;
+        const seasonPredTotal = seasonPredMap.get(team.id) || 0;
         const teamPreds = (allPredictions || []).filter(
           (p) => p.team_id === team.id
         );
@@ -209,12 +221,13 @@ export default async function LeagueHomePage({
           currentScore,
           previousScore,
           predictionAccuracy,
-          totalPoints: currentScore?.cumulative_total || 0,
+          totalPoints: (currentScore?.cumulative_total || 0) + seasonPredTotal,
+          seasonPredTotal,
           rank: currentScore?.rank || 999,
           picks,
         };
       })
-      .sort((a, b) => a.rank - b.rank);
+      .sort((a, b) => b.totalPoints - a.totalPoints);
   }
 
   return (
