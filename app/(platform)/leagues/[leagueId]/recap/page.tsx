@@ -386,9 +386,9 @@ export default async function RecapPage({
                 {correctPredictionCount} of {predictionCount} correct
               </p>
               <div className="space-y-1.5">
-                {(episodePredictions || []).map((pred) => {
-                  const correct = (pred.points_earned || 0) > 0;
-                  return (
+                {(episodePredictions || [])
+                  .filter((p) => (p.points_earned || 0) > 0)
+                  .map((pred) => (
                     <div
                       key={pred.id}
                       className="flex items-center justify-between gap-2 text-sm"
@@ -401,16 +401,11 @@ export default async function RecapPage({
                           → {(pred.players as any)?.name || "Unknown"} ({pred.points_allocated}pt)
                         </span>
                       </div>
-                      <span
-                        className={`shrink-0 font-semibold ${
-                          correct ? "text-green-400" : "text-text-muted"
-                        }`}
-                      >
-                        {correct ? `+${pred.points_earned}` : "✗"}
+                      <span className="shrink-0 font-semibold text-green-400">
+                        +{pred.points_earned}
                       </span>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             </div>
           )}

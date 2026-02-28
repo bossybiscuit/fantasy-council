@@ -96,13 +96,33 @@ export default async function TeamPage({
         .in("player_id", playerIds)
     : { data: [] };
 
-  // Get episode team scores (cumulative), ordered by episode number
-  const { data: episodeScores } = await db
+  // Get episode team scores (cumulative)
+  const { data: episodeScoresRaw } = await db
     .from("episode_team_scores")
     .select("*, episodes(episode_number, title)")
     .eq("league_id", leagueId)
+    .eq("team_id", teamId);
+
+  // Sort client-side — foreignTable ordering is unreliable in PostgREST
+  const episodeScores = (episodeScoresRaw || []).sort(
+    (a, b) =>
+      ((a.episodes as any)?.episode_number ?? 0) -
+      ((b.episodes as any)?.episode_number ?? 0)
+  );
+
+  // Season predictions for this team
+  const { data: seasonPredictions } = await db
+    .from("season_predictions")
+    .select("*")
+    .eq("league_id", leagueId)
     .eq("team_id", teamId)
-    .order("episode_number", { foreignTable: "episodes" });
+    .not("locked_at", "is", null)
+    .order("category");
+
+  const seasonPredTotal = (seasonPredictions || []).reduce(
+    (sum, p) => sum + (p.points_earned || 0),
+    0
+  );
 
   // Get predictions with player + episode info (including is_scored to gate result display)
   const { data: predictions } = await db
@@ -145,7 +165,9 @@ export default async function TeamPage({
         ? db.from("draft_picks").select("team_id, player_id, players(id, name, tribe, tribe_color, is_active, img_url)").in("team_id", otherTeamIds)
         : Promise.resolve({ data: [] }),
       otherTeamIds.length > 0
-        ? db.from("episode_team_scores").select("team_id, cumulative_total, rank").in("team_id", otherTeamIds).order("episode_number", { foreignTable: "episodes" })
+        // No foreignTable order — it requires the join in select and silently returns null without it.
+        // Instead use max(cumulative_total) per team in the loop below.
+        ? db.from("episode_team_scores").select("team_id, cumulative_total, rank").eq("league_id", leagueId).in("team_id", otherTeamIds)
         : Promise.resolve({ data: [] }),
       otherTeamIds.length > 0
         ? db.from("scoring_events").select("team_id, player_id, points").eq("league_id", leagueId).in("team_id", otherTeamIds)
@@ -170,14 +192,17 @@ export default async function TeamPage({
       (otherPlayerPtsMap[ev.team_id][ev.player_id] || 0) + ev.points;
   }
 
-  // Build latest score/rank per team
+  // Build latest score/rank per team — keep the row with the highest cumulative_total
   const otherLatestScoreMap: Record<string, { totalPts: number; rank: number | null }> = {};
   for (const t of otherTeamIds) otherLatestScoreMap[t] = { totalPts: 0, rank: null };
   for (const s of otherScores || []) {
-    otherLatestScoreMap[s.team_id] = {
-      totalPts: (s as any).cumulative_total ?? 0,
-      rank: (s as any).rank ?? null,
-    };
+    const curr = otherLatestScoreMap[s.team_id] || { totalPts: 0, rank: null };
+    if ((s.cumulative_total ?? 0) >= curr.totalPts) {
+      otherLatestScoreMap[s.team_id] = {
+        totalPts: (s as any).cumulative_total ?? 0,
+        rank: (s as any).rank ?? null,
+      };
+    }
   }
 
   // Assemble other teams data
@@ -358,17 +383,31 @@ export default async function TeamPage({
                   );
                 })}
               </tbody>
+              {seasonPredTotal > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-bg-surface/50">
+                    <td className="py-2.5 px-4 text-text-muted text-xs font-medium">Season Predictions</td>
+                    <td className="py-2.5 px-4 text-right text-text-muted">—</td>
+                    <td className="py-2.5 px-4 text-right text-text-muted">—</td>
+                    <td className="py-2.5 px-4 text-right text-accent-gold font-semibold">{seasonPredTotal}</td>
+                    <td className="py-2.5 px-4 text-right text-accent-gold font-semibold">{seasonPredTotal}</td>
+                    <td className="py-2.5 px-4 text-right font-bold text-accent-gold">
+                      {(episodeScores[episodeScores.length - 1]?.cumulative_total ?? 0) + seasonPredTotal}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
       )}
 
-      {/* Player-Episode Scoring Details */}
-      {scoredEpisodes && scoredEpisodes.length > 0 && playerIds.length > 0 && (
+      {/* Player-Episode Scoring Details + Season Predictions */}
+      {(scoredEpisodes && scoredEpisodes.length > 0 && playerIds.length > 0) || (seasonPredictions && seasonPredictions.length > 0) ? (
         <div className="card">
           <h2 className="section-title mb-4">Scoring Events</h2>
           <div className="space-y-4">
-            {scoredEpisodes.map((ep) => {
+            {(scoredEpisodes || []).map((ep) => {
               const epEvents = (scoringEvents || []).filter((e) => e.episode_id === ep.id);
               if (epEvents.length === 0) return null;
               return (
@@ -393,9 +432,52 @@ export default async function TeamPage({
                 </div>
               );
             })}
+
+            {/* Season Predictions section */}
+            {seasonPredictions && seasonPredictions.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-text-muted uppercase mb-2">
+                  Season Predictions
+                </p>
+                <div className="space-y-1">
+                  {seasonPredictions.map((pred) => {
+                    const label = pred.category
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (c: string) => c.toUpperCase());
+                    const graded = pred.is_correct !== null;
+                    return (
+                      <div
+                        key={pred.id}
+                        className="flex items-center justify-between text-sm py-1.5 px-3 rounded bg-bg-surface"
+                      >
+                        <span className="text-text-primary">{label}</span>
+                        <span className="text-text-muted text-xs truncate max-w-[40%] text-right">
+                          {pred.answer || "—"}
+                        </span>
+                        <span
+                          className={`font-semibold shrink-0 ml-2 ${
+                            !graded
+                              ? "text-text-muted"
+                              : pred.is_correct
+                              ? "text-accent-gold"
+                              : "text-text-muted"
+                          }`}
+                        >
+                          {!graded
+                            ? "Pending"
+                            : pred.is_correct
+                            ? `+${pred.points_earned}`
+                            : "✗"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      ) : null}
       {/* Prediction History */}
       {predictions && predictions.length > 0 && (
         <PredictionHistory predictions={predictions as any} />
