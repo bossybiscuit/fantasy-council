@@ -50,6 +50,9 @@ export default function StandingsTable({
 
   return (
     <div>
+      {/* ── Podium ── */}
+      <PodiumDisplay rows={rows} leagueId={leagueId} />
+
       {/* ── Mobile card list ── */}
       <div className="md:hidden space-y-2">
         {rows.map((row, idx) => {
@@ -369,6 +372,83 @@ export default function StandingsTable({
             No standings yet. Draft must complete first.
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Podium ────────────────────────────────────────────────────────────────────
+
+function PodiumDisplay({
+  rows,
+  leagueId,
+}: {
+  rows: StandingsRow[];
+  leagueId: string;
+}) {
+  if (rows.length < 3) return null;
+
+  const slots = [
+    {
+      row: rows[1],
+      plateH: "h-16 sm:h-20",
+      rankColor: "text-zinc-300",
+      plateBg:
+        "bg-gradient-to-b from-zinc-400/20 to-zinc-400/5 border-t-2 border-zinc-400/50",
+    },
+    {
+      row: rows[0],
+      plateH: "h-24 sm:h-32",
+      rankColor: "text-accent-gold",
+      plateBg:
+        "bg-gradient-to-b from-accent-gold/25 to-accent-gold/5 border-t-2 border-accent-gold/80",
+    },
+    {
+      row: rows[2],
+      plateH: "h-10 sm:h-14",
+      rankColor: "text-orange-500",
+      plateBg:
+        "bg-gradient-to-b from-orange-700/20 to-orange-700/5 border-t-2 border-orange-600/50",
+    },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-border bg-gradient-to-b from-bg-card to-bg-base px-4 pt-5 pb-0 mb-6 overflow-hidden">
+      <p className="text-center text-[10px] uppercase tracking-[0.25em] text-text-muted font-medium mb-6">
+        Leaderboard
+      </p>
+      <div className="flex items-end justify-center gap-2 sm:gap-4">
+        {slots.map(({ row, plateH, rankColor, plateBg }) => (
+          <Link
+            key={row.team.id}
+            href={`/leagues/${leagueId}/team/${row.team.id}`}
+            className="flex flex-col items-center group flex-1 max-w-[130px] sm:max-w-[160px]"
+          >
+            {/* Info above platform */}
+            <div className="text-center mb-2 px-1 w-full">
+              <p
+                className={`text-xl sm:text-2xl font-black ${rankColor} leading-none mb-1.5`}
+              >
+                #{row.rank}
+              </p>
+              <p className="font-semibold text-text-primary text-xs sm:text-sm truncate group-hover:text-accent-orange transition-colors leading-tight">
+                {row.team.name}
+              </p>
+              <p className="text-[10px] text-text-muted truncate mb-1.5">
+                {row.profile?.display_name || row.profile?.username || "—"}
+              </p>
+              <p className={`font-black text-sm sm:text-base ${rankColor}`}>
+                {row.totalPoints}
+                <span className="text-[10px] font-normal text-text-muted ml-0.5">
+                  pts
+                </span>
+              </p>
+            </div>
+
+            {/* Platform block */}
+            <div className={`w-full ${plateH} ${plateBg} rounded-t-lg`} />
+          </Link>
+        ))}
       </div>
     </div>
   );
