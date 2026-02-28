@@ -107,6 +107,14 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
     setArr(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
   }
 
+  function toggleTribeInArray(arr: string[], ids: string[], allSelected: boolean, setArr: (v: string[]) => void) {
+    if (allSelected) {
+      setArr(arr.filter((x) => !ids.includes(x)));
+    } else {
+      setArr([...arr, ...ids.filter((id) => !arr.includes(id))]);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedEpisodeId) return;
@@ -260,8 +268,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
         {/* Tribe Immunity */}
         <div className="card">
           <h3 className="section-title mb-4">Tribe Immunity</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="flex-1">
               <p className="text-xs font-medium text-text-muted mb-3">
                 Immunity Win ({DEFAULT_SCORING.TRIBE_IMMUNITY_WIN}pt each)
               </p>
@@ -270,9 +278,16 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
                 allPlayers={activePlayers}
                 selected={tribeImmunityWinners}
                 onToggle={(id) => toggleInArray(tribeImmunityWinners, id, setTribeImmunityWinners)}
+                onToggleTribe={(ids, allSelected) =>
+                  toggleTribeInArray(tribeImmunityWinners, ids, allSelected, setTribeImmunityWinners)
+                }
               />
             </div>
-            <div>
+
+            {/* Vertical divider */}
+            <div className="hidden sm:block border-l border-border" />
+
+            <div className="flex-1">
               <p className="text-xs font-medium text-text-muted mb-3">
                 Immunity 2nd ({DEFAULT_SCORING.TRIBE_IMMUNITY_SECOND}pt each)
               </p>
@@ -281,6 +296,9 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
                 allPlayers={activePlayers}
                 selected={tribeImmunitySecond}
                 onToggle={(id) => toggleInArray(tribeImmunitySecond, id, setTribeImmunitySecond)}
+                onToggleTribe={(ids, allSelected) =>
+                  toggleTribeInArray(tribeImmunitySecond, ids, allSelected, setTribeImmunitySecond)
+                }
               />
             </div>
           </div>
@@ -495,44 +513,61 @@ function TribePlayerGrid({
   allPlayers,
   selected,
   onToggle,
+  onToggleTribe,
 }: {
   tribeEntries: [string, { players: Player[]; color: string | null }][];
   allPlayers: Player[];
   selected: string[];
   onToggle: (id: string) => void;
+  onToggleTribe?: (ids: string[], allSelected: boolean) => void;
 }) {
   if (tribeEntries.length > 0) {
     return (
       <div className="space-y-3">
-        {tribeEntries.map(([tribe, { players: tribePlayers, color }]) => (
-          <div key={tribe}>
-            <div className="flex items-center gap-2 mb-1.5">
-              {color && (
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: color }}
-                />
-              )}
-              <span className="text-xs font-medium text-text-muted">{tribe}</span>
+        {tribeEntries.map(([tribe, { players: tribePlayers, color }]) => {
+          const tribeIds = tribePlayers.map((p) => p.id);
+          const allSelected = tribeIds.length > 0 && tribeIds.every((id) => selected.includes(id));
+          return (
+            <div key={tribe}>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-2">
+                  {color && (
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                  )}
+                  <span className="text-xs font-medium text-text-muted">{tribe}</span>
+                </div>
+                {onToggleTribe && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleTribe(tribeIds, allSelected)}
+                    className="text-xs text-text-muted hover:text-text-primary transition-colors"
+                  >
+                    {allSelected ? "Deselect all" : "Select all"}
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {tribePlayers.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(p.id)}
+                      onChange={() => onToggle(p.id)}
+                      className="accent-accent-orange"
+                    />
+                    <span className="text-sm text-text-primary">{p.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-1">
-              {tribePlayers.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(p.id)}
-                    onChange={() => onToggle(p.id)}
-                    className="accent-accent-orange"
-                  />
-                  <span className="text-sm text-text-primary">{p.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }

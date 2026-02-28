@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import StandingsTable from "@/components/ui/StandingsTable";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
@@ -30,6 +30,11 @@ export default async function LeagueHomePage({
 
   if (!league) redirect("/dashboard");
 
+  // Use service client for league data reads — the viewing user may be a super admin
+  // who is not a member/commissioner of this league, which would cause RLS to silently
+  // return empty results for draft_picks, scoring events, and episode_team_scores.
+  const db = createServiceClient();
+
   const { data: myTeam } = await supabase
     .from("teams")
     .select("id")
@@ -40,7 +45,7 @@ export default async function LeagueHomePage({
   // Fetch teams without the profiles() join — that join errors silently
   // (returns null data) likely due to RLS on profiles during PostgREST join.
   // Instead: get teams, then look up profiles separately and merge.
-  const { data: teamsData } = await supabase
+  const { data: teamsData } = await db
     .from("teams")
     .select("id, name, user_id, budget_remaining")
     .eq("league_id", leagueId)
@@ -123,13 +128,13 @@ export default async function LeagueHomePage({
   const previousEpisode = (previousEpisodeArr as any[])?.[0] || null;
 
   // Draft picks with player data for roster previews
-  const { data: draftPicksRaw } = await supabase
+  const { data: draftPicksRaw } = await db
     .from("draft_picks")
     .select("team_id, player_id, players(id, name, slug, is_active, tribe, tribe_color)")
     .eq("league_id", leagueId);
 
   // All scoring events to compute per-player point contributions per team
-  const { data: scoringEventsRaw } = await supabase
+  const { data: scoringEventsRaw } = await db
     .from("scoring_events")
     .select("team_id, player_id, points")
     .eq("league_id", leagueId);
@@ -145,27 +150,27 @@ export default async function LeagueHomePage({
   let standingsRows: any[] = [];
 
   if (latestEpisode && teams) {
-    const { data: currentScores } = await supabase
+    const { data: currentScores } = await db
       .from("episode_team_scores")
       .select("*")
       .eq("league_id", leagueId)
       .eq("episode_id", latestEpisode.id);
 
     const { data: previousScores } = previousEpisode
-      ? await supabase
+      ? await db
           .from("episode_team_scores")
           .select("*")
           .eq("league_id", leagueId)
           .eq("episode_id", previousEpisode.id)
       : { data: [] };
 
-    const { data: allPredictions } = await supabase
+    const { data: allPredictions } = await db
       .from("predictions")
       .select("team_id, points_allocated, points_earned")
       .eq("league_id", leagueId);
 
     // Season prediction totals per team
-    const { data: seasonPredRows } = await supabase
+    const { data: seasonPredRows } = await db
       .from("season_predictions")
       .select("team_id, points_earned")
       .eq("league_id", leagueId);
