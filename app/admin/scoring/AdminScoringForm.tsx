@@ -365,8 +365,8 @@ export default function AdminScoringForm({
               Reward Winners ({DEFAULT_SCORING.TRIBE_REWARD_WIN}pt each)
             </p>
             <TribePlayerGrid
-              tribeEntries={tribeEntries}
-              allPlayers={activePlayers}
+              tribeEntries={allTribeEntries}
+              allPlayers={allSeasonPlayers}
               selected={tribeRewardWinners}
               onToggle={(id) => toggleInArray(tribeRewardWinners, id, setTribeRewardWinners)}
               onToggleTribe={(ids, allSelected) =>
@@ -386,8 +386,8 @@ export default function AdminScoringForm({
                   Immunity Win ({DEFAULT_SCORING.TRIBE_IMMUNITY_WIN}pt each)
                 </p>
                 <TribePlayerGrid
-                  tribeEntries={tribeEntries}
-                  allPlayers={activePlayers}
+                  tribeEntries={allTribeEntries}
+                  allPlayers={allSeasonPlayers}
                   selected={tribeImmunityWinners}
                   onToggle={(id) => toggleInArray(tribeImmunityWinners, id, setTribeImmunityWinners)}
                   onToggleTribe={(ids, allSelected) =>
@@ -406,8 +406,8 @@ export default function AdminScoringForm({
                   Immunity 2nd ({DEFAULT_SCORING.TRIBE_IMMUNITY_SECOND}pt each)
                 </p>
                 <TribePlayerGrid
-                  tribeEntries={tribeEntries}
-                  allPlayers={activePlayers}
+                  tribeEntries={allTribeEntries}
+                  allPlayers={allSeasonPlayers}
                   selected={tribeImmunitySecond}
                   onToggle={(id) => toggleInArray(tribeImmunitySecond, id, setTribeImmunitySecond)}
                   onToggleTribe={(ids, allSelected) =>
@@ -425,13 +425,13 @@ export default function AdminScoringForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <SingleSelect
                 label={`Individual Reward Winner (${DEFAULT_SCORING.INDIVIDUAL_REWARD_WIN}pt)`}
-                players={activePlayers}
+                players={allSeasonPlayers}
                 value={individualRewardWinner}
                 onChange={setIndividualRewardWinner}
               />
               <SingleSelect
                 label={`Individual Immunity Winner (${DEFAULT_SCORING.INDIVIDUAL_IMMUNITY_WIN}pt)`}
-                players={activePlayers}
+                players={allSeasonPlayers}
                 value={individualImmunityWinner}
                 onChange={setIndividualImmunityWinner}
               />
@@ -808,7 +808,7 @@ function TribePlayerGrid({
                       onChange={() => onToggle(p.id)}
                       className={accentClass}
                     />
-                    <span className="text-sm text-text-primary">{p.name}</span>
+                    <span className={`text-sm ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>{p.name}</span>
                   </label>
                 ))}
               </div>
@@ -832,7 +832,7 @@ function TribePlayerGrid({
             onChange={() => onToggle(p.id)}
             className={accentClass}
           />
-          <span className="text-sm text-text-primary">{p.name}</span>
+          <span className={`text-sm ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>{p.name}</span>
         </label>
       ))}
     </div>
