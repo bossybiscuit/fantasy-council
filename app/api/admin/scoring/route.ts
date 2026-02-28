@@ -17,6 +17,7 @@ interface AdminScoringInput {
   individual_immunity_winner: string | null;
   votes_received_counts: Record<string, number>;
   voted_out_players: string[];
+  medevac_players: string[];
   is_merge: boolean;
   is_final_three: boolean;
   final_three_players: string[];
@@ -242,6 +243,35 @@ export async function POST(request: NextRequest) {
       .from("players")
       .update({ is_active: false })
       .in("id", body.voted_out_players);
+  }
+
+  // Medevac / quit — mark inactive globally; NO prediction points awarded.
+  // Insert a 0-pt medevac scoring event per league for bookkeeping (form pre-fill).
+  const medevacIds: string[] = body.medevac_players || [];
+  if (medevacIds.length > 0) {
+    await db.from("players").update({ is_active: false }).in("id", medevacIds);
+
+    for (const league of leagues) {
+      const { data: leaguePicks } = await db
+        .from("draft_picks")
+        .select("player_id, team_id")
+        .eq("league_id", league.id)
+        .in("player_id", medevacIds);
+
+      const pickMap = new Map((leaguePicks || []).map((p) => [p.player_id, p.team_id]));
+
+      await db.from("scoring_events").insert(
+        medevacIds.map((pid) => ({
+          league_id: league.id,
+          episode_id,
+          player_id: pid,
+          team_id: pickMap.get(pid) || null,
+          category: "medevac" as ScoringCategory,
+          points: 0,
+          note: "Medevac / no-vote elimination",
+        }))
+      );
+    }
   }
 
   // Mark episode as scored
