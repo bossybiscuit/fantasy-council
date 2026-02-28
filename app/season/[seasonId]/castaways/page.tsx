@@ -105,6 +105,9 @@ export default async function CastawaysPage({
       entry.leagueIds.add(ev.league_id);
 
       const cat = ev.category as ScoringCategory;
+      // Skip events that reward teams for predictions, not the player themselves
+      if (cat === "voted_out_prediction" || cat === "medevac") continue;
+
       if (CHALLENGE_CATEGORIES.includes(cat) && cat !== "episode_title") {
         entry.challenge_pts += ev.points;
       } else if (cat === "episode_title") {
