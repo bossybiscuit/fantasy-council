@@ -119,11 +119,12 @@ export default function AdminScoringForm({
   const loadEpisodeData = useCallback(
     (episodeId: string) => {
       const ep = episodes.find((e) => e.id === episodeId);
-      if (!ep?.is_scored) {
+      const epEvents = scoringEvents.filter((e) => e.episode_id === episodeId);
+      // Only clear form for truly fresh (never-scored) episodes
+      if (!ep?.is_scored && epEvents.length === 0) {
         clearForm();
         return;
       }
-      const epEvents = scoringEvents.filter((e) => e.episode_id === episodeId);
       const playersByCategory = (cat: string) =>
         [...new Set(epEvents.filter((e) => e.category === cat).map((e) => e.player_id))];
       const firstByCategory = (cat: string) => playersByCategory(cat)[0] || "";
@@ -246,8 +247,7 @@ export default function AdminScoringForm({
     if (!res.ok) {
       setError(data.error);
     } else {
-      setSuccess("Episode scoring cleared across all leagues.");
-      clearForm();
+      setSuccess("Episode scoring cleared across all leagues. Re-submit the form to re-score.");
       router.refresh();
     }
   }
@@ -534,27 +534,22 @@ export default function AdminScoringForm({
               These players will be marked as eliminated across all leagues
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-              {allSeasonPlayers
-                .filter((p) => p.is_active || votedOutPlayers.includes(p.id))
-                .map((p) => (
-                  <label
-                    key={p.id}
-                    className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={votedOutPlayers.includes(p.id)}
-                      onChange={() => toggleInArray(votedOutPlayers, p.id, setVotedOutPlayers)}
-                      className="accent-red-500"
-                    />
-                    <span className="text-sm text-text-primary">
-                      {p.name}
-                      {!p.is_active && (
-                        <span className="text-xs text-text-muted ml-1">(inactive)</span>
-                      )}
-                    </span>
-                  </label>
-                ))}
+              {allSeasonPlayers.map((p) => (
+                <label
+                  key={p.id}
+                  className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
+                >
+                  <input
+                    type="checkbox"
+                    checked={votedOutPlayers.includes(p.id)}
+                    onChange={() => toggleInArray(votedOutPlayers, p.id, setVotedOutPlayers)}
+                    className="accent-red-500"
+                  />
+                  <span className={`text-sm ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>
+                    {p.name}
+                  </span>
+                </label>
+              ))}
             </div>
           </div>
 
