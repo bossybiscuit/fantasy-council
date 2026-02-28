@@ -94,6 +94,7 @@ export const CATEGORY_LABELS: Record<ScoringCategory, string> = {
   found_idol: "Found Idol",
   successful_idol_play: "Successful Idol Play",
   votes_received: "Votes Received at Tribal",
+  medevac: "Medevac / No-Vote Elimination",
 };
 
 export const CHALLENGE_CATEGORIES: ScoringCategory[] = [

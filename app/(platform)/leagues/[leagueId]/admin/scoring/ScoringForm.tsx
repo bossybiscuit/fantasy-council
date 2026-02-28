@@ -37,6 +37,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
   const [individualRewardWinner, setIndividualRewardWinner] = useState("");
   const [votesReceivedPlayers, setVotesReceivedPlayers] = useState<string[]>([]);
   const [votedOutPlayers, setVotedOutPlayers] = useState<string[]>([]);
+  const [medevacPlayers, setMedevacPlayers] = useState<string[]>([]);
   const [isMerge, setIsMerge] = useState(false);
   const [isFinalThree, setIsFinalThree] = useState(false);
   const [finalThreePlayers, setFinalThreePlayers] = useState<string[]>([]);
@@ -65,6 +66,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
     setIndividualRewardWinner("");
     setVotesReceivedPlayers([]);
     setVotedOutPlayers([]);
+    setMedevacPlayers([]);
     setIsMerge(false);
     setIsFinalThree(false);
     setFinalThreePlayers([]);
@@ -91,6 +93,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
       setIndividualRewardWinner(firstByCategory("individual_reward"));
       setVotesReceivedPlayers(playersByCategory("votes_received"));
       setVotedOutPlayers(playersByCategory("voted_out_prediction"));
+      setMedevacPlayers(playersByCategory("medevac"));
       setIsMerge(ep.is_merge);
       setIsFinalThree(ep.is_finale);
       setFinalThreePlayers(playersByCategory("final_three"));
@@ -141,6 +144,7 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
         individual_reward_winner: individualRewardWinner || null,
         votes_received_players: votesReceivedPlayers,
         voted_out_players: votedOutPlayers,
+        medevac_players: medevacPlayers,
         is_merge: isMerge,
         is_final_three: isFinalThree,
         final_three_players: finalThreePlayers,
@@ -344,27 +348,48 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
         {/* Voted Out */}
         <div className="card">
           <h3 className="section-title mb-2">Voted Out</h3>
-          <p className="text-xs text-text-muted mb-3">These players will be marked as eliminated</p>
+          <p className="text-xs text-text-muted mb-3">Marked as eliminated — vote prediction points awarded</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-            {allPlayers
-              .filter((p) => p.is_active || votedOutPlayers.includes(p.id))
-              .map((p) => (
-                <label
-                  key={p.id}
-                  className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
-                >
-                  <input
-                    type="checkbox"
-                    checked={votedOutPlayers.includes(p.id)}
-                    onChange={() => toggleInArray(votedOutPlayers, p.id, setVotedOutPlayers)}
-                    className="accent-red-500"
-                  />
-                  <span className="text-sm text-text-primary">
-                    {p.name}
-                    {!p.is_active && <span className="text-xs text-text-muted ml-1">(inactive)</span>}
-                  </span>
-                </label>
-              ))}
+            {allPlayers.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
+              >
+                <input
+                  type="checkbox"
+                  checked={votedOutPlayers.includes(p.id)}
+                  onChange={() => toggleInArray(votedOutPlayers, p.id, setVotedOutPlayers)}
+                  className="accent-red-500"
+                />
+                <span className={`text-sm ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>
+                  {p.name}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* No-Vote Elimination (Medevac / Quit) */}
+        <div className="card border-border/50">
+          <h3 className="section-title mb-1">No-Vote Elimination</h3>
+          <p className="text-xs text-text-muted mb-3">Medevac, quit, etc. — marked as eliminated, <span className="font-medium text-accent-gold">no prediction points awarded</span></p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {allPlayers.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface"
+              >
+                <input
+                  type="checkbox"
+                  checked={medevacPlayers.includes(p.id)}
+                  onChange={() => toggleInArray(medevacPlayers, p.id, setMedevacPlayers)}
+                  className="accent-accent-gold"
+                />
+                <span className={`text-sm ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>
+                  {p.name}
+                </span>
+              </label>
+            ))}
           </div>
         </div>
 

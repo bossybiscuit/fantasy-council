@@ -654,7 +654,8 @@ export type ScoringCategory =
   | "tribal_vote_correct"
   | "found_idol"
   | "successful_idol_play"
-  | "votes_received";
+  | "votes_received"
+  | "medevac";
 
 // Convenience row types
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];

@@ -16,6 +16,7 @@ interface ScoringInput {
   individual_reward_winner: string | null;
   votes_received_players: string[];
   voted_out_players: string[];
+  medevac_players: string[];
   is_merge: boolean;
   is_final_three: boolean;
   final_three_players: string[];
@@ -156,6 +157,27 @@ export async function POST(request: NextRequest) {
       .from("players")
       .update({ is_active: false })
       .in("id", body.voted_out_players);
+  }
+
+  // Medevac / quit — mark inactive, record a 0-pt event for bookkeeping, NO prediction points
+  const medevacPlayers = body.medevac_players || [];
+  if (medevacPlayers.length > 0) {
+    await supabase
+      .from("players")
+      .update({ is_active: false })
+      .in("id", medevacPlayers);
+
+    await supabase.from("scoring_events").insert(
+      medevacPlayers.map((pid: string) => ({
+        league_id,
+        episode_id,
+        player_id: pid,
+        team_id: playerTeamMap.get(pid) || null,
+        category: "medevac" as ScoringCategory,
+        points: 0,
+        note: "Medevac / no-vote elimination",
+      }))
+    );
   }
 
   // Resolve vote predictions: award points to teams that predicted the boot
