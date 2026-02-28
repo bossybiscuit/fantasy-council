@@ -22,6 +22,8 @@ interface StandingsRow {
   previousScore: EpisodeTeamScore | null;
   predictionAccuracy: number;
   totalPoints: number;
+  weeklyPredPoints: number;
+  seasonPredTotal: number;
   rank: number;
   picks: PlayerPick[];
 }
@@ -125,10 +127,17 @@ export default function StandingsTable({
                 )}
               </div>
 
-              {/* Expanded roster chips */}
-              {isExpanded && hasPicks && (
-                <div className="px-3 pb-3 pt-1 border-t border-border/50">
-                  <RosterChips picks={row.picks} leagueId={leagueId} compact />
+              {/* Expanded roster + prediction chips */}
+              {isExpanded && (
+                <div className="px-3 pb-3 pt-1 border-t border-border/50 space-y-2">
+                  {hasPicks && (
+                    <RosterChips picks={row.picks} leagueId={leagueId} compact />
+                  )}
+                  <PredictionChips
+                    weeklyPredPoints={row.weeklyPredPoints}
+                    seasonPredTotal={row.seasonPredTotal}
+                    compact
+                  />
                 </div>
               )}
             </div>
@@ -290,7 +299,7 @@ export default function StandingsTable({
                 {isExpanded && (
                   <tr className="border-b border-border">
                     <td colSpan={6} className="px-4 pb-4 pt-2">
-                      <div className="pl-2 sm:pl-8">
+                      <div className="pl-2 sm:pl-8 space-y-2">
                         {hasPicks ? (
                           <RosterChips
                             picks={row.picks}
@@ -301,6 +310,10 @@ export default function StandingsTable({
                             No players drafted yet
                           </span>
                         )}
+                        <PredictionChips
+                          weeklyPredPoints={row.weeklyPredPoints}
+                          seasonPredTotal={row.seasonPredTotal}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -367,6 +380,50 @@ function RosterChips({
           </span>
         </Link>
       ))}
+    </div>
+  );
+}
+
+// ── Prediction summary chips ──────────────────────────────────────────────────
+
+function PredictionChips({
+  weeklyPredPoints,
+  seasonPredTotal,
+  compact = false,
+}: {
+  weeklyPredPoints: number;
+  seasonPredTotal: number;
+  compact?: boolean;
+}) {
+  if (weeklyPredPoints === 0 && seasonPredTotal === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {weeklyPredPoints > 0 && (
+        <div
+          className={`flex items-center gap-1.5 rounded-full border border-border bg-bg-surface text-xs ${
+            compact ? "px-2 py-1" : "px-2.5 py-1.5"
+          }`}
+        >
+          <span className="text-text-muted">Weekly Predictions</span>
+          <span className="text-accent-orange font-semibold">
+            {weeklyPredPoints}
+            <span className="text-text-muted font-normal">pts</span>
+          </span>
+        </div>
+      )}
+      {seasonPredTotal > 0 && (
+        <div
+          className={`flex items-center gap-1.5 rounded-full border border-border bg-bg-surface text-xs ${
+            compact ? "px-2 py-1" : "px-2.5 py-1.5"
+          }`}
+        >
+          <span className="text-text-muted">Season Predictions</span>
+          <span className="text-accent-gold font-semibold">
+            {seasonPredTotal}
+            <span className="text-text-muted font-normal">pts</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
