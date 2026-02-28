@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getScoringValues, getCategoryPoints } from "@/lib/scoring";
+import { recalculateScores } from "@/lib/recalculate-scores";
 import type { ScoringCategory } from "@/types/database";
 
 interface AdminScoringInput {
@@ -46,11 +47,16 @@ export async function POST(request: NextRequest) {
   const user = await verifySuperAdmin(supabase);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Use service client for all DB writes — the super admin is not necessarily the
+  // commissioner of every league, and RLS commissioner-only policies would silently
+  // block inserts/updates on scoring_events and episode_team_scores.
+  const db = createServiceClient();
+
   const body: AdminScoringInput = await request.json();
   const { season_id, episode_id } = body;
 
   // Get all leagues for this season
-  const { data: leagues } = await supabase
+  const { data: leagues } = await db
     .from("leagues")
     .select("*")
     .eq("season_id", season_id);
@@ -59,14 +65,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No leagues found for this season" }, { status: 404 });
   }
 
-  // Build scoring events (same results for all leagues, team mapping differs per league)
-  // Use default scoring config for the events list — per-league config applied when inserting
   let totalEventsCount = 0;
 
   // Get active players for merge bonus (same across leagues)
   let mergePlayers: string[] = [];
   if (body.is_merge) {
-    const { data: activePlayers } = await supabase
+    const { data: activePlayers } = await db
       .from("players")
       .select("id")
       .eq("season_id", season_id)
@@ -115,7 +119,7 @@ export async function POST(request: NextRequest) {
     if (body.winner_player) addEvent(body.winner_player, "winner");
 
     // Get draft picks to map player -> team for this league
-    const { data: draftPicks } = await supabase
+    const { data: draftPicks } = await db
       .from("draft_picks")
       .select("player_id, team_id")
       .eq("league_id", league.id);
@@ -126,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete existing scoring events for this league + episode (idempotent)
-    await supabase
+    await db
       .from("scoring_events")
       .delete()
       .eq("league_id", league.id)
@@ -134,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     // Insert scoring events
     if (events.length > 0) {
-      const { error } = await supabase.from("scoring_events").insert(
+      const { error } = await db.from("scoring_events").insert(
         events.map((e) => ({
           league_id: league.id,
           episode_id,
@@ -153,7 +157,7 @@ export async function POST(request: NextRequest) {
 
     // Resolve vote predictions
     for (const votedOutId of body.voted_out_players) {
-      const { data: preds } = await supabase
+      const { data: preds } = await db
         .from("predictions")
         .select("*")
         .eq("league_id", league.id)
@@ -162,12 +166,12 @@ export async function POST(request: NextRequest) {
 
       for (const pred of preds || []) {
         const earned = pred.points_allocated;
-        await supabase
+        await db
           .from("predictions")
           .update({ points_earned: earned })
           .eq("id", pred.id);
 
-        await supabase.from("scoring_events").insert({
+        await db.from("scoring_events").insert({
           league_id: league.id,
           episode_id,
           player_id: votedOutId,
@@ -184,7 +188,7 @@ export async function POST(request: NextRequest) {
       const isHostSpeaker = body.episode_title_speaker === "jeff_probst";
       const titlePickPts = getCategoryPoints("episode_title", config);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: titlePicks } = await (supabase as any)
+      const { data: titlePicks } = await (db as any)
         .from("title_picks")
         .select("id, player_id, is_host_pick")
         .eq("league_id", league.id)
@@ -194,7 +198,7 @@ export async function POST(request: NextRequest) {
         const isCorrect = isHostSpeaker
           ? pick.is_host_pick === true
           : pick.player_id === body.episode_title_speaker;
-        await supabase
+        await db
           .from("title_picks")
           .update({ points_earned: isCorrect ? titlePickPts : 0 })
           .eq("id", pick.id);
@@ -202,28 +206,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Recalculate episode team scores for this league
-    await recalculateScores(supabase, league.id, episode_id, season_id);
+    await recalculateScores(db, league.id, episode_id, season_id);
   }
 
   // Auto-grade winner season predictions when a winner is declared
   if (body.winner_player) {
-    const { data: winnerData } = await supabase
+    const { data: winnerData } = await db
       .from("players")
       .select("name")
       .eq("id", body.winner_player)
       .single();
 
     if (winnerData?.name) {
-      const serviceClient = createServiceClient();
       const leagueIds = leagues.map((l) => l.id);
       await Promise.all([
-        serviceClient
+        db
           .from("season_predictions")
           .update({ is_correct: true, points_earned: 10 })
           .in("league_id", leagueIds)
           .eq("category", "winner")
           .eq("answer", winnerData.name),
-        serviceClient
+        db
           .from("season_predictions")
           .update({ is_correct: false, points_earned: 0 })
           .in("league_id", leagueIds)
@@ -235,14 +238,14 @@ export async function POST(request: NextRequest) {
 
   // Mark players voted out as inactive (global, only needs to happen once)
   if (body.voted_out_players.length > 0) {
-    await supabase
+    await db
       .from("players")
       .update({ is_active: false })
       .in("id", body.voted_out_players);
   }
 
   // Mark episode as scored
-  await supabase
+  await db
     .from("episodes")
     .update({
       is_scored: true,
@@ -263,47 +266,49 @@ export async function DELETE(request: NextRequest) {
   const user = await verifySuperAdmin(supabase);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const db = createServiceClient();
+
   const { season_id, episode_id } = await request.json();
   if (!season_id || !episode_id) {
     return NextResponse.json({ error: "Missing season_id or episode_id" }, { status: 400 });
   }
 
   // Get all leagues for this season
-  const { data: leagues } = await supabase
+  const { data: leagues } = await db
     .from("leagues")
-    .select("id")
+    .select("id, season_id")
     .eq("season_id", season_id);
 
   for (const league of leagues || []) {
-    await supabase
+    await db
       .from("scoring_events")
       .delete()
       .eq("league_id", league.id)
       .eq("episode_id", episode_id);
 
-    await supabase
+    await db
       .from("episode_team_scores")
       .delete()
       .eq("league_id", league.id)
       .eq("episode_id", episode_id);
 
-    await supabase
+    await db
       .from("title_picks")
       .update({ points_earned: 0 })
       .eq("league_id", league.id)
       .eq("episode_id", episode_id);
 
-    await supabase
+    await db
       .from("predictions")
       .update({ points_earned: 0 })
       .eq("league_id", league.id)
       .eq("episode_id", episode_id);
 
-    await recalculateScores(supabase, league.id, episode_id, season_id);
+    await recalculateScores(db, league.id, episode_id, season_id);
   }
 
   // Unmark episode as scored
-  await supabase
+  await db
     .from("episodes")
     .update({ is_scored: false, is_merge: false, is_finale: false })
     .eq("id", episode_id);
@@ -311,112 +316,3 @@ export async function DELETE(request: NextRequest) {
   return NextResponse.json({ success: true });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function recalculateScores(supabase: any, league_id: string, episode_id: string, season_id: string) {
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("league_id", league_id);
-
-  if (!teams) return;
-
-  const { data: allScoredEpisodes } = await supabase
-    .from("episodes")
-    .select("id, episode_number")
-    .eq("season_id", season_id)
-    .eq("is_scored", true)
-    .order("episode_number", { ascending: true });
-
-  const scoredIds = new Set((allScoredEpisodes || []).map((e: any) => e.id));
-  if (!scoredIds.has(episode_id)) {
-    const { data: thisEp } = await supabase
-      .from("episodes")
-      .select("id, episode_number")
-      .eq("id", episode_id)
-      .single();
-    if (thisEp) {
-      allScoredEpisodes.push(thisEp);
-      allScoredEpisodes.sort((a: any, b: any) => a.episode_number - b.episode_number);
-    }
-  }
-
-  const challengeCats = new Set(["tribe_reward", "individual_reward", "individual_immunity", "tribe_immunity", "second_place_immunity", "found_idol", "successful_idol_play", "episode_title", "votes_received"]);
-  const milestoneCats = new Set(["merge", "final_three", "winner"]);
-
-  for (const team of teams) {
-    let cumulative = 0;
-
-    for (const ep of allScoredEpisodes || []) {
-      const { data: events } = await supabase
-        .from("scoring_events")
-        .select("points, category")
-        .eq("league_id", league_id)
-        .eq("episode_id", ep.id)
-        .eq("team_id", team.id);
-
-      const challengePoints = (events || [])
-        .filter((e: any) => challengeCats.has(e.category))
-        .reduce((sum: number, e: any) => sum + e.points, 0);
-
-      const milestonePoints = (events || [])
-        .filter((e: any) => milestoneCats.has(e.category))
-        .reduce((sum: number, e: any) => sum + e.points, 0);
-
-      const { data: preds } = await supabase
-        .from("predictions")
-        .select("points_earned")
-        .eq("league_id", league_id)
-        .eq("episode_id", ep.id)
-        .eq("team_id", team.id);
-
-      const votePredPoints = (preds || []).reduce(
-        (sum: number, p: any) => sum + (p.points_earned || 0),
-        0
-      );
-
-      const { data: titlePick } = await supabase
-        .from("title_picks")
-        .select("points_earned")
-        .eq("league_id", league_id)
-        .eq("episode_id", ep.id)
-        .eq("team_id", team.id)
-        .maybeSingle();
-
-      const titlePickPoints = titlePick?.points_earned || 0;
-      const predictionPoints = votePredPoints + titlePickPoints;
-      const total = challengePoints + milestonePoints + predictionPoints;
-      cumulative += total;
-
-      await supabase
-        .from("episode_team_scores")
-        .upsert(
-          {
-            league_id,
-            episode_id: ep.id,
-            team_id: team.id,
-            challenge_points: challengePoints,
-            milestone_points: milestonePoints,
-            prediction_points: predictionPoints,
-            total_points: total,
-            cumulative_total: cumulative,
-          },
-          { onConflict: "league_id,episode_id,team_id" }
-        );
-    }
-  }
-
-  // Update ranks
-  const { data: scores } = await supabase
-    .from("episode_team_scores")
-    .select("id, cumulative_total")
-    .eq("league_id", league_id)
-    .eq("episode_id", episode_id)
-    .order("cumulative_total", { ascending: false });
-
-  for (let i = 0; i < (scores || []).length; i++) {
-    await supabase
-      .from("episode_team_scores")
-      .update({ rank: i + 1 })
-      .eq("id", scores![i].id);
-  }
-}

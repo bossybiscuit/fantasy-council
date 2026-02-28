@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { recalculateScores } from "@/lib/recalculate-scores";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -62,6 +63,24 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // When draft is finalized, backfill episode_team_scores for all already-scored episodes
+  // so teams that joined late (or draft was completed after scoring) get correct standings.
+  if (draft_status === "completed" && league?.season_id) {
+    const db = createServiceClient();
+    const { data: scoredEpisodes } = await db
+      .from("episodes")
+      .select("id")
+      .eq("season_id", league.season_id)
+      .eq("is_scored", true)
+      .order("episode_number", { ascending: false })
+      .limit(1);
+
+    const latestScoredEpisode = scoredEpisodes?.[0];
+    if (latestScoredEpisode) {
+      await recalculateScores(db, league_id, latestScoredEpisode.id, league.season_id);
+    }
   }
 
   return NextResponse.json({ success: true });

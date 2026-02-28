@@ -54,7 +54,7 @@ export default function AdminScoringForm({
     (ep) => ep.is_finale && ep.id !== selectedEpisodeId
   );
 
-  // Tribe-grouped players for the tribe immunity grids
+  // Tribe-grouped players for the tribe immunity grids (active only)
   const tribeGroups = activePlayers.reduce(
     (acc, p) => {
       const tribe = p.tribe || "No Tribe";
@@ -65,6 +65,18 @@ export default function AdminScoringForm({
     {} as Record<string, { players: Player[]; color: string | null }>
   );
   const tribeEntries = Object.entries(tribeGroups);
+
+  // Tribe-grouped players for votes received (all players, including voted out)
+  const allTribeGroups = allSeasonPlayers.reduce(
+    (acc, p) => {
+      const tribe = p.tribe || "No Tribe";
+      if (!acc[tribe]) acc[tribe] = { players: [], color: p.tribe_color };
+      acc[tribe].players.push(p);
+      return acc;
+    },
+    {} as Record<string, { players: Player[]; color: string | null }>
+  );
+  const allTribeEntries = Object.entries(allTribeGroups);
 
   // Form state
   const [loading, setLoading] = useState(false);
@@ -429,8 +441,8 @@ export default function AdminScoringForm({
             </h3>
             <p className="text-xs text-text-muted mb-4">Tally how many votes each player received this episode</p>
             <div className="space-y-3">
-              {tribeEntries.length > 0 ? (
-                tribeEntries.map(([tribe, { players: tribePlayers, color }]) => (
+              {allTribeEntries.length > 0 ? (
+                allTribeEntries.map(([tribe, { players: tribePlayers, color }]) => (
                   <div key={tribe}>
                     <div className="flex items-center gap-2 mb-2">
                       {color && <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}
@@ -441,7 +453,7 @@ export default function AdminScoringForm({
                         const count = votesReceivedCounts[p.id] || 0;
                         return (
                           <div key={p.id} className="flex items-center gap-3 px-1.5 py-1 rounded hover:bg-bg-surface">
-                            <span className="text-sm text-text-primary flex-1">{p.name}</span>
+                            <span className={`text-sm flex-1 ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>{p.name}</span>
                             <div className="flex items-center gap-0 border border-border rounded-md overflow-hidden shrink-0">
                               <button
                                 type="button"
@@ -470,11 +482,11 @@ export default function AdminScoringForm({
                 ))
               ) : (
                 <div className="space-y-1">
-                  {activePlayers.map((p) => {
+                  {allSeasonPlayers.map((p) => {
                     const count = votesReceivedCounts[p.id] || 0;
                     return (
                       <div key={p.id} className="flex items-center gap-3 px-1.5 py-1 rounded hover:bg-bg-surface">
-                        <span className="text-sm text-text-primary flex-1">{p.name}</span>
+                        <span className={`text-sm flex-1 ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>{p.name}</span>
                         <div className="flex items-center gap-0 border border-border rounded-md overflow-hidden shrink-0">
                           <button
                             type="button"
