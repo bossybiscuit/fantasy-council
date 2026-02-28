@@ -52,16 +52,26 @@ export default function StandingsTable({
     <div>
       {/* ── Mobile card list ── */}
       <div className="md:hidden space-y-2">
-        {rows.map((row) => {
+        {rows.map((row, idx) => {
           const indicator = getRankIndicator(row.rank, row.previousScore?.rank ?? null);
           const isMe = row.team.id === myTeamId;
           const isExpanded = expandedTeamId === row.team.id;
           const hasPicks = row.picks && row.picks.length > 0;
 
           return (
+            <Fragment key={row.team.id}>
             <div
-              key={row.team.id}
-              className={`rounded-xl border ${isMe ? "border-accent-orange/30 bg-accent-orange/5" : "border-border bg-bg-card"}`}
+              className={`rounded-xl border ${
+                isMe
+                  ? "border-accent-orange/30 bg-accent-orange/5"
+                  : row.rank === 1
+                  ? "border-accent-gold/25 bg-accent-gold/8"
+                  : row.rank === 2
+                  ? "border-zinc-400/20 bg-zinc-400/5"
+                  : row.rank === 3
+                  ? "border-orange-700/20 bg-orange-700/5"
+                  : "border-border bg-bg-card"
+              }`}
             >
               <div className="flex items-center gap-3 p-3">
                 {/* Rank */}
@@ -141,6 +151,16 @@ export default function StandingsTable({
                 </div>
               )}
             </div>
+            {idx === 2 && rows.length > 3 && (
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1 border-t border-dashed border-border/60" />
+                <span className="text-[10px] text-text-muted uppercase tracking-widest shrink-0">
+                  rest
+                </span>
+                <div className="flex-1 border-t border-dashed border-border/60" />
+              </div>
+            )}
+            </Fragment>
           );
         })}
         {rows.length === 0 && (
@@ -174,7 +194,7 @@ export default function StandingsTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
+          {rows.map((row, idx) => {
             const indicator = getRankIndicator(
               row.rank,
               row.previousScore?.rank ?? null
@@ -188,7 +208,15 @@ export default function StandingsTable({
               <Fragment key={row.team.id}>
                 <tr
                   className={`border-border table-row-hover ${
-                    isMe ? "bg-accent-orange/5" : ""
+                    isMe
+                      ? "bg-accent-orange/5"
+                      : row.rank === 1
+                      ? "bg-accent-gold/8"
+                      : row.rank === 2
+                      ? "bg-zinc-400/5"
+                      : row.rank === 3
+                      ? "bg-orange-700/5"
+                      : ""
                   } ${isExpanded ? "" : "border-b"}`}
                 >
                   {/* Rank */}
@@ -314,6 +342,19 @@ export default function StandingsTable({
                           weeklyPredPoints={row.weeklyPredPoints}
                           seasonPredTotal={row.seasonPredTotal}
                         />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {idx === 2 && rows.length > 3 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 border-t border-dashed border-border/60" />
+                        <span className="text-[10px] text-text-muted uppercase tracking-widest shrink-0">
+                          rest
+                        </span>
+                        <div className="flex-1 border-t border-dashed border-border/60" />
                       </div>
                     </td>
                   </tr>
