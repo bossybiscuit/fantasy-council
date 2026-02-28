@@ -143,8 +143,8 @@ export default function AdminScoringForm({
       }
       setVotesReceivedCounts(votesCounts);
       setVotedOutPlayers(playersByCategory("voted_out_prediction"));
-      setIsMerge(ep.is_merge);
-      setIsFinalThree(ep.is_finale);
+      setIsMerge(ep?.is_merge ?? false);
+      setIsFinalThree(ep?.is_finale ?? false);
       setFinalThreePlayers(playersByCategory("final_three"));
       setWinnerPlayer(firstByCategory("winner"));
     },

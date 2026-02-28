@@ -7,8 +7,6 @@ export async function recalculateScores(supabase: any, league_id: string, episod
 
   if (!teams || teams.length === 0) return;
 
-  const teamIds = teams.map((t: any) => t.id);
-
   // Fetch all scored episodes for this season in one query
   const { data: allScoredEpisodes } = await supabase
     .from("episodes")
