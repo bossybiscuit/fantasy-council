@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       .in("id", body.voted_out_players);
   }
 
-  // Medevac / quit — mark inactive, record a 0-pt event for bookkeeping, NO prediction points
+  // Medevac / quit — mark inactive, record a 0-pt event for bookkeeping
   const medevacPlayers = body.medevac_players || [];
   if (medevacPlayers.length > 0) {
     await supabase
@@ -178,6 +178,37 @@ export async function POST(request: NextRequest) {
         note: "Medevac / no-vote elimination",
       }))
     );
+
+    // If this league awards prediction points for medevac eliminations,
+    // resolve predictions the same way as voted_out
+    if ((config as any).MEDEVAC_AWARDS_PREDICTIONS) {
+      for (const medevacId of medevacPlayers) {
+        const { data: preds } = await supabase
+          .from("predictions")
+          .select("*")
+          .eq("league_id", league_id)
+          .eq("episode_id", episode_id)
+          .eq("player_id", medevacId);
+
+        for (const pred of preds || []) {
+          const earned = pred.points_allocated;
+          await supabase
+            .from("predictions")
+            .update({ points_earned: earned })
+            .eq("id", pred.id);
+
+          await supabase.from("scoring_events").insert({
+            league_id,
+            episode_id,
+            player_id: medevacId,
+            team_id: pred.team_id,
+            category: "voted_out_prediction" as ScoringCategory,
+            points: earned,
+            note: "Correct prediction (medevac elimination)",
+          });
+        }
+      }
+    }
   }
 
   // Resolve vote predictions: award points to teams that predicted the boot

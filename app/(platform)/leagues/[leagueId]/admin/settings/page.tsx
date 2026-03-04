@@ -501,6 +501,14 @@ export default function LeagueSettingsPage({
               </div>
             </div>
           </ToggleRow>
+
+          <ToggleRow
+            icon="🏥"
+            label="Medevac Awards Prediction Points"
+            description="When enabled, teams that predicted a medevac'd/quit player will earn their prediction points — just like a normal vote-out."
+            enabled={!!config.MEDEVAC_AWARDS_PREDICTIONS}
+            onToggle={(v) => setConfig((prev: any) => ({ ...prev, MEDEVAC_AWARDS_PREDICTIONS: v }))}
+          />
         </div>
       )}
 

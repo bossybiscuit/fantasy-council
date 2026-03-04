@@ -206,6 +206,54 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Medevac bookkeeping + optional prediction points (per-league toggle)
+    const medevacIds: string[] = body.medevac_players || [];
+    if (medevacIds.length > 0) {
+      // Insert 0-pt medevac events for form pre-fill
+      await db.from("scoring_events").insert(
+        medevacIds.map((pid) => ({
+          league_id: league.id,
+          episode_id,
+          player_id: pid,
+          team_id: playerTeamMap.get(pid) || null,
+          category: "medevac" as ScoringCategory,
+          points: 0,
+          note: "Medevac / no-vote elimination",
+        }))
+      );
+
+      // If this league awards prediction points for medevac eliminations,
+      // resolve predictions the same way as voted_out
+      if ((config as any).MEDEVAC_AWARDS_PREDICTIONS) {
+        for (const medevacId of medevacIds) {
+          const { data: preds } = await db
+            .from("predictions")
+            .select("*")
+            .eq("league_id", league.id)
+            .eq("episode_id", episode_id)
+            .eq("player_id", medevacId);
+
+          for (const pred of preds || []) {
+            const earned = pred.points_allocated;
+            await db
+              .from("predictions")
+              .update({ points_earned: earned })
+              .eq("id", pred.id);
+
+            await db.from("scoring_events").insert({
+              league_id: league.id,
+              episode_id,
+              player_id: medevacId,
+              team_id: pred.team_id,
+              category: "voted_out_prediction" as ScoringCategory,
+              points: earned,
+              note: "Correct prediction (medevac elimination)",
+            });
+          }
+        }
+      }
+    }
+
     // Recalculate episode team scores for this league
     await recalculateScores(db, league.id, episode_id, season_id);
   }
@@ -245,33 +293,11 @@ export async function POST(request: NextRequest) {
       .in("id", body.voted_out_players);
   }
 
-  // Medevac / quit — mark inactive globally; NO prediction points awarded.
-  // Insert a 0-pt medevac scoring event per league for bookkeeping (form pre-fill).
-  const medevacIds: string[] = body.medevac_players || [];
-  if (medevacIds.length > 0) {
-    await db.from("players").update({ is_active: false }).in("id", medevacIds);
-
-    for (const league of leagues) {
-      const { data: leaguePicks } = await db
-        .from("draft_picks")
-        .select("player_id, team_id")
-        .eq("league_id", league.id)
-        .in("player_id", medevacIds);
-
-      const pickMap = new Map((leaguePicks || []).map((p) => [p.player_id, p.team_id]));
-
-      await db.from("scoring_events").insert(
-        medevacIds.map((pid) => ({
-          league_id: league.id,
-          episode_id,
-          player_id: pid,
-          team_id: pickMap.get(pid) || null,
-          category: "medevac" as ScoringCategory,
-          points: 0,
-          note: "Medevac / no-vote elimination",
-        }))
-      );
-    }
+  // Medevac / quit — mark players inactive globally
+  // (0-pt events and optional prediction grading already handled in the per-league loop above)
+  const globalMedevacIds: string[] = body.medevac_players || [];
+  if (globalMedevacIds.length > 0) {
+    await db.from("players").update({ is_active: false }).in("id", globalMedevacIds);
   }
 
   // Mark episode as scored

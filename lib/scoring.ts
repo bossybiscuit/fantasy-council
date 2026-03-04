@@ -29,6 +29,7 @@ export type ScoringConfig = {
   MERGE_BONUS?: number;
   FINAL_THREE_BONUS?: number;
   WINNER_BONUS?: number;
+  MEDEVAC_AWARDS_PREDICTIONS?: boolean;
 };
 
 export function getScoringValues(
