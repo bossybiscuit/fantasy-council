@@ -11,6 +11,8 @@ interface ScoringInput {
   episode_id: string;
   found_idol_players: string[];
   successful_idol_play_players: string[];
+  tribe_reward_winners: string[];
+  tribe_reward_second: string[];
   tribe_immunity_winners: string[];
   tribe_immunity_second: string[];
   individual_reward_winner: string | null;
@@ -87,6 +89,8 @@ export async function POST(request: NextRequest) {
   // Challenge events
   for (const pid of (body.found_idol_players || [])) addEvent(pid, "found_idol");
   for (const pid of (body.successful_idol_play_players || [])) addEvent(pid, "successful_idol_play");
+  for (const pid of (body.tribe_reward_winners || [])) addEvent(pid, "tribe_reward");
+  for (const pid of (body.tribe_reward_second || [])) addEvent(pid, "tribe_reward_second");
   for (const pid of (body.tribe_immunity_winners || [])) addEvent(pid, "tribe_immunity");
   for (const pid of (body.tribe_immunity_second || [])) addEvent(pid, "second_place_immunity");
   if (body.individual_reward_winner) addEvent(body.individual_reward_winner, "individual_reward");
@@ -345,6 +349,8 @@ async function recalculateScores(
   }
 
   const challengeCats = new Set([
+    "tribe_reward",
+    "tribe_reward_second",
     "individual_reward",
     "tribe_immunity",
     "second_place_immunity",

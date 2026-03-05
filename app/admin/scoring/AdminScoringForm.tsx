@@ -88,6 +88,7 @@ export default function AdminScoringForm({
   const [successfulIdolPlayPlayer, setSuccessfulIdolPlayPlayer] = useState("");
   const [episodeTitleSpeaker, setEpisodeTitleSpeaker] = useState("");
   const [tribeRewardWinners, setTribeRewardWinners] = useState<string[]>([]);
+  const [tribeRewardSecond, setTribeRewardSecond] = useState<string[]>([]);
   const [tribeImmunityWinners, setTribeImmunityWinners] = useState<string[]>([]);
   const [tribeImmunitySecond, setTribeImmunitySecond] = useState<string[]>([]);
   const [individualRewardWinner, setIndividualRewardWinner] = useState("");
@@ -105,6 +106,7 @@ export default function AdminScoringForm({
     setSuccessfulIdolPlayPlayer("");
     setEpisodeTitleSpeaker("");
     setTribeRewardWinners([]);
+    setTribeRewardSecond([]);
     setTribeImmunityWinners([]);
     setTribeImmunitySecond([]);
     setIndividualRewardWinner("");
@@ -135,6 +137,7 @@ export default function AdminScoringForm({
       setSuccessfulIdolPlayPlayer(firstByCategory("successful_idol_play"));
       setEpisodeTitleSpeaker(firstByCategory("episode_title"));
       setTribeRewardWinners(playersByCategory("tribe_reward"));
+      setTribeRewardSecond(playersByCategory("tribe_reward_second"));
       setTribeImmunityWinners(playersByCategory("tribe_immunity"));
       setTribeImmunitySecond(playersByCategory("second_place_immunity"));
       setIndividualRewardWinner(firstByCategory("individual_reward"));
@@ -199,6 +202,7 @@ export default function AdminScoringForm({
         successful_idol_play_players: successfulIdolPlayPlayer ? [successfulIdolPlayPlayer] : [],
         episode_title_speaker: episodeTitleSpeaker || null,
         tribe_reward_winners: tribeRewardWinners,
+        tribe_reward_second: tribeRewardSecond,
         tribe_immunity_winners: tribeImmunityWinners,
         tribe_immunity_second: tribeImmunitySecond,
         individual_reward_winner: individualRewardWinner || null,
@@ -360,20 +364,45 @@ export default function AdminScoringForm({
 
           {/* Tribe Reward */}
           <div className="card">
-            <h3 className="section-title mb-1">Tribe Reward</h3>
-            <p className="text-xs font-medium text-text-muted mb-3">
-              Reward Winners ({DEFAULT_SCORING.TRIBE_REWARD_WIN}pt each)
-            </p>
-            <TribePlayerGrid
-              tribeEntries={allTribeEntries}
-              allPlayers={allSeasonPlayers}
-              selected={tribeRewardWinners}
-              onToggle={(id) => toggleInArray(tribeRewardWinners, id, setTribeRewardWinners)}
-              onToggleTribe={(ids, allSelected) =>
-                toggleTribeInArray(tribeRewardWinners, ids, allSelected, setTribeRewardWinners)
-              }
-              accentClass="accent-accent-orange"
-            />
+            <h3 className="section-title mb-4">Tribe Reward</h3>
+            <div className="flex flex-col sm:flex-row gap-6">
+              {/* Reward Win */}
+              <div className="flex-1">
+                <p className="text-xs font-medium text-text-muted mb-3">
+                  Reward Win ({DEFAULT_SCORING.TRIBE_REWARD_WIN}pt each)
+                </p>
+                <TribePlayerGrid
+                  tribeEntries={allTribeEntries}
+                  allPlayers={allSeasonPlayers}
+                  selected={tribeRewardWinners}
+                  onToggle={(id) => toggleInArray(tribeRewardWinners, id, setTribeRewardWinners)}
+                  onToggleTribe={(ids, allSelected) =>
+                    toggleTribeInArray(tribeRewardWinners, ids, allSelected, setTribeRewardWinners)
+                  }
+                  accentClass="accent-accent-orange"
+                />
+              </div>
+
+              {/* Vertical divider */}
+              <div className="hidden sm:block border-l border-border" />
+
+              {/* Reward 2nd Place */}
+              <div className="flex-1">
+                <p className="text-xs font-medium text-text-muted mb-3">
+                  Reward 2nd ({DEFAULT_SCORING.TRIBE_REWARD_SECOND}pt each)
+                </p>
+                <TribePlayerGrid
+                  tribeEntries={allTribeEntries}
+                  allPlayers={allSeasonPlayers}
+                  selected={tribeRewardSecond}
+                  onToggle={(id) => toggleInArray(tribeRewardSecond, id, setTribeRewardSecond)}
+                  onToggleTribe={(ids, allSelected) =>
+                    toggleTribeInArray(tribeRewardSecond, ids, allSelected, setTribeRewardSecond)
+                  }
+                  accentClass="accent-accent-orange"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Tribe Immunity */}

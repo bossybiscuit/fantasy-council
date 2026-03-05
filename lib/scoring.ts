@@ -3,6 +3,7 @@ import type { Json, ScoringCategory } from "@/types/database";
 // Default scoring constants
 export const DEFAULT_SCORING = {
   TRIBE_REWARD_WIN: 1,
+  TRIBE_REWARD_SECOND: 0.5,
   TRIBE_IMMUNITY_WIN: 2,
   TRIBE_IMMUNITY_SECOND: 1,
   INDIVIDUAL_IMMUNITY_WIN: 4,
@@ -18,6 +19,7 @@ export const DEFAULT_SCORING = {
 
 export type ScoringConfig = {
   TRIBE_REWARD_WIN?: number;
+  TRIBE_REWARD_SECOND?: number;
   TRIBE_IMMUNITY_WIN?: number;
   TRIBE_IMMUNITY_SECOND?: number;
   INDIVIDUAL_IMMUNITY_WIN?: number;
@@ -49,6 +51,8 @@ export function getCategoryPoints(
   switch (category) {
     case "tribe_reward":
       return config.TRIBE_REWARD_WIN;
+    case "tribe_reward_second":
+      return config.TRIBE_REWARD_SECOND;
     case "tribe_immunity":
       return config.TRIBE_IMMUNITY_WIN;
     case "second_place_immunity":
@@ -78,6 +82,7 @@ export function getCategoryPoints(
 
 export const CATEGORY_LABELS: Record<ScoringCategory, string> = {
   tribe_reward: "Tribe Reward Win",
+  tribe_reward_second: "Tribe Reward 2nd",
   individual_reward: "Individual Reward Win",
   tribe_immunity: "Tribe Immunity Win",
   individual_immunity: "Individual Immunity Win",
@@ -100,6 +105,7 @@ export const CATEGORY_LABELS: Record<ScoringCategory, string> = {
 
 export const CHALLENGE_CATEGORIES: ScoringCategory[] = [
   "tribe_reward",
+  "tribe_reward_second",
   "individual_reward",
   "individual_immunity",
   "tribe_immunity",

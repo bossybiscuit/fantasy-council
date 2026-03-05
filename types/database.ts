@@ -638,6 +638,7 @@ export type Database = {
 
 export type ScoringCategory =
   | "tribe_reward"
+  | "tribe_reward_second"
   | "individual_reward"
   | "tribe_immunity"
   | "individual_immunity"

@@ -32,7 +32,7 @@ export async function recalculateScores(supabase: any, league_id: string, episod
   if (episodes.length === 0) return;
 
   const challengeCats = new Set([
-    "tribe_reward", "individual_reward", "individual_immunity", "tribe_immunity",
+    "tribe_reward", "tribe_reward_second", "individual_reward", "individual_immunity", "tribe_immunity",
     "second_place_immunity", "found_idol", "successful_idol_play", "episode_title", "votes_received",
   ]);
   const milestoneCats = new Set(["merge", "final_three", "winner"]);

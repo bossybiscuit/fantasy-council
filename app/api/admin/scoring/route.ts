@@ -11,6 +11,7 @@ interface AdminScoringInput {
   successful_idol_play_players: string[];
   episode_title_speaker: string | null;
   tribe_reward_winners: string[];
+  tribe_reward_second: string[];
   tribe_immunity_winners: string[];
   tribe_immunity_second: string[];
   individual_reward_winner: string | null;
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
       addEvent(body.episode_title_speaker, "episode_title");
     }
     for (const pid of (body.tribe_reward_winners || [])) addEvent(pid, "tribe_reward");
+    for (const pid of (body.tribe_reward_second || [])) addEvent(pid, "tribe_reward_second");
     for (const pid of body.tribe_immunity_winners) addEvent(pid, "tribe_immunity");
     for (const pid of body.tribe_immunity_second) addEvent(pid, "second_place_immunity");
     if (body.individual_reward_winner) addEvent(body.individual_reward_winner, "individual_reward");

@@ -32,6 +32,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
   // Form state
   const [foundIdolPlayer, setFoundIdolPlayer] = useState("");
   const [successfulIdolPlayPlayer, setSuccessfulIdolPlayPlayer] = useState("");
+  const [tribeRewardWinners, setTribeRewardWinners] = useState<string[]>([]);
+  const [tribeRewardSecond, setTribeRewardSecond] = useState<string[]>([]);
   const [tribeImmunityWinners, setTribeImmunityWinners] = useState<string[]>([]);
   const [tribeImmunitySecond, setTribeImmunitySecond] = useState<string[]>([]);
   const [individualRewardWinner, setIndividualRewardWinner] = useState("");
@@ -61,6 +63,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
   function clearForm() {
     setFoundIdolPlayer("");
     setSuccessfulIdolPlayPlayer("");
+    setTribeRewardWinners([]);
+    setTribeRewardSecond([]);
     setTribeImmunityWinners([]);
     setTribeImmunitySecond([]);
     setIndividualRewardWinner("");
@@ -88,6 +92,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
 
       setFoundIdolPlayer(firstByCategory("found_idol"));
       setSuccessfulIdolPlayPlayer(firstByCategory("successful_idol_play"));
+      setTribeRewardWinners(playersByCategory("tribe_reward"));
+      setTribeRewardSecond(playersByCategory("tribe_reward_second"));
       setTribeImmunityWinners(playersByCategory("tribe_immunity"));
       setTribeImmunitySecond(playersByCategory("second_place_immunity"));
       setIndividualRewardWinner(firstByCategory("individual_reward"));
@@ -139,6 +145,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
         episode_id: selectedEpisodeId,
         found_idol_players: foundIdolPlayer ? [foundIdolPlayer] : [],
         successful_idol_play_players: successfulIdolPlayPlayer ? [successfulIdolPlayPlayer] : [],
+        tribe_reward_winners: tribeRewardWinners,
+        tribe_reward_second: tribeRewardSecond,
         tribe_immunity_winners: tribeImmunityWinners,
         tribe_immunity_second: tribeImmunitySecond,
         individual_reward_winner: individualRewardWinner || null,
@@ -266,6 +274,45 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
               value={successfulIdolPlayPlayer}
               onChange={setSuccessfulIdolPlayPlayer}
             />
+          </div>
+        </div>
+
+        {/* Tribe Reward */}
+        <div className="card">
+          <h3 className="section-title mb-4">Tribe Reward</h3>
+          <div className="flex flex-col sm:flex-row gap-6">
+            <div className="flex-1">
+              <p className="text-xs font-medium text-text-muted mb-3">
+                Reward Win ({DEFAULT_SCORING.TRIBE_REWARD_WIN}pt each)
+              </p>
+              <TribePlayerGrid
+                tribeEntries={tribeEntries}
+                allPlayers={activePlayers}
+                selected={tribeRewardWinners}
+                onToggle={(id) => toggleInArray(tribeRewardWinners, id, setTribeRewardWinners)}
+                onToggleTribe={(ids, allSelected) =>
+                  toggleTribeInArray(tribeRewardWinners, ids, allSelected, setTribeRewardWinners)
+                }
+              />
+            </div>
+
+            {/* Vertical divider */}
+            <div className="hidden sm:block border-l border-border" />
+
+            <div className="flex-1">
+              <p className="text-xs font-medium text-text-muted mb-3">
+                Reward 2nd ({DEFAULT_SCORING.TRIBE_REWARD_SECOND}pt each)
+              </p>
+              <TribePlayerGrid
+                tribeEntries={tribeEntries}
+                allPlayers={activePlayers}
+                selected={tribeRewardSecond}
+                onToggle={(id) => toggleInArray(tribeRewardSecond, id, setTribeRewardSecond)}
+                onToggleTribe={(ids, allSelected) =>
+                  toggleTribeInArray(tribeRewardSecond, ids, allSelected, setTribeRewardSecond)
+                }
+              />
+            </div>
           </div>
         </div>
 
