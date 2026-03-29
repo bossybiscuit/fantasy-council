@@ -137,7 +137,7 @@ export default async function CastawayDetailPage({
   const challengeWins = new Set<string>();
   for (const ev of allEvents || []) {
     if (ev.category === "individual_immunity") immunityWins.add(ev.episode_id);
-    if (["tribe_immunity", "tribe_reward", "individual_reward", "individual_immunity"].includes(ev.category)) {
+    if (["tribe_immunity", "tribe_reward", "tribe_reward_second", "individual_reward", "individual_immunity"].includes(ev.category)) {
       challengeWins.add(ev.episode_id);
     }
   }

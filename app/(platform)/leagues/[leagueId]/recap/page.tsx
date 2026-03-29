@@ -104,6 +104,7 @@ export default async function RecapPage({
 
   const challengeCategories: ScoringCategory[] = [
     "tribe_reward",
+    "tribe_reward_second",
     "individual_reward",
     "tribe_immunity",
     "individual_immunity",
