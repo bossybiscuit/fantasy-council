@@ -543,6 +543,7 @@ export type Database = {
           episode_id: string;
           team_id: string;
           player_id: string | null;
+          is_host_pick: boolean;
           points_earned: number;
           created_at: string;
         };
@@ -552,11 +553,13 @@ export type Database = {
           episode_id: string;
           team_id: string;
           player_id?: string | null;
+          is_host_pick?: boolean;
           points_earned?: number;
           created_at?: string;
         };
         Update: {
           player_id?: string | null;
+          is_host_pick?: boolean;
           points_earned?: number;
         };
         Relationships: [];
