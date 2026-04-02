@@ -91,8 +91,8 @@ export default function AdminScoringForm({
   const [tribeRewardSecond, setTribeRewardSecond] = useState<string[]>([]);
   const [tribeImmunityWinners, setTribeImmunityWinners] = useState<string[]>([]);
   const [tribeImmunitySecond, setTribeImmunitySecond] = useState<string[]>([]);
-  const [individualRewardWinner, setIndividualRewardWinner] = useState("");
-  const [individualImmunityWinner, setIndividualImmunityWinner] = useState("");
+  const [individualRewardWinners, setIndividualRewardWinners] = useState<string[]>([]);
+  const [individualImmunityWinners, setIndividualImmunityWinners] = useState<string[]>([]);
   const [votesReceivedCounts, setVotesReceivedCounts] = useState<Record<string, number>>({});
   const [votedOutPlayers, setVotedOutPlayers] = useState<string[]>([]);
   const [medevacPlayers, setMedevacPlayers] = useState<string[]>([]);
@@ -109,8 +109,8 @@ export default function AdminScoringForm({
     setTribeRewardSecond([]);
     setTribeImmunityWinners([]);
     setTribeImmunitySecond([]);
-    setIndividualRewardWinner("");
-    setIndividualImmunityWinner("");
+    setIndividualRewardWinners([]);
+    setIndividualImmunityWinners([]);
     setVotesReceivedCounts({});
     setVotedOutPlayers([]);
     setMedevacPlayers([]);
@@ -140,8 +140,8 @@ export default function AdminScoringForm({
       setTribeRewardSecond(playersByCategory("tribe_reward_second"));
       setTribeImmunityWinners(playersByCategory("tribe_immunity"));
       setTribeImmunitySecond(playersByCategory("second_place_immunity"));
-      setIndividualRewardWinner(firstByCategory("individual_reward"));
-      setIndividualImmunityWinner(firstByCategory("individual_immunity"));
+      setIndividualRewardWinners(playersByCategory("individual_reward"));
+      setIndividualImmunityWinners(playersByCategory("individual_immunity"));
       const votesCounts: Record<string, number> = {};
       for (const ev of epEvents.filter((e) => e.category === "votes_received")) {
         votesCounts[ev.player_id] = ev.points || 0;
@@ -205,8 +205,8 @@ export default function AdminScoringForm({
         tribe_reward_second: tribeRewardSecond,
         tribe_immunity_winners: tribeImmunityWinners,
         tribe_immunity_second: tribeImmunitySecond,
-        individual_reward_winner: individualRewardWinner || null,
-        individual_immunity_winner: individualImmunityWinner || null,
+        individual_reward_winners: individualRewardWinners,
+        individual_immunity_winners: individualImmunityWinners,
         votes_received_counts: votesReceivedCounts,
         voted_out_players: votedOutPlayers,
         medevac_players: medevacPlayers,
@@ -451,19 +451,46 @@ export default function AdminScoringForm({
           {/* Individual Reward + Immunity */}
           <div className="card">
             <h3 className="section-title mb-4">Individual Challenges</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <SingleSelect
-                label={`Individual Reward Winner (${DEFAULT_SCORING.INDIVIDUAL_REWARD_WIN}pt)`}
-                players={allSeasonPlayers}
-                value={individualRewardWinner}
-                onChange={setIndividualRewardWinner}
-              />
-              <SingleSelect
-                label={`Individual Immunity Winner (${DEFAULT_SCORING.INDIVIDUAL_IMMUNITY_WIN}pt)`}
-                players={allSeasonPlayers}
-                value={individualImmunityWinner}
-                onChange={setIndividualImmunityWinner}
-              />
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-text-muted mb-3">
+                  Individual Reward ({DEFAULT_SCORING.INDIVIDUAL_REWARD_WIN}pt each)
+                </p>
+                <div className="grid grid-cols-2 gap-1">
+                  {allSeasonPlayers.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface">
+                      <input
+                        type="checkbox"
+                        checked={individualRewardWinners.includes(p.id)}
+                        onChange={() => toggleInArray(individualRewardWinners, p.id, setIndividualRewardWinners)}
+                        className="accent-accent-orange"
+                      />
+                      <span className={`text-sm ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hidden sm:block border-l border-border" />
+
+              <div className="flex-1">
+                <p className="text-xs font-medium text-text-muted mb-3">
+                  Individual Immunity ({DEFAULT_SCORING.INDIVIDUAL_IMMUNITY_WIN}pt each)
+                </p>
+                <div className="grid grid-cols-2 gap-1">
+                  {allSeasonPlayers.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-bg-surface">
+                      <input
+                        type="checkbox"
+                        checked={individualImmunityWinners.includes(p.id)}
+                        onChange={() => toggleInArray(individualImmunityWinners, p.id, setIndividualImmunityWinners)}
+                        className="accent-accent-orange"
+                      />
+                      <span className={`text-sm ${p.is_active ? "text-text-primary" : "text-text-muted line-through"}`}>{p.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

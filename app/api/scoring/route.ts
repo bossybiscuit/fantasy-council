@@ -15,7 +15,8 @@ interface ScoringInput {
   tribe_reward_second: string[];
   tribe_immunity_winners: string[];
   tribe_immunity_second: string[];
-  individual_reward_winner: string | null;
+  individual_reward_winners: string[];
+  individual_immunity_winners: string[];
   votes_received_players: string[];
   voted_out_players: string[];
   medevac_players: string[];
@@ -93,7 +94,8 @@ export async function POST(request: NextRequest) {
   for (const pid of (body.tribe_reward_second || [])) addEvent(pid, "tribe_reward_second");
   for (const pid of (body.tribe_immunity_winners || [])) addEvent(pid, "tribe_immunity");
   for (const pid of (body.tribe_immunity_second || [])) addEvent(pid, "second_place_immunity");
-  if (body.individual_reward_winner) addEvent(body.individual_reward_winner, "individual_reward");
+  for (const pid of (body.individual_reward_winners || [])) addEvent(pid, "individual_reward");
+  for (const pid of (body.individual_immunity_winners || [])) addEvent(pid, "individual_immunity");
   for (const pid of (body.votes_received_players || [])) addEvent(pid, "votes_received");
 
   // Merge bonus: all active players
