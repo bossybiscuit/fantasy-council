@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       .not("locked_at", "is", null),
     db
       .from("title_picks")
-      .select("team_id, player_id")
+      .select("team_id, player_id, is_host_pick")
       .eq("league_id", leagueId)
       .eq("episode_id", episodeId),
   ]);
@@ -53,17 +53,21 @@ export async function GET(req: NextRequest, { params }: Params) {
     predsByTeam.get(p.team_id)?.push(p);
   }
 
-  // Map title picks by team_id (player_id only — client resolves name)
-  const titlePickByTeam = new Map<string, string>();
+  // Map title picks by team_id
+  const titlePickByTeam = new Map<string, { player_id: string | null; is_host_pick: boolean }>();
   for (const tp of titlePicks || []) {
-    if (tp.player_id) titlePickByTeam.set(tp.team_id, tp.player_id);
+    titlePickByTeam.set(tp.team_id, { player_id: tp.player_id, is_host_pick: !!(tp as any).is_host_pick });
   }
 
-  const result = (teams || []).map((team) => ({
-    team,
-    predictions: predsByTeam.get(team.id) || [],
-    title_pick_player_id: titlePickByTeam.get(team.id) ?? null,
-  }));
+  const result = (teams || []).map((team) => {
+    const tp = titlePickByTeam.get(team.id);
+    return {
+      team,
+      predictions: predsByTeam.get(team.id) || [],
+      title_pick_player_id: tp?.player_id ?? null,
+      title_pick_is_host: tp?.is_host_pick ?? false,
+    };
+  });
 
   return NextResponse.json({ teams: result });
 }

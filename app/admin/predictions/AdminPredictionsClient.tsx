@@ -34,6 +34,7 @@ interface TeamPred {
   team: Team;
   predictions: { team_id: string; player_id: string; points_allocated: number; players: any }[];
   title_pick_player_id: string | null;
+  title_pick_is_host: boolean;
 }
 
 interface AdminPredictionsClientProps {
@@ -314,11 +315,13 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
                           </tr>
                         </thead>
                         <tbody>
-                          {teamPreds.map(({ team, predictions: preds, title_pick_player_id }) => {
+                          {teamPreds.map(({ team, predictions: preds, title_pick_player_id, title_pick_is_host }) => {
                             const hasVotePreds = preds.length > 0;
-                            const hasTitlePick = !!title_pick_player_id;
+                            const hasTitlePick = !!title_pick_player_id || title_pick_is_host;
                             const hasSubmitted = hasVotePreds || hasTitlePick;
-                            const titleSpeakerName = title_pick_player_id
+                            const titleSpeakerName = title_pick_is_host
+                              ? "Jeff Probst (Host)"
+                              : title_pick_player_id
                               ? players.find((p) => p.id === title_pick_player_id)?.name ?? "?"
                               : null;
                             return (
