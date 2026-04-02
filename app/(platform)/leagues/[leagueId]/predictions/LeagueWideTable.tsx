@@ -88,7 +88,9 @@ export function LeagueWideTable({
                     <td className="py-2 px-4 text-xs text-text-muted" colSpan={isScored ? 2 : 2}>
                       🎙️ Title Speaker:{" "}
                       <span className="text-text-primary">
-                        {(titlePick.players as any)?.name ?? "?"}
+                        {titlePick.is_host_pick
+                          ? "Jeff Probst (Host)"
+                          : (titlePick.players as any)?.name ?? "?"}
                       </span>
                     </td>
                     {isScored && <td colSpan={2} />}

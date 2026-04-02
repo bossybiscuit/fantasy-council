@@ -102,7 +102,7 @@ export default async function PredictionsPage({
   const { data: allEpisodeTitlePicks } = nextEpisode
     ? await db
         .from("title_picks")
-        .select("team_id, player_id, players(name)")
+        .select("team_id, player_id, is_host_pick, players(name)")
         .eq("league_id", leagueId)
         .eq("episode_id", nextEpisode.id)
     : { data: [] };
@@ -133,7 +133,7 @@ export default async function PredictionsPage({
     pastEpisodeIds.length > 0
       ? await db
           .from("title_picks")
-          .select("episode_id, team_id, player_id, players(name)")
+          .select("episode_id, team_id, player_id, is_host_pick, players(name)")
           .eq("league_id", leagueId)
           .in("episode_id", pastEpisodeIds)
       : { data: [] };
