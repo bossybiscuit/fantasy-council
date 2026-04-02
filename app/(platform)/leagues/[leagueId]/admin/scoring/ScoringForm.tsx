@@ -46,20 +46,40 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
   const [finalThreePlayers, setFinalThreePlayers] = useState<string[]>([]);
   const [winnerPlayer, setWinnerPlayer] = useState("");
 
-  const activePlayers = players.filter((p) => p.is_active);
-  const allPlayers = players;
+  const activePlayers = players.filter((p) => p.is_active).sort((a, b) => a.name.localeCompare(b.name));
+  const allPlayers = [...players].sort((a, b) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
-  // Tribe-grouped players for immunity grids
-  const tribeGroups = activePlayers.reduce(
-    (acc, p) => {
-      const tribe = p.tribe || "No Tribe";
-      if (!acc[tribe]) acc[tribe] = { players: [], color: p.tribe_color };
-      acc[tribe].players.push(p);
-      return acc;
-    },
-    {} as Record<string, { players: Player[]; color: string | null }>
-  );
-  const tribeEntries = Object.entries(tribeGroups);
+  // Check if post-merge (all active players on same tribe)
+  const uniqueActiveTribes = new Set(activePlayers.map((p) => p.tribe || "No Tribe"));
+  const isMerged = uniqueActiveTribes.size <= 1;
+
+  // Tribe-grouped players — if merged, single group with eliminated at bottom
+  const buildTribeEntries = (playerList: Player[]): [string, { players: Player[]; color: string | null }][] => {
+    if (isMerged) {
+      const sorted = [...playerList].sort((a, b) => {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      const tribeName = activePlayers[0]?.tribe || "Merged Tribe";
+      const tribeColor = activePlayers[0]?.tribe_color || null;
+      return [[tribeName, { players: sorted, color: tribeColor }]];
+    }
+    const groups = playerList.reduce(
+      (acc, p) => {
+        const tribe = p.tribe || "No Tribe";
+        if (!acc[tribe]) acc[tribe] = { players: [], color: p.tribe_color };
+        acc[tribe].players.push(p);
+        return acc;
+      },
+      {} as Record<string, { players: Player[]; color: string | null }>
+    );
+    return Object.entries(groups);
+  };
+
+  const tribeEntries = buildTribeEntries(activePlayers);
 
   function clearForm() {
     setFoundIdolPlayer("");

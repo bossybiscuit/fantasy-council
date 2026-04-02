@@ -38,8 +38,12 @@ export default function AdminScoringForm({
   );
 
   const seasonPlayerList = players.filter((p) => (p as any).season_id === selectedSeasonId);
-  const activePlayers = seasonPlayerList.filter((p) => p.is_active);
-  const allSeasonPlayers = seasonPlayerList;
+  const activePlayers = seasonPlayerList.filter((p) => p.is_active).sort((a, b) => a.name.localeCompare(b.name));
+  // Sort: active players first, then eliminated — alphabetical within each group
+  const allSeasonPlayers = [...seasonPlayerList].sort((a, b) => {
+    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
 
   const selectedEpisode = episodes.find((e) => e.id === selectedEpisodeId);
   const selectedSeason = seasons.find((s) => s.id === selectedSeasonId);
@@ -54,29 +58,35 @@ export default function AdminScoringForm({
     (ep) => ep.is_finale && ep.id !== selectedEpisodeId
   );
 
-  // Tribe-grouped players for the tribe immunity grids (active only)
-  const tribeGroups = activePlayers.reduce(
-    (acc, p) => {
-      const tribe = p.tribe || "No Tribe";
-      if (!acc[tribe]) acc[tribe] = { players: [], color: p.tribe_color };
-      acc[tribe].players.push(p);
-      return acc;
-    },
-    {} as Record<string, { players: Player[]; color: string | null }>
-  );
-  const tribeEntries = Object.entries(tribeGroups);
+  // Check if post-merge (all active players on same tribe)
+  const uniqueActiveTribes = new Set(activePlayers.map((p) => p.tribe || "No Tribe"));
+  const isMerged = uniqueActiveTribes.size <= 1;
 
-  // Tribe-grouped players for votes received (all players, including voted out)
-  const allTribeGroups = allSeasonPlayers.reduce(
-    (acc, p) => {
-      const tribe = p.tribe || "No Tribe";
-      if (!acc[tribe]) acc[tribe] = { players: [], color: p.tribe_color };
-      acc[tribe].players.push(p);
-      return acc;
-    },
-    {} as Record<string, { players: Player[]; color: string | null }>
-  );
-  const allTribeEntries = Object.entries(allTribeGroups);
+  // Tribe-grouped players — if merged, single group with eliminated at bottom
+  const buildTribeEntries = (playerList: Player[]): [string, { players: Player[]; color: string | null }][] => {
+    if (isMerged) {
+      const sorted = [...playerList].sort((a, b) => {
+        if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      const tribeName = activePlayers[0]?.tribe || "Merged Tribe";
+      const tribeColor = activePlayers[0]?.tribe_color || null;
+      return [[tribeName, { players: sorted, color: tribeColor }]];
+    }
+    const groups = playerList.reduce(
+      (acc, p) => {
+        const tribe = p.tribe || "No Tribe";
+        if (!acc[tribe]) acc[tribe] = { players: [], color: p.tribe_color };
+        acc[tribe].players.push(p);
+        return acc;
+      },
+      {} as Record<string, { players: Player[]; color: string | null }>
+    );
+    return Object.entries(groups);
+  };
+
+  const tribeEntries = buildTribeEntries(activePlayers);
+  const allTribeEntries = buildTribeEntries(allSeasonPlayers);
 
   // Form state
   const [loading, setLoading] = useState(false);
