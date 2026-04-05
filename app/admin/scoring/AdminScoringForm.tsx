@@ -655,13 +655,13 @@ export default function AdminScoringForm({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <SingleSelect
                 label={`Found Idol (${DEFAULT_SCORING.FOUND_IDOL}pt)`}
-                players={activePlayers}
+                players={allSeasonPlayers}
                 value={foundIdolPlayer}
                 onChange={setFoundIdolPlayer}
               />
               <SingleSelect
                 label={`Played Idol Successfully (${DEFAULT_SCORING.SUCCESSFUL_IDOL_PLAY}pt)`}
-                players={activePlayers}
+                players={allSeasonPlayers}
                 value={successfulIdolPlayPlayer}
                 onChange={setSuccessfulIdolPlayPlayer}
               />
