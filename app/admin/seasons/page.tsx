@@ -21,6 +21,11 @@ export default function AdminSeasonsPage() {
     title: "",
     air_date: "",
   });
+  const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
+  const [episodeEdit, setEpisodeEdit] = useState<{ title: string; air_date: string }>({
+    title: "",
+    air_date: "",
+  });
 
   useEffect(() => {
     loadSeasons();
@@ -277,35 +282,94 @@ export default function AdminSeasonsPage() {
           </div>
 
           <div className="space-y-2">
-            {episodes.map((ep) => (
-              <div
-                key={ep.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-bg-surface border border-border"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-accent-orange font-mono text-sm">E{ep.episode_number}</span>
-                  <span className="text-text-primary">{ep.title || "Untitled"}</span>
-                  {ep.air_date && (
-                    <span className="text-text-muted text-xs">{ep.air_date}</span>
-                  )}
-                  {ep.is_merge && (
-                    <span className="text-xs text-accent-gold">MERGE</span>
-                  )}
-                  {ep.is_scored && (
-                    <span className="text-xs text-green-400">✓ Scored</span>
+            {episodes.map((ep) => {
+              const isEditing = editingEpisodeId === ep.id;
+              return (
+                <div
+                  key={ep.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-bg-surface border border-border gap-3"
+                >
+                  {isEditing ? (
+                    <>
+                      <span className="text-accent-orange font-mono text-sm shrink-0">E{ep.episode_number}</span>
+                      <input
+                        type="text"
+                        className="input flex-1 text-sm"
+                        placeholder="Episode title"
+                        value={episodeEdit.title}
+                        onChange={(e) => setEpisodeEdit({ ...episodeEdit, title: e.target.value })}
+                      />
+                      <input
+                        type="date"
+                        className="input w-40 text-sm"
+                        value={episodeEdit.air_date}
+                        onChange={(e) => setEpisodeEdit({ ...episodeEdit, air_date: e.target.value })}
+                      />
+                      <button
+                        onClick={async () => {
+                          await supabase
+                            .from("episodes")
+                            .update({
+                              title: episodeEdit.title || null,
+                              air_date: episodeEdit.air_date || null,
+                            })
+                            .eq("id", ep.id);
+                          setEditingEpisodeId(null);
+                          loadEpisodes(selectedSeason);
+                        }}
+                        className="text-green-400 hover:text-green-300 text-xs shrink-0"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingEpisodeId(null)}
+                        className="text-text-muted hover:text-text-primary text-xs shrink-0"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className="text-accent-orange font-mono text-sm shrink-0">E{ep.episode_number}</span>
+                        <span className="text-text-primary truncate">{ep.title || "Untitled"}</span>
+                        {ep.air_date && (
+                          <span className="text-text-muted text-xs shrink-0">{ep.air_date}</span>
+                        )}
+                        {ep.is_merge && (
+                          <span className="text-xs text-accent-gold shrink-0">MERGE</span>
+                        )}
+                        {ep.is_scored && (
+                          <span className="text-xs text-green-400 shrink-0">✓ Scored</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingEpisodeId(ep.id);
+                          setEpisodeEdit({
+                            title: ep.title || "",
+                            air_date: ep.air_date || "",
+                          });
+                        }}
+                        className="text-accent-orange hover:text-orange-400 text-xs shrink-0"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Remove episode E${ep.episode_number}? This is destructive if any data references it.`)) return;
+                          await supabase.from("episodes").delete().eq("id", ep.id);
+                          loadEpisodes(selectedSeason);
+                        }}
+                        className="text-red-500 hover:text-red-400 text-xs shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </>
                   )}
                 </div>
-                <button
-                  onClick={async () => {
-                    await supabase.from("episodes").delete().eq("id", ep.id);
-                    loadEpisodes(selectedSeason);
-                  }}
-                  className="text-red-500 hover:text-red-400 text-xs"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+              );
+            })}
             {episodes.length === 0 && (
               <p className="text-text-muted text-sm text-center py-4">
                 No episodes yet
