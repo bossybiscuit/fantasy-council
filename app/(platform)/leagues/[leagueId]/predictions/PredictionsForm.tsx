@@ -113,7 +113,17 @@ export default function PredictionsForm({
     setLoading(true);
     setError(null);
 
-    const requests: Promise<Response>[] = [];
+    const requests: Promise<Response>[] = [
+      fetch("/api/title-picks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          league_id: leagueId,
+          episode_id: episodeId,
+          player_id: titlePickPlayerId || null,
+        }),
+      }),
+    ];
 
     if (!isFinale) {
       const allocationList = Object.entries(allocations)
@@ -129,15 +139,6 @@ export default function PredictionsForm({
             episode_id: episodeId,
             team_id: teamId,
             allocations: allocationList,
-          }),
-        }),
-        fetch("/api/title-picks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            league_id: leagueId,
-            episode_id: episodeId,
-            player_id: titlePickPlayerId || null,
           }),
         })
       );
@@ -181,30 +182,28 @@ export default function PredictionsForm({
 
   return (
     <div className="space-y-4">
-      {/* Title Pick — hidden on finale */}
-      {!isFinale && (
-        <div className="card">
-          <h2 className="section-title mb-1">Episode Title Pick</h2>
-          <p className="text-xs text-text-muted mb-3">
-            Who says the episode title? Worth{" "}
-            <strong className="text-accent-gold">3 pts</strong> if correct.
-          </p>
-          <select
-            className="input text-sm"
-            value={titlePickPlayerId}
-            onChange={(e) => setTitlePickPlayerId(e.target.value)}
-          >
-            <option value="">— No pick —</option>
-            <option value="jeff_probst">Jeff Probst (Host)</option>
-            {players.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-                {p.tribe ? ` (${p.tribe})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      {/* Title Pick */}
+      <div className="card">
+        <h2 className="section-title mb-1">Episode Title Pick</h2>
+        <p className="text-xs text-text-muted mb-3">
+          Who says the episode title? Worth{" "}
+          <strong className="text-accent-gold">3 pts</strong> if correct.
+        </p>
+        <select
+          className="input text-sm"
+          value={titlePickPlayerId}
+          onChange={(e) => setTitlePickPlayerId(e.target.value)}
+        >
+          <option value="">— No pick —</option>
+          <option value="jeff_probst">Jeff Probst (Host)</option>
+          {players.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+              {p.tribe ? ` (${p.tribe})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* Vote Allocations — hidden on finale (5th place replaces it) */}
       {!isFinale && (
