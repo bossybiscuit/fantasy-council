@@ -396,10 +396,16 @@ export default function PredictionsForm({
 
           <button
             onClick={handleSubmit}
-            disabled={loading || totalAllocated !== 10 || fifthTotal !== 10 || fourthTotal !== 10}
+            disabled={loading || fifthTotal !== 10 || fourthTotal !== 10}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? "Casting your vote..." : "Cast Your Finale Picks 🏆"}
+            {loading
+              ? "Casting your vote..."
+              : fifthTotal !== 10
+              ? `Allocate ${10 - fifthTotal} more point${10 - fifthTotal !== 1 ? "s" : ""} on 5th place`
+              : fourthTotal !== 10
+              ? `Allocate ${10 - fourthTotal} more point${10 - fourthTotal !== 1 ? "s" : ""} on 4th place`
+              : "Cast Your Finale Picks 🏆"}
           </button>
         </>
       )}
