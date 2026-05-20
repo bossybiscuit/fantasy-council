@@ -22,9 +22,16 @@ export default function AdminSeasonsPage() {
     air_date: "",
   });
   const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
-  const [episodeEdit, setEpisodeEdit] = useState<{ title: string; air_date: string }>({
+  const [episodeEdit, setEpisodeEdit] = useState<{
+    title: string;
+    air_date: string;
+    is_finale: boolean;
+    is_merge: boolean;
+  }>({
     title: "",
     air_date: "",
+    is_finale: false,
+    is_merge: false,
   });
 
   useEffect(() => {
@@ -290,44 +297,68 @@ export default function AdminSeasonsPage() {
                   className="flex items-center justify-between p-3 rounded-lg bg-bg-surface border border-border gap-3"
                 >
                   {isEditing ? (
-                    <>
-                      <span className="text-accent-orange font-mono text-sm shrink-0">E{ep.episode_number}</span>
-                      <input
-                        type="text"
-                        className="input flex-1 text-sm"
-                        placeholder="Episode title"
-                        value={episodeEdit.title}
-                        onChange={(e) => setEpisodeEdit({ ...episodeEdit, title: e.target.value })}
-                      />
-                      <input
-                        type="date"
-                        className="input w-40 text-sm"
-                        value={episodeEdit.air_date}
-                        onChange={(e) => setEpisodeEdit({ ...episodeEdit, air_date: e.target.value })}
-                      />
-                      <button
-                        onClick={async () => {
-                          await supabase
-                            .from("episodes")
-                            .update({
-                              title: episodeEdit.title || null,
-                              air_date: episodeEdit.air_date || null,
-                            })
-                            .eq("id", ep.id);
-                          setEditingEpisodeId(null);
-                          loadEpisodes(selectedSeason);
-                        }}
-                        className="text-green-400 hover:text-green-300 text-xs shrink-0"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingEpisodeId(null)}
-                        className="text-text-muted hover:text-text-primary text-xs shrink-0"
-                      >
-                        Cancel
-                      </button>
-                    </>
+                    <div className="flex flex-col gap-2 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-accent-orange font-mono text-sm shrink-0">E{ep.episode_number}</span>
+                        <input
+                          type="text"
+                          className="input flex-1 min-w-40 text-sm"
+                          placeholder="Episode title"
+                          value={episodeEdit.title}
+                          onChange={(e) => setEpisodeEdit({ ...episodeEdit, title: e.target.value })}
+                        />
+                        <input
+                          type="date"
+                          className="input w-40 text-sm"
+                          value={episodeEdit.air_date}
+                          onChange={(e) => setEpisodeEdit({ ...episodeEdit, air_date: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex items-center gap-4 flex-wrap pl-7">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={episodeEdit.is_merge}
+                            onChange={(e) => setEpisodeEdit({ ...episodeEdit, is_merge: e.target.checked })}
+                            className="accent-accent-gold"
+                          />
+                          <span className="text-xs text-text-primary">Merge episode</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={episodeEdit.is_finale}
+                            onChange={(e) => setEpisodeEdit({ ...episodeEdit, is_finale: e.target.checked })}
+                            className="accent-accent-orange"
+                          />
+                          <span className="text-xs text-text-primary">Finale episode</span>
+                        </label>
+                        <button
+                          onClick={async () => {
+                            await supabase
+                              .from("episodes")
+                              .update({
+                                title: episodeEdit.title || null,
+                                air_date: episodeEdit.air_date || null,
+                                is_merge: episodeEdit.is_merge,
+                                is_finale: episodeEdit.is_finale,
+                              })
+                              .eq("id", ep.id);
+                            setEditingEpisodeId(null);
+                            loadEpisodes(selectedSeason);
+                          }}
+                          className="text-green-400 hover:text-green-300 text-xs ml-auto"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingEpisodeId(null)}
+                          className="text-text-muted hover:text-text-primary text-xs"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -339,6 +370,9 @@ export default function AdminSeasonsPage() {
                         {ep.is_merge && (
                           <span className="text-xs text-accent-gold shrink-0">MERGE</span>
                         )}
+                        {ep.is_finale && (
+                          <span className="text-xs text-accent-orange shrink-0">FINALE</span>
+                        )}
                         {ep.is_scored && (
                           <span className="text-xs text-green-400 shrink-0">✓ Scored</span>
                         )}
@@ -349,6 +383,8 @@ export default function AdminSeasonsPage() {
                           setEpisodeEdit({
                             title: ep.title || "",
                             air_date: ep.air_date || "",
+                            is_merge: !!ep.is_merge,
+                            is_finale: !!ep.is_finale,
                           });
                         }}
                         className="text-accent-orange hover:text-orange-400 text-xs shrink-0"
