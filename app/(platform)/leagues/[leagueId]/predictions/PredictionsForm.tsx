@@ -96,11 +96,6 @@ export default function PredictionsForm({
   }
 
   async function handleSubmit() {
-    if (totalAllocated !== 10) {
-      setError("You must allocate exactly 10 points total");
-      return;
-    }
-
     if (isFinale) {
       if (fifthTotal !== 10) {
         setError("5th place must total 10 points");
@@ -110,36 +105,43 @@ export default function PredictionsForm({
         setError("4th place must total 10 points");
         return;
       }
+    } else if (totalAllocated !== 10) {
+      setError("You must allocate exactly 10 points total");
+      return;
     }
 
     setLoading(true);
     setError(null);
 
-    const allocationList = Object.entries(allocations)
-      .filter(([, pts]) => pts > 0)
-      .map(([player_id, points_allocated]) => ({ player_id, points_allocated }));
+    const requests: Promise<Response>[] = [];
 
-    const requests: Promise<Response>[] = [
-      fetch("/api/predictions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          league_id: leagueId,
-          episode_id: episodeId,
-          team_id: teamId,
-          allocations: allocationList,
+    if (!isFinale) {
+      const allocationList = Object.entries(allocations)
+        .filter(([, pts]) => pts > 0)
+        .map(([player_id, points_allocated]) => ({ player_id, points_allocated }));
+
+      requests.push(
+        fetch("/api/predictions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            league_id: leagueId,
+            episode_id: episodeId,
+            team_id: teamId,
+            allocations: allocationList,
+          }),
         }),
-      }),
-      fetch("/api/title-picks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          league_id: leagueId,
-          episode_id: episodeId,
-          player_id: titlePickPlayerId || null,
-        }),
-      }),
-    ];
+        fetch("/api/title-picks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            league_id: leagueId,
+            episode_id: episodeId,
+            player_id: titlePickPlayerId || null,
+          }),
+        })
+      );
+    }
 
     if (isFinale) {
       requests.push(
@@ -179,30 +181,33 @@ export default function PredictionsForm({
 
   return (
     <div className="space-y-4">
-      {/* Title Pick */}
-      <div className="card">
-        <h2 className="section-title mb-1">Episode Title Pick</h2>
-        <p className="text-xs text-text-muted mb-3">
-          Who says the episode title? Worth{" "}
-          <strong className="text-accent-gold">3 pts</strong> if correct.
-        </p>
-        <select
-          className="input text-sm"
-          value={titlePickPlayerId}
-          onChange={(e) => setTitlePickPlayerId(e.target.value)}
-        >
-          <option value="">— No pick —</option>
-          <option value="jeff_probst">Jeff Probst (Host)</option>
-          {players.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-              {p.tribe ? ` (${p.tribe})` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Title Pick — hidden on finale */}
+      {!isFinale && (
+        <div className="card">
+          <h2 className="section-title mb-1">Episode Title Pick</h2>
+          <p className="text-xs text-text-muted mb-3">
+            Who says the episode title? Worth{" "}
+            <strong className="text-accent-gold">3 pts</strong> if correct.
+          </p>
+          <select
+            className="input text-sm"
+            value={titlePickPlayerId}
+            onChange={(e) => setTitlePickPlayerId(e.target.value)}
+          >
+            <option value="">— No pick —</option>
+            <option value="jeff_probst">Jeff Probst (Host)</option>
+            {players.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+                {p.tribe ? ` (${p.tribe})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
-      {/* Vote Allocations */}
+      {/* Vote Allocations — hidden on finale (5th place replaces it) */}
+      {!isFinale && (
       <div className="card">
         <div className="flex items-center justify-between mb-1">
           <h2 className="section-title mb-0">Vote Predictions</h2>
@@ -297,9 +302,9 @@ export default function PredictionsForm({
         </div>
 
         <button
-          onClick={isFinale ? undefined : handleSubmit}
-          disabled={loading || totalAllocated !== 10 || isFinale}
-          className={`btn-primary w-full mt-5 disabled:opacity-50 disabled:cursor-not-allowed ${isFinale ? "hidden" : ""}`}
+          onClick={handleSubmit}
+          disabled={loading || totalAllocated !== 10}
+          className="btn-primary w-full mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading
             ? "Casting your vote..."
@@ -308,6 +313,19 @@ export default function PredictionsForm({
             : `Allocate ${remaining} more point${remaining !== 1 ? "s" : ""}`}
         </button>
       </div>
+      )}
+
+      {/* Error message — shown for finale form too (only-finale flow) */}
+      {isFinale && error && (
+        <div className="card border border-red-700/30 bg-red-900/20 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
+      {isFinale && success && (
+        <div className="card border border-green-700/30 bg-green-900/20 text-green-400 text-sm">
+          🏆 Finale picks locked in!
+        </div>
+      )}
 
       {/* Finale Predictions */}
       {isFinale && (

@@ -99,6 +99,16 @@ export default async function PredictionsPage({
         .eq("team_id", myTeam.id)
     : { data: [] };
 
+  // All teams' finale picks for the current episode (only relevant when is_finale)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: allEpisodeFinalePicks } = nextEpisode && (nextEpisode as any).is_finale
+    ? await (db as any)
+        .from("finale_predictions")
+        .select("team_id, pick_type, player_id, points_allocated, points_earned, players(name)")
+        .eq("league_id", leagueId)
+        .eq("episode_id", nextEpisode.id)
+    : { data: [] };
+
   // All teams' predictions for the current episode (for States A/B/C)
   const { data: allEpisodePredictions } = nextEpisode
     ? await db
@@ -158,7 +168,10 @@ export default async function PredictionsPage({
   const isScored = (nextEpisode as any)?.is_scored ?? false;
 
   // Which teams have submitted for the current episode
-  const submittedTeamIds = new Set((allEpisodePredictions || []).map((p) => p.team_id));
+  const isFinaleEpisode = !!(nextEpisode as any)?.is_finale;
+  const submittedTeamIds = isFinaleEpisode
+    ? new Set(((allEpisodeFinalePicks as any[]) || []).map((p: any) => p.team_id))
+    : new Set((allEpisodePredictions || []).map((p) => p.team_id));
 
   // Group current-episode predictions and title picks by team
   const predsByTeam = new Map<string, any[]>();
