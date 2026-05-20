@@ -88,6 +88,17 @@ export default async function PredictionsPage({
         .maybeSingle()
     : { data: null };
 
+  // Current user's existing finale picks (only relevant if nextEpisode.is_finale)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existingFinalePicks } = nextEpisode && (nextEpisode as any).is_finale
+    ? await (db as any)
+        .from("finale_predictions")
+        .select("pick_type, player_id, points_allocated")
+        .eq("league_id", leagueId)
+        .eq("episode_id", nextEpisode.id)
+        .eq("team_id", myTeam.id)
+    : { data: [] };
+
   // All teams' predictions for the current episode (for States A/B/C)
   const { data: allEpisodePredictions } = nextEpisode
     ? await db
@@ -225,6 +236,8 @@ export default async function PredictionsPage({
                   ? "jeff_probst"
                   : (existingTitlePick?.player_id ?? null)
               }
+              isFinale={(nextEpisode as any).is_finale ?? false}
+              existingFinalePicks={(existingFinalePicks as any) || []}
             />
           )}
 

@@ -24,6 +24,8 @@ interface ScoringInput {
   is_final_three: boolean;
   final_three_players: string[];
   winner_player: string | null;
+  fifth_place_player?: string | null;
+  fourth_place_player?: string | null;
 }
 
 type ScoringEventInput = {
@@ -120,6 +122,10 @@ export async function POST(request: NextRequest) {
     addEvent(body.winner_player, "winner");
   }
 
+  // Finale placement markers (0pt)
+  if (body.fifth_place_player) addEvent(body.fifth_place_player, "fifth_place" as ScoringCategory, 0);
+  if (body.fourth_place_player) addEvent(body.fourth_place_player, "fourth_place" as ScoringCategory, 0);
+
   // Get draft picks to map player -> team
   const { data: draftPicks } = await supabase
     .from("draft_picks")
@@ -157,12 +163,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Mark players voted out as inactive
-  if (body.voted_out_players.length > 0) {
+  // Mark players voted out as inactive (incl. finale placements)
+  const placementIds: string[] = [];
+  if (body.fifth_place_player) placementIds.push(body.fifth_place_player);
+  if (body.fourth_place_player) placementIds.push(body.fourth_place_player);
+  const inactiveIds = [...new Set([...body.voted_out_players, ...placementIds])];
+  if (inactiveIds.length > 0) {
     await supabase
       .from("players")
       .update({ is_active: false })
-      .in("id", body.voted_out_players);
+      .in("id", inactiveIds);
   }
 
   // Medevac / quit — mark inactive, record a 0-pt event for bookkeeping
@@ -242,6 +252,32 @@ export async function POST(request: NextRequest) {
         points: earned,
         note: "Correct vote prediction",
       });
+    }
+  }
+
+  // Finale prediction resolution (5th/4th place allocations + final 3 + winner picks)
+  if (body.is_final_three) {
+    const { data: finalePicks } = await supabase
+      .from("finale_predictions")
+      .select("*")
+      .eq("league_id", league_id)
+      .eq("episode_id", episode_id);
+
+    for (const pick of finalePicks || []) {
+      let earned = 0;
+      if (pick.pick_type === "fifth_place" && body.fifth_place_player) {
+        if (pick.player_id === body.fifth_place_player) earned = pick.points_allocated;
+      } else if (pick.pick_type === "fourth_place" && body.fourth_place_player) {
+        if (pick.player_id === body.fourth_place_player) earned = pick.points_allocated;
+      } else if (pick.pick_type === "final_three") {
+        if (body.final_three_players.includes(pick.player_id)) earned = 2;
+      } else if (pick.pick_type === "winner") {
+        if (body.winner_player && pick.player_id === body.winner_player) earned = 5;
+      }
+      await supabase
+        .from("finale_predictions")
+        .update({ points_earned: earned })
+        .eq("id", pick.id);
     }
   }
 
@@ -404,7 +440,19 @@ async function recalculateScores(
 
       const titlePickPoints = titlePick?.points_earned || 0;
 
-      const predictionPoints = votePredPoints + titlePickPoints;
+      // Finale prediction points
+      const { data: finalePicks } = await supabase
+        .from("finale_predictions")
+        .select("points_earned")
+        .eq("league_id", league_id)
+        .eq("episode_id", ep.id)
+        .eq("team_id", team.id);
+      const finalePoints = (finalePicks || []).reduce(
+        (sum: number, p: any) => sum + (p.points_earned || 0),
+        0
+      );
+
+      const predictionPoints = votePredPoints + titlePickPoints + finalePoints;
       const total = challengePoints + milestonePoints + predictionPoints;
       cumulative += total;
 

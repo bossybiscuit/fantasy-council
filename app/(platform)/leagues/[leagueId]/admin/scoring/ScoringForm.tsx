@@ -45,6 +45,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
   const [isFinalThree, setIsFinalThree] = useState(false);
   const [finalThreePlayers, setFinalThreePlayers] = useState<string[]>([]);
   const [winnerPlayer, setWinnerPlayer] = useState("");
+  const [fifthPlacePlayer, setFifthPlacePlayer] = useState("");
+  const [fourthPlacePlayer, setFourthPlacePlayer] = useState("");
 
   const activePlayers = players.filter((p) => p.is_active).sort((a, b) => a.name.localeCompare(b.name));
   const allPlayers = [...players].sort((a, b) => {
@@ -97,6 +99,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
     setIsFinalThree(false);
     setFinalThreePlayers([]);
     setWinnerPlayer("");
+    setFifthPlacePlayer("");
+    setFourthPlacePlayer("");
   }
 
   const loadEpisodeData = useCallback(
@@ -127,6 +131,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
       setIsFinalThree(ep.is_finale);
       setFinalThreePlayers(playersByCategory("final_three"));
       setWinnerPlayer(firstByCategory("winner"));
+      setFifthPlacePlayer(firstByCategory("fifth_place"));
+      setFourthPlacePlayer(firstByCategory("fourth_place"));
     },
     [episodes, scoringEvents]
   );
@@ -181,6 +187,8 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
         is_final_three: isFinalThree,
         final_three_players: finalThreePlayers,
         winner_player: winnerPlayer || null,
+        fifth_place_player: fifthPlacePlayer || null,
+        fourth_place_player: fourthPlacePlayer || null,
       }),
     });
 
@@ -539,6 +547,30 @@ export default function ScoringForm({ league, players, episodes, scoringEvents }
             </button>
           </div>
         </div>
+
+        {/* Finale Placement (5th / 4th) — shown when Final Three toggle is on */}
+        {isFinalThree && (
+          <div className="card border border-accent-gold/30 bg-accent-gold/5">
+            <h3 className="font-medium text-text-primary mb-1">Finale Placement</h3>
+            <p className="text-xs text-text-muted mb-3">
+              Resolves finale 5th/4th place predictions.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SingleSelect
+                label="5th Place"
+                players={allPlayers}
+                value={fifthPlacePlayer}
+                onChange={setFifthPlacePlayer}
+              />
+              <SingleSelect
+                label="4th Place"
+                players={allPlayers}
+                value={fourthPlacePlayer}
+                onChange={setFourthPlacePlayer}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Final Three */}
         <div

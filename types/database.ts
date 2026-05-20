@@ -564,6 +564,38 @@ export type Database = {
         };
         Relationships: [];
       };
+      finale_predictions: {
+        Row: {
+          id: string;
+          league_id: string;
+          episode_id: string;
+          team_id: string;
+          pick_type: "fifth_place" | "fourth_place" | "final_three" | "winner";
+          player_id: string;
+          points_allocated: number;
+          points_earned: number;
+          locked_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          league_id: string;
+          episode_id: string;
+          team_id: string;
+          pick_type: "fifth_place" | "fourth_place" | "final_three" | "winner";
+          player_id: string;
+          points_allocated?: number;
+          points_earned?: number;
+          locked_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          points_allocated?: number;
+          points_earned?: number;
+          locked_at?: string | null;
+        };
+        Relationships: [];
+      };
       episode_team_scores: {
         Row: {
           id: string;
@@ -659,7 +691,9 @@ export type ScoringCategory =
   | "found_idol"
   | "successful_idol_play"
   | "votes_received"
-  | "medevac";
+  | "medevac"
+  | "fifth_place"
+  | "fourth_place";
 
 // Convenience row types
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];

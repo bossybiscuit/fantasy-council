@@ -39,8 +39,8 @@ export async function recalculateScores(supabase: any, league_id: string, episod
 
   const allEpisodeIds = episodes.map((e) => e.id);
 
-  // Batch-fetch all scoring events, predictions, and title_picks for this league across all episodes
-  const [{ data: allEvents }, { data: allPreds }, { data: allTitlePicks }] = await Promise.all([
+  // Batch-fetch all scoring events, predictions, title_picks, and finale_predictions for this league across all episodes
+  const [{ data: allEvents }, { data: allPreds }, { data: allTitlePicks }, { data: allFinalePicks }] = await Promise.all([
     supabase
       .from("scoring_events")
       .select("episode_id, team_id, points, category")
@@ -53,6 +53,11 @@ export async function recalculateScores(supabase: any, league_id: string, episod
       .in("episode_id", allEpisodeIds),
     supabase
       .from("title_picks")
+      .select("episode_id, team_id, points_earned")
+      .eq("league_id", league_id)
+      .in("episode_id", allEpisodeIds),
+    supabase
+      .from("finale_predictions")
       .select("episode_id, team_id, points_earned")
       .eq("league_id", league_id)
       .in("episode_id", allEpisodeIds),
@@ -84,6 +89,13 @@ export async function recalculateScores(supabase: any, league_id: string, episod
     titleMap.set(key, (titleMap.get(key) || 0) + (tp.points_earned || 0));
   }
 
+  const finaleMap = new Map<string, number>();
+  for (const fp of allFinalePicks || []) {
+    if (!fp.team_id) continue;
+    const key = `${fp.episode_id}:${fp.team_id}`;
+    finaleMap.set(key, (finaleMap.get(key) || 0) + (fp.points_earned || 0));
+  }
+
   // Build all upsert rows in memory
   const upsertRows: object[] = [];
   for (const team of teams) {
@@ -92,7 +104,7 @@ export async function recalculateScores(supabase: any, league_id: string, episod
       const key = `${ep.id}:${team.id}`;
       const challengePoints = challengeMap.get(key) || 0;
       const milestonePoints = milestoneMap.get(key) || 0;
-      const predictionPoints = (predMap.get(key) || 0) + (titleMap.get(key) || 0);
+      const predictionPoints = (predMap.get(key) || 0) + (titleMap.get(key) || 0) + (finaleMap.get(key) || 0);
       const total = challengePoints + milestonePoints + predictionPoints;
       cumulative += total;
 

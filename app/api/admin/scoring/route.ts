@@ -23,6 +23,8 @@ interface AdminScoringInput {
   is_final_three: boolean;
   final_three_players: string[];
   winner_player: string | null;
+  fifth_place_player?: string | null;
+  fourth_place_player?: string | null;
 }
 
 type ScoringEventInput = {
@@ -117,6 +119,10 @@ export async function POST(request: NextRequest) {
       for (const pid of body.final_three_players) addEvent(pid, "final_three");
     }
     if (body.winner_player) addEvent(body.winner_player, "winner");
+
+    // Finale placement markers (0pt — used to remember selections + drive finale resolution)
+    if (body.fifth_place_player) addEvent(body.fifth_place_player, "fifth_place" as ScoringCategory, 0);
+    if (body.fourth_place_player) addEvent(body.fourth_place_player, "fourth_place" as ScoringCategory, 0);
 
     // Get draft picks to map player -> team for this league
     const { data: draftPicks } = await db
@@ -253,6 +259,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Finale prediction resolution (5th/4th place allocations + final 3 + winner picks)
+    if (body.is_final_three) {
+      const { data: finalePicks } = await db
+        .from("finale_predictions")
+        .select("*")
+        .eq("league_id", league.id)
+        .eq("episode_id", episode_id);
+
+      for (const pick of finalePicks || []) {
+        let earned = 0;
+        if (pick.pick_type === "fifth_place" && body.fifth_place_player) {
+          if (pick.player_id === body.fifth_place_player) earned = pick.points_allocated;
+        } else if (pick.pick_type === "fourth_place" && body.fourth_place_player) {
+          if (pick.player_id === body.fourth_place_player) earned = pick.points_allocated;
+        } else if (pick.pick_type === "final_three") {
+          if (body.final_three_players.includes(pick.player_id)) earned = 2;
+        } else if (pick.pick_type === "winner") {
+          if (body.winner_player && pick.player_id === body.winner_player) earned = 5;
+        }
+        await db
+          .from("finale_predictions")
+          .update({ points_earned: earned })
+          .eq("id", pick.id);
+      }
+    }
+
     // Recalculate episode team scores for this league
     await recalculateScores(db, league.id, episode_id, season_id);
   }
@@ -285,11 +317,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Mark players voted out as inactive (global, only needs to happen once)
-  if (body.voted_out_players.length > 0) {
+  const placementIds: string[] = [];
+  if (body.fifth_place_player) placementIds.push(body.fifth_place_player);
+  if (body.fourth_place_player) placementIds.push(body.fourth_place_player);
+  const inactiveIds = [...new Set([...body.voted_out_players, ...placementIds])];
+  if (inactiveIds.length > 0) {
     await db
       .from("players")
       .update({ is_active: false })
-      .in("id", body.voted_out_players);
+      .in("id", inactiveIds);
   }
 
   // Medevac / quit — mark players inactive globally
