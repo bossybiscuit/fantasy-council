@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const db = createServiceClient();
 
-  const [{ data: teams }, { data: preds }, { data: titlePicks }] = await Promise.all([
+  const [{ data: teams }, { data: preds }, { data: titlePicks }, { data: finalePicks }] = await Promise.all([
     db.from("teams").select("id, name").eq("league_id", leagueId).order("created_at"),
     db
       .from("predictions")
@@ -43,6 +43,12 @@ export async function GET(req: NextRequest, { params }: Params) {
     db
       .from("title_picks")
       .select("team_id, player_id, is_host_pick")
+      .eq("league_id", leagueId)
+      .eq("episode_id", episodeId),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (db as any)
+      .from("finale_predictions")
+      .select("team_id, pick_type, player_id, points_allocated, players(name)")
       .eq("league_id", leagueId)
       .eq("episode_id", episodeId),
   ]);
@@ -59,6 +65,13 @@ export async function GET(req: NextRequest, { params }: Params) {
     titlePickByTeam.set(tp.team_id, { player_id: tp.player_id, is_host_pick: !!(tp as any).is_host_pick });
   }
 
+  // Group finale picks by team
+  const finaleByTeam = new Map<string, any[]>();
+  for (const team of teams || []) finaleByTeam.set(team.id, []);
+  for (const fp of (finalePicks as any[]) || []) {
+    finaleByTeam.get(fp.team_id)?.push(fp);
+  }
+
   const result = (teams || []).map((team) => {
     const tp = titlePickByTeam.get(team.id);
     return {
@@ -66,6 +79,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       predictions: predsByTeam.get(team.id) || [],
       title_pick_player_id: tp?.player_id ?? null,
       title_pick_is_host: tp?.is_host_pick ?? false,
+      finale_picks: finaleByTeam.get(team.id) || [],
     };
   });
 

@@ -16,6 +16,7 @@ interface Episode {
   is_scored: boolean;
   prediction_deadline: string | null;
   air_date: string | null;
+  is_finale?: boolean;
 }
 
 interface Player {
@@ -35,6 +36,7 @@ interface TeamPred {
   predictions: { team_id: string; player_id: string; points_allocated: number; players: any }[];
   title_pick_player_id: string | null;
   title_pick_is_host: boolean;
+  finale_picks: { pick_type: string; player_id: string; points_allocated: number; players: any }[];
 }
 
 interface AdminPredictionsClientProps {
@@ -295,6 +297,65 @@ export default function AdminPredictionsClient({ leagues }: AdminPredictionsClie
                   <p className="label mb-2">Submission Status</p>
                   {loadingPreds ? (
                     <p className="text-text-muted text-xs">Loading...</p>
+                  ) : selectedEp?.is_finale ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">Team</th>
+                            <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">5th Place</th>
+                            <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">4th Place</th>
+                            <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">Final 3</th>
+                            <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">Winner</th>
+                            <th className="text-left py-2 px-3 text-text-muted font-medium text-xs">Title Speaker</th>
+                            <th className="text-right py-2 px-3 text-text-muted font-medium text-xs">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamPreds.map(({ team, finale_picks, title_pick_player_id, title_pick_is_host }) => {
+                            const picks = finale_picks || [];
+                            const fifth = picks.filter((p) => p.pick_type === "fifth_place");
+                            const fourth = picks.filter((p) => p.pick_type === "fourth_place");
+                            const finalThree = picks.filter((p) => p.pick_type === "final_three");
+                            const winner = picks.find((p) => p.pick_type === "winner");
+                            const fmtAlloc = (arr: typeof picks) =>
+                              arr.length === 0
+                                ? null
+                                : arr.map((p) => `${(p.players as any)?.name ?? "?"} (${p.points_allocated}pt)`).join(", ");
+                            const fmtList = (arr: typeof picks) =>
+                              arr.length === 0
+                                ? null
+                                : arr.map((p) => (p.players as any)?.name ?? "?").join(", ");
+                            const hasSubmitted = picks.length > 0;
+                            const titleSpeakerName = title_pick_is_host
+                              ? "Jeff Probst (Host)"
+                              : title_pick_player_id
+                              ? players.find((p) => p.id === title_pick_player_id)?.name ?? "?"
+                              : null;
+                            const dash = <span className="italic text-text-muted/50">—</span>;
+                            return (
+                              <tr key={team.id} className="border-b border-border last:border-0">
+                                <td className="py-2 px-3 font-medium text-text-primary text-xs">{team.name}</td>
+                                <td className="py-2 px-3 text-text-muted text-xs">{fmtAlloc(fifth) ?? dash}</td>
+                                <td className="py-2 px-3 text-text-muted text-xs">{fmtAlloc(fourth) ?? dash}</td>
+                                <td className="py-2 px-3 text-text-muted text-xs">{fmtList(finalThree) ?? dash}</td>
+                                <td className="py-2 px-3 text-text-muted text-xs">
+                                  {winner ? (winner.players as any)?.name ?? "?" : dash}
+                                </td>
+                                <td className="py-2 px-3 text-text-muted text-xs">{titleSpeakerName ?? dash}</td>
+                                <td className="py-2 px-3 text-right text-xs">
+                                  {hasSubmitted ? (
+                                    <span className="text-green-400 font-medium">✓ Submitted</span>
+                                  ) : (
+                                    <span className="text-amber-400">⚠ Not yet</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">

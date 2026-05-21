@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const [{ data: episodes }, { data: players }, { data: teams }] = await Promise.all([
     db
       .from("episodes")
-      .select("id, episode_number, title, is_scored, prediction_deadline, air_date")
+      .select("id, episode_number, title, is_scored, prediction_deadline, air_date, is_finale")
       .eq("season_id", league.season_id)
       .order("episode_number"),
     db

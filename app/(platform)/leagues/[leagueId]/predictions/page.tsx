@@ -183,6 +183,11 @@ export default async function PredictionsPage({
   for (const tp of allEpisodeTitlePicks || []) {
     titlePickByTeam.set(tp.team_id, tp);
   }
+  const finalePicksByTeam = new Map<string, any[]>();
+  for (const team of allTeams || []) finalePicksByTeam.set(team.id, []);
+  for (const fp of (allEpisodeFinalePicks as any[]) || []) {
+    finalePicksByTeam.get(fp.team_id)?.push(fp);
+  }
 
   return (
     <div>
@@ -296,7 +301,9 @@ export default async function PredictionsPage({
             teams={allTeams || []}
             predsByTeam={predsByTeam}
             titlePickByTeam={titlePickByTeam}
+            finalePicksByTeam={finalePicksByTeam}
             isScored={false}
+            isFinale={isFinaleEpisode}
           />
         </div>
       )}
@@ -312,7 +319,9 @@ export default async function PredictionsPage({
             teams={allTeams || []}
             predsByTeam={predsByTeam}
             titlePickByTeam={titlePickByTeam}
+            finalePicksByTeam={finalePicksByTeam}
             isScored={true}
+            isFinale={isFinaleEpisode}
           />
         </div>
       )}
