@@ -47,13 +47,13 @@ export default function SurvivorPoolBoard({
       const current = currentEpisodeId ? teamPicks.get(currentEpisodeId) : undefined;
       return { team, currentStreak, total, history, current };
     })
-    .sort((a, b) => b.total - a.total || b.currentStreak - a.currentStreak);
+    .sort((a, b) => b.currentStreak - a.currentStreak || b.total - a.total);
 
   return (
     <div className="card mt-6">
-      <h2 className="section-title mb-1">🛟 Survivor Pool Standings</h2>
+      <h2 className="section-title mb-1">🛟 Survivor Pool Streaks</h2>
       <p className="text-xs text-text-muted mb-4">
-        Pool points count toward the overall standings.
+        Pool points are added to your weekly prediction points.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -61,7 +61,6 @@ export default function SurvivorPoolBoard({
             <tr className="border-b border-border">
               <th className="text-left py-2 px-2 text-text-muted font-medium">Team</th>
               <th className="text-right py-2 px-2 text-text-muted font-medium">Streak</th>
-              <th className="text-right py-2 px-2 text-text-muted font-medium">Pts</th>
               <th className="text-left py-2 px-2 text-text-muted font-medium">This Week</th>
               <th className="text-left py-2 px-2 text-text-muted font-medium hidden md:table-cell">
                 History
@@ -86,9 +85,6 @@ export default function SurvivorPoolBoard({
                     ) : (
                       <span className="text-text-muted">0</span>
                     )}
-                  </td>
-                  <td className="py-2 px-2 text-right font-semibold text-accent-gold tabular-nums">
-                    {row.total}
                   </td>
                   <td className="py-2 px-2 text-xs">
                     {row.current ? (

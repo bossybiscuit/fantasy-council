@@ -79,7 +79,7 @@ Hey —
 I'm running a ${seasonName} fantasy league and you're invited. There's no draft, so anyone can jump in:
 
 • Weekly vote predictions — call who's going home
-• Survivor Pool — pick someone to survive each week; streaks pay exponentially, but you can't reuse a castaway
+• Survivor Pool — pick someone to survive each week; each correct pick in a row is worth one more point, but you can't reuse a castaway
 • Season-long predictions — winner, first boot, and more
 
 League: ${league.name}

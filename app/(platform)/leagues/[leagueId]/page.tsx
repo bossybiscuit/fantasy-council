@@ -8,6 +8,12 @@ import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import LobbyView, { InviteShare } from "./LobbyView";
 import Link from "next/link";
+import {
+  computeTeamStreaks,
+  getSurvivorPoolSettings,
+  isSurvivorPoolEnabled,
+  type PoolPick,
+} from "@/lib/survivor-pool";
 
 export default async function LeagueHomePage({
   params,
@@ -218,6 +224,31 @@ export default async function LeagueHomePage({
       );
     }
 
+    // Survivor Pool streaks (shown next to each team's points)
+    const poolEnabled = isSurvivorPoolEnabled(league);
+    const streakByTeam = new Map<string, number>();
+    if (poolEnabled) {
+      const [{ data: seasonEps }, { data: poolPicks }] = await Promise.all([
+        db
+          .from("episodes")
+          .select("id, is_scored")
+          .eq("season_id", season?.id)
+          .order("episode_number", { ascending: true }),
+        db
+          .from("survivor_picks")
+          .select("episode_id, team_id, player_id, survived")
+          .eq("league_id", leagueId),
+      ]);
+      const epIds = (seasonEps || []).map((e) => e.id);
+      const graded = new Set((seasonEps || []).filter((e) => e.is_scored).map((e) => e.id));
+      const settings = getSurvivorPoolSettings(league.scoring_config);
+      for (const team of teams) {
+        const picks = new Map<string, PoolPick>();
+        for (const p of poolPicks || []) if (p.team_id === team.id) picks.set(p.episode_id, p);
+        streakByTeam.set(team.id, computeTeamStreaks(epIds, graded, picks, settings).currentStreak);
+      }
+    }
+
     standingsRows = teams
       .map((team) => {
         const currentScore =
@@ -269,6 +300,7 @@ export default async function LeagueHomePage({
           weeklyPredPoints,
           seasonPredTotal,
           survivorPoints: survivorPointsMap.get(team.id) || 0,
+          survivorStreak: poolEnabled ? streakByTeam.get(team.id) || 0 : undefined,
           rank: 0, // assigned after sort
           picks,
         };

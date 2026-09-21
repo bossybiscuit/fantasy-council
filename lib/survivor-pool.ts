@@ -4,18 +4,18 @@ import type { Json } from "@/types/database";
 // Each episode, a team picks ONE castaway they think will survive the episode.
 // A castaway can only be picked once per season. A wrong (or missed) pick doesn't
 // knock the team out — it resets their streak to zero. A correct pick earns
-//   min(CAP, BASE × MULTIPLIER^(streak − 1))
-// so with the defaults a streak pays 1, 2, 4, 8, 16, 16, ...
+//   min(CAP, BASE + INCREMENT × (streak − 1))
+// so with the defaults a streak pays 1, 2, 3, 4, 5, ...
 
 export const SURVIVOR_POOL_DEFAULTS = {
   SURVIVOR_POOL_BASE: 1,
-  SURVIVOR_POOL_MULTIPLIER: 2,
-  SURVIVOR_POOL_CAP: 16, // 0 = uncapped
+  SURVIVOR_POOL_INCREMENT: 1,
+  SURVIVOR_POOL_CAP: 0, // 0 = uncapped
 } as const;
 
 export type SurvivorPoolSettings = {
   base: number;
-  multiplier: number;
+  increment: number;
   cap: number;
 };
 
@@ -24,7 +24,7 @@ export function getSurvivorPoolSettings(configJson: Json | null | undefined): Su
   const c = (configJson as Record<string, any>) || {};
   return {
     base: c.SURVIVOR_POOL_BASE ?? SURVIVOR_POOL_DEFAULTS.SURVIVOR_POOL_BASE,
-    multiplier: c.SURVIVOR_POOL_MULTIPLIER ?? SURVIVOR_POOL_DEFAULTS.SURVIVOR_POOL_MULTIPLIER,
+    increment: c.SURVIVOR_POOL_INCREMENT ?? SURVIVOR_POOL_DEFAULTS.SURVIVOR_POOL_INCREMENT,
     cap: c.SURVIVOR_POOL_CAP ?? SURVIVOR_POOL_DEFAULTS.SURVIVOR_POOL_CAP,
   };
 }
@@ -39,7 +39,7 @@ export function isSurvivorPoolEnabled(league: { format?: string | null; scoring_
 
 export function survivorPointsForStreak(streak: number, s: SurvivorPoolSettings): number {
   if (streak <= 0) return 0;
-  const raw = s.base * Math.pow(s.multiplier, streak - 1);
+  const raw = s.base + s.increment * (streak - 1);
   const capped = s.cap > 0 ? Math.min(s.cap, raw) : raw;
   return Math.round(capped * 100) / 100;
 }

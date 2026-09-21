@@ -108,7 +108,7 @@ Default point values (editable per league):
 
 **Vote Predictions**: Allocate exactly 10 points across active players before each episode. If your predicted player is voted out, you earn those points.
 
-**Survivor Pool**: Each week, pick one castaway you think will *survive* the episode. You can't pick the same castaway twice in a season. A wrong pick doesn't eliminate you — it resets your streak. Consecutive correct picks pay `min(cap, base × multiplier^(streak−1))` — by default 1, 2, 4, 8, 16, 16, … (configurable in League Settings).
+**Survivor Pool**: Each week, pick one castaway you think will *survive* the episode. You can't pick the same castaway twice in a season. A wrong pick doesn't eliminate you — it resets your streak. Each correct pick in a row is worth one more point than the last — 1, 2, 3, 4, … (starting points, increment, and an optional cap are configurable in League Settings).
 
 ---
 

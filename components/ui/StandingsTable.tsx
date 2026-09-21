@@ -25,6 +25,8 @@ interface StandingsRow {
   weeklyPredPoints: number;
   seasonPredTotal: number;
   survivorPoints?: number;
+  /** Current Survivor Pool streak — shown next to total points when the pool is on */
+  survivorStreak?: number;
   rank: number;
   picks: PlayerPick[];
 }
@@ -119,7 +121,10 @@ export default function StandingsTable({
 
                 {/* Points */}
                 <div className="text-right shrink-0">
-                  <p className="text-accent-gold font-bold">{row.totalPoints}</p>
+                  <p className="text-accent-gold font-bold">
+                    {row.totalPoints}
+                    <StreakBadge streak={row.survivorStreak} />
+                  </p>
                   {showBudget && row.team.budget_remaining != null ? (
                     <p className="text-xs text-accent-gold/70">${row.team.budget_remaining} left</p>
                   ) : (
@@ -304,6 +309,7 @@ export default function StandingsTable({
                     <span className="text-accent-gold font-bold text-base">
                       {row.totalPoints}
                     </span>
+                    <StreakBadge streak={row.survivorStreak} />
                   </td>
 
                   {/* Predictions */}
@@ -448,6 +454,7 @@ function PodiumDisplay({
                 <span className="text-[10px] font-normal text-text-muted ml-0.5">
                   pts
                 </span>
+                <StreakBadge streak={row.survivorStreak} />
               </p>
             </div>
 
@@ -524,10 +531,12 @@ function PredictionChips({
   survivorPoints?: number;
   compact?: boolean;
 }) {
-  if (weeklyPredPoints === 0 && seasonPredTotal === 0 && survivorPoints === 0) return null;
+  // Survivor Pool points are part of the weekly predictions total
+  const weeklyTotal = weeklyPredPoints + survivorPoints;
+  if (weeklyTotal === 0 && seasonPredTotal === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
-      {weeklyPredPoints > 0 && (
+      {weeklyTotal > 0 && (
         <div
           className={`flex items-center gap-1.5 rounded-full border border-border bg-bg-surface text-xs ${
             compact ? "px-2 py-1" : "px-2.5 py-1.5"
@@ -535,7 +544,7 @@ function PredictionChips({
         >
           <span className="text-text-muted">Weekly Predictions</span>
           <span className="text-accent-orange font-semibold">
-            {weeklyPredPoints}
+            {weeklyTotal}
             <span className="text-text-muted font-normal">pts</span>
           </span>
         </div>
@@ -553,20 +562,24 @@ function PredictionChips({
           </span>
         </div>
       )}
-      {survivorPoints > 0 && (
-        <div
-          className={`flex items-center gap-1.5 rounded-full border border-border bg-bg-surface text-xs ${
-            compact ? "px-2 py-1" : "px-2.5 py-1.5"
-          }`}
-        >
-          <span className="text-text-muted">🛟 Survivor Pool</span>
-          <span className="text-green-400 font-semibold">
-            {survivorPoints}
-            <span className="text-text-muted font-normal">pts</span>
-          </span>
-        </div>
-      )}
+
     </div>
+  );
+}
+
+// ── Survivor Pool streak ──────────────────────────────────────────────────────
+
+function StreakBadge({ streak }: { streak?: number }) {
+  if (streak === undefined) return null;
+  return (
+    <span
+      title={`Survivor Pool streak: ${streak}`}
+      className={`ml-1.5 text-xs font-semibold whitespace-nowrap ${
+        streak > 0 ? "text-accent-orange" : "text-text-muted font-normal"
+      }`}
+    >
+      🔥{streak}
+    </span>
   );
 }
 

@@ -84,12 +84,6 @@ export default async function DashboardPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-text-muted">Draft</span>
-                    <span className="text-text-primary capitalize">
-                      {league.draft_type} — {league.draft_status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
                     <span className="text-text-muted">Teams</span>
                     <span className="text-text-primary">
                       {league.num_teams}

@@ -236,7 +236,7 @@ export default function LeagueSettingsPage({
     if (config.enable_idols && val("IDOL_PLAY_POINT", 3) < 0) errors.add("IDOL_PLAY_POINT");
     if (config.enable_advantages && val("ADVANTAGE_POINT", 2) < 0) errors.add("ADVANTAGE_POINT");
     if (val("SURVIVOR_POOL_BASE", 1) <= 0) errors.add("SURVIVOR_POOL_BASE");
-    if (val("SURVIVOR_POOL_MULTIPLIER", 2) < 1) errors.add("SURVIVOR_POOL_MULTIPLIER");
+    if (val("SURVIVOR_POOL_INCREMENT", 1) < 0) errors.add("SURVIVOR_POOL_INCREMENT");
     setValidationErrors(errors);
     return errors.size === 0;
   }
@@ -330,7 +330,7 @@ export default function LeagueSettingsPage({
         <ToggleRow
           icon="🛟"
           label="Enable Survivor Pool"
-          description="Each week, players pick one castaway to survive the episode. No repeats all season. A wrong pick resets their streak — consecutive correct picks earn exponentially more."
+          description="Each week, players pick one castaway to survive the episode. No repeats all season. A wrong pick resets their streak — each correct pick in a row is worth more than the last."
           enabled={isSurvivorPoolEnabled({ format: league.format, scoring_config: config })}
           onToggle={(v) => setConfig((prev: any) => ({ ...prev, SURVIVOR_POOL_ENABLED: v }))}
         >
@@ -345,19 +345,18 @@ export default function LeagueSettingsPage({
               />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-text-muted">Multiplier per streak week</span>
+              <span className="text-xs text-text-muted">Extra points per streak week</span>
               <Stepper
-                value={val("SURVIVOR_POOL_MULTIPLIER", 2)}
-                onChange={(v) => set("SURVIVOR_POOL_MULTIPLIER", v)}
-                min={1}
-                max={10}
-                hasError={validationErrors.has("SURVIVOR_POOL_MULTIPLIER")}
+                value={val("SURVIVOR_POOL_INCREMENT", 1)}
+                onChange={(v) => set("SURVIVOR_POOL_INCREMENT", v)}
+                max={50}
+                hasError={validationErrors.has("SURVIVOR_POOL_INCREMENT")}
               />
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs text-text-muted">Max points per week (0 = no cap)</span>
               <Stepper
-                value={val("SURVIVOR_POOL_CAP", 16)}
+                value={val("SURVIVOR_POOL_CAP", 0)}
                 onChange={(v) => set("SURVIVOR_POOL_CAP", v)}
                 max={9999}
               />
