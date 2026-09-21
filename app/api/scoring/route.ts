@@ -6,6 +6,7 @@ import {
 } from "@/lib/scoring";
 import type { ScoringCategory } from "@/types/database";
 import { gradeSurvivorPicks } from "@/lib/survivor-pool";
+import { gradeTopThree } from "@/lib/season-predictions";
 
 interface ScoringInput {
   league_id: string;
@@ -279,6 +280,14 @@ export async function POST(request: NextRequest) {
         .from("finale_predictions")
         .update({ points_earned: earned })
         .eq("id", pick.id);
+    }
+  }
+
+  // Auto-grade this league's Top 3 season predictions once the Final Three is known
+  if (body.is_final_three && (body.final_three_players || []).length === 3) {
+    const { data: f3 } = await supabase.from("players").select("name").in("id", body.final_three_players);
+    if (f3 && f3.length === 3) {
+      await gradeTopThree(createServiceClient(), f3.map((p) => p.name), [league_id]);
     }
   }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { TOP_THREE_KEY, gradeTopThree } from "@/lib/season-predictions";
 
 // GET — fetch all season predictions for this league
 export async function GET(
@@ -120,6 +121,13 @@ export async function PATCH(
   if (!category) return NextResponse.json({ error: "category is required" }, { status: 400 });
 
   const serviceClient = createServiceClient();
+
+  // Top 3: partial credit per team based on how many of the Final Three they named
+  if (category === TOP_THREE_KEY && Array.isArray(body.correct_answers)) {
+    const { error } = await gradeTopThree(serviceClient, body.correct_answers, [leagueId]);
+    if (error) return NextResponse.json({ error }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
 
   if (correct_answer !== undefined) {
     const correctPoints = typeof points === "number" ? points : 5;

@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getScoringValues, getCategoryPoints } from "@/lib/scoring";
 import { recalculateScores } from "@/lib/recalculate-scores";
 import { gradeSurvivorPicks } from "@/lib/survivor-pool";
+import { gradeTopThree } from "@/lib/season-predictions";
 import type { ScoringCategory } from "@/types/database";
 
 interface AdminScoringInput {
@@ -325,6 +326,14 @@ export async function POST(request: NextRequest) {
           .eq("category", "winner")
           .neq("answer", winnerData.name),
       ]);
+    }
+  }
+
+  // Auto-grade Top 3 season predictions once the Final Three is known
+  if (body.is_final_three && (body.final_three_players || []).length === 3) {
+    const { data: f3 } = await db.from("players").select("name").in("id", body.final_three_players);
+    if (f3 && f3.length === 3) {
+      await gradeTopThree(db, f3.map((p) => p.name), leagues.map((l) => l.id));
     }
   }
 

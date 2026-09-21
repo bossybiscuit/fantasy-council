@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SeasonPrediction } from "@/types/database";
+import {
+  TOP_THREE_KEY,
+  TOP_THREE_POINTS,
+  parseTopThree,
+  serializeTopThree,
+} from "@/lib/season-predictions";
 
 export interface ImageOption {
   label: string;
@@ -17,6 +23,8 @@ export interface Category {
   options: string[] | null;
   imageOptions?: ImageOption[];
   playerPicker?: boolean;
+  /** Pick three castaways; scored 1 / 5 / 15 for 1 / 2 / 3 correct */
+  topThree?: boolean;
   points: number | null;
 }
 
@@ -43,37 +51,12 @@ export const SEASON_CATEGORIES: Category[] = [
     points: 5,
   },
   {
-    key: "final_immunity",
-    label: "Final Immunity Challenge",
-    description: "What will the final immunity challenge be?",
-    options: ["Pinball Wizard", "Obstacle Course", "Simmotion"],
-    points: 5,
-  },
-  {
-    key: "tribe_swap",
-    label: "Tribe Swap",
-    description: "Will there be a tribe swap?",
-    options: ["Yes", "No"],
-    points: 5,
-  },
-  {
-    key: "immunity_necklace",
-    label: "Immunity Necklace",
-    description: "What will the immunity necklace look like?",
+    key: TOP_THREE_KEY,
+    label: "Top 3",
+    description: `Pick the three castaways who make it to the end (any order). 1 right = ${TOP_THREE_POINTS[1]} pt, 2 right = ${TOP_THREE_POINTS[2]} pts, all 3 = ${TOP_THREE_POINTS[3]} pts.`,
     options: null,
-    imageOptions: [
-      {
-        label: "Tooth Necklace",
-        value: "tooth_necklace",
-        image_url: "/images/predictions/tooth.PNG",
-      },
-      {
-        label: "Bird Necklace",
-        value: "bird_necklace",
-        image_url: "/images/predictions/bird.PNG",
-      },
-    ],
-    points: 5,
+    topThree: true,
+    points: TOP_THREE_POINTS[3],
   },
   {
     key: "winner",
@@ -159,6 +142,21 @@ export default function SeasonPredictionsForm({
     }
   }
 
+  async function gradeTopThree(names: string[]) {
+    setGrading((g) => ({ ...g, [TOP_THREE_KEY]: true }));
+    const res = await fetch(`/api/leagues/${leagueId}/season-predictions`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category: TOP_THREE_KEY, correct_answers: names }),
+    });
+    setGrading((g) => ({ ...g, [TOP_THREE_KEY]: false }));
+    if (res.ok) {
+      setGradeSuccess((s) => ({ ...s, [TOP_THREE_KEY]: true }));
+      setTimeout(() => setGradeSuccess((s) => ({ ...s, [TOP_THREE_KEY]: false })), 3000);
+      router.refresh();
+    }
+  }
+
   return (
     <div className="space-y-4">
       {isLocked && (
@@ -192,7 +190,9 @@ export default function SeasonPredictionsForm({
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {cat.points !== null && (
-                  <span className="text-xs text-accent-gold font-medium">{cat.points} pts</span>
+                  <span className="text-xs text-accent-gold font-medium">
+                    {cat.topThree ? `up to ${cat.points}` : cat.points} pts
+                  </span>
                 )}
                 {isGraded && (
                   <span
@@ -300,6 +300,18 @@ export default function SeasonPredictionsForm({
                   );
                 })}
               </div>
+            ) : cat.topThree ? (
+              /* Three player dropdowns — no duplicates */
+              <TopThreePicker
+                players={players}
+                value={parseTopThree(currentAnswer)}
+                disabled={isLocked}
+                onChange={(names) => {
+                  const serialized = serializeTopThree(names);
+                  setAnswers((a) => ({ ...a, [cat.key]: serialized }));
+                  saveAnswer(cat.key, serialized);
+                }}
+              />
             ) : cat.playerPicker ? (
               /* Player dropdown */
               <div className="mt-3">
@@ -380,6 +392,32 @@ export default function SeasonPredictionsForm({
               </div>
             )}
 
+            {/* Commissioner grading — top 3 */}
+            {isCommissioner && isLocked && cat.topThree && !isGraded && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-xs text-text-muted mb-2">
+                  Grade — select the actual Final Three (also auto-grades when the finale is scored):
+                </p>
+                <TopThreePicker
+                  players={players}
+                  value={parseTopThree(gradeInputs[cat.key])}
+                  disabled={grading[cat.key]}
+                  onChange={(names) => setGradeInputs((g) => ({ ...g, [cat.key]: serializeTopThree(names) }))}
+                />
+                <button
+                  type="button"
+                  onClick={() => gradeTopThree(parseTopThree(gradeInputs[cat.key]))}
+                  disabled={grading[cat.key] || parseTopThree(gradeInputs[cat.key]).length !== 3}
+                  className="mt-2 px-3 py-1 rounded border border-accent-gold/30 text-accent-gold text-xs hover:bg-accent-gold/10 transition-colors disabled:opacity-50"
+                >
+                  ✓ Grade Top 3
+                </button>
+                {gradeSuccess[cat.key] && (
+                  <p className="text-xs text-green-400 mt-2">✓ Graded!</p>
+                )}
+              </div>
+            )}
+
             {/* Commissioner grading — player picker */}
             {isCommissioner && isLocked && cat.playerPicker && !isGraded && (
               <div className="mt-3 pt-3 border-t border-border">
@@ -405,6 +443,47 @@ export default function SeasonPredictionsForm({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+export function TopThreePicker({
+  players,
+  value,
+  disabled,
+  onChange,
+}: {
+  players: { id: string; name: string; tribe: string | null }[];
+  value: string[];
+  disabled?: boolean;
+  onChange: (names: string[]) => void;
+}) {
+  const slots = [0, 1, 2].map((i) => value[i] ?? "");
+  return (
+    <div className="grid gap-2 sm:grid-cols-3 mt-3">
+      {slots.map((current, i) => (
+        <select
+          key={i}
+          className="input text-sm"
+          value={current}
+          disabled={disabled}
+          onChange={(e) => {
+            const next = [...slots];
+            next[i] = e.target.value;
+            onChange(next.filter(Boolean));
+          }}
+        >
+          <option value="">— Pick #{i + 1} —</option>
+          {players
+            .filter((p) => p.name === current || !slots.includes(p.name))
+            .map((p) => (
+              <option key={p.id} value={p.name}>
+                {p.name}
+                {p.tribe ? ` (${p.tribe})` : ""}
+              </option>
+            ))}
+        </select>
+      ))}
     </div>
   );
 }

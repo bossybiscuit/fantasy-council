@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { formatSeasonAnswer } from "@/lib/season-predictions";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import { PlayerAvatar } from "@/components/ui/PlayerCard";
@@ -452,7 +453,7 @@ export default async function TeamPage({
                       >
                         <span className="text-text-primary">{label}</span>
                         <span className="text-text-muted text-xs truncate max-w-[40%] text-right">
-                          {pred.answer || "—"}
+                          {formatSeasonAnswer(pred.category, pred.answer) || "—"}
                         </span>
                         <span
                           className={`font-semibold shrink-0 ml-2 ${

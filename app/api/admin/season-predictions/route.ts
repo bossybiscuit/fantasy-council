@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { TOP_THREE_KEY, gradeTopThree } from "@/lib/season-predictions";
 
 async function verifySuperAdmin(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
@@ -71,6 +72,13 @@ export async function POST(req: NextRequest) {
   if (!category) return NextResponse.json({ error: "category is required" }, { status: 400 });
 
   const db = createServiceClient();
+
+  // Top 3: partial credit per team, platform-wide
+  if (category === TOP_THREE_KEY && Array.isArray(body.correct_answers)) {
+    const { error } = await gradeTopThree(db, body.correct_answers);
+    if (error) return NextResponse.json({ error }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
 
   if (correct_answer !== undefined) {
     const correctPoints = typeof points === "number" ? points : 5;

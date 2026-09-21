@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { SEASON_CATEGORIES } from "@/app/(platform)/leagues/[leagueId]/predictions/season/SeasonPredictionsForm";
+import { TOP_THREE_KEY, formatSeasonAnswer, parseTopThree } from "@/lib/season-predictions";
 import type { Category, ImageOption } from "@/app/(platform)/leagues/[leagueId]/predictions/season/SeasonPredictionsForm";
 
 interface Prediction {
@@ -69,6 +70,21 @@ export default function AdminSeasonPredictionsPanel() {
     if (res.ok) {
       setCategorySuccess((s) => ({ ...s, [category]: true }));
       setTimeout(() => setCategorySuccess((s) => ({ ...s, [category]: false })), 3000);
+      fetchPredictions();
+    }
+  }
+
+  async function gradeTopThreeAll(names: string[]) {
+    setCategoryGrading((g) => ({ ...g, [TOP_THREE_KEY]: true }));
+    const res = await fetch("/api/admin/season-predictions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category: TOP_THREE_KEY, correct_answers: names }),
+    });
+    setCategoryGrading((g) => ({ ...g, [TOP_THREE_KEY]: false }));
+    if (res.ok) {
+      setCategorySuccess((s) => ({ ...s, [TOP_THREE_KEY]: true }));
+      setTimeout(() => setCategorySuccess((s) => ({ ...s, [TOP_THREE_KEY]: false })), 3000);
       fetchPredictions();
     }
   }
@@ -147,6 +163,7 @@ export default function AdminSeasonPredictionsPanel() {
   // Helper: get display label from a raw answer value (handles image option values)
   function getAnswerLabel(cat: Category, answer: string | null): string | null {
     if (!answer) return null;
+    if (cat.topThree) return formatSeasonAnswer(cat.key, answer);
     if (cat.imageOptions) {
       const opt = cat.imageOptions.find((o: ImageOption) => o.value === answer);
       return opt?.label ?? answer;
@@ -175,7 +192,7 @@ export default function AdminSeasonPredictionsPanel() {
       {SEASON_CATEGORIES.map((cat) => {
         const submitted = submissionCount(cat.key);
         const graded = gradedCount(cat.key);
-        const isTextCategory = !cat.options && !cat.imageOptions && !cat.playerPicker;
+        const isTextCategory = !cat.options && !cat.imageOptions && !cat.playerPicker && !cat.topThree;
 
         return (
           <div key={cat.key} className="card">
@@ -185,7 +202,9 @@ export default function AdminSeasonPredictionsPanel() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-text-primary">{cat.label}</h3>
                   {cat.points !== null ? (
-                    <span className="text-xs text-accent-gold font-medium">{cat.points} pts</span>
+                    <span className="text-xs text-accent-gold font-medium">
+                      {cat.topThree ? `up to ${cat.points}` : cat.points} pts
+                    </span>
                   ) : (
                     <span className="text-xs text-text-muted">commissioner scored</span>
                   )}
@@ -271,6 +290,65 @@ export default function AdminSeasonPredictionsPanel() {
                         );
                       })}
                     </div>
+                  ) : (
+                    <p className="text-xs text-text-muted italic">No submissions yet.</p>
+                  );
+                })()}
+                {categorySuccess[cat.key] && (
+                  <p className="text-xs text-green-400 mt-2">✓ Graded all teams platform-wide!</p>
+                )}
+              </div>
+            )}
+
+            {/* Auto-grade panel for Top 3 — pick the actual Final Three from names teams submitted */}
+            {cat.topThree && (
+              <div className="mb-4 p-3 rounded-lg bg-bg-surface border border-border">
+                <p className="text-xs text-text-muted mb-2 font-medium">
+                  Select the Final Three (auto-grades all teams; also happens automatically when the finale is scored):
+                </p>
+                {(() => {
+                  const picked = parseTopThree(categoryAnswer[cat.key]);
+                  const names = [
+                    ...new Set(
+                      teamList.flatMap((t) =>
+                        parseTopThree(predMap[cat.key]?.[`${t.teamId}::${t.leagueId}`]?.answer)
+                      )
+                    ),
+                  ].sort();
+                  return names.length > 0 ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {names.map((n) => {
+                          const on = picked.includes(n);
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              disabled={categoryGrading[cat.key] || (!on && picked.length >= 3)}
+                              onClick={() => {
+                                const next = on ? picked.filter((x) => x !== n) : [...picked, n];
+                                setCategoryAnswer((a) => ({ ...a, [cat.key]: JSON.stringify(next) }));
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-sm border transition-colors disabled:opacity-40 ${
+                                on
+                                  ? "bg-accent-gold/10 border-accent-gold/50 text-accent-gold"
+                                  : "border-border text-text-muted hover:border-accent-gold/40 hover:text-text-primary"
+                              }`}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => gradeTopThreeAll(picked)}
+                        disabled={categoryGrading[cat.key] || picked.length !== 3}
+                        className="btn-secondary text-xs mt-3 disabled:opacity-50"
+                      >
+                        Grade Top 3 ({picked.length}/3 selected)
+                      </button>
+                    </>
                   ) : (
                     <p className="text-xs text-text-muted italic">No submissions yet.</p>
                   );
@@ -372,7 +450,7 @@ export default function AdminSeasonPredictionsPanel() {
                     </span>
 
                     {/* Grade indicator for option-based (regular + image + playerPicker) */}
-                    {(cat.options || cat.imageOptions || cat.playerPicker) && isGraded && (
+                    {(cat.options || cat.imageOptions || cat.playerPicker || cat.topThree) && isGraded && (
                       <span className={`text-sm shrink-0 ${pred!.is_correct ? "text-green-400" : "text-red-400"}`}>
                         {pred!.is_correct ? "✅" : "❌"}
                         {pred!.points_earned > 0 && (
