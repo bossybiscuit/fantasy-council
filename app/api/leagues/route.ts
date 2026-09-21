@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { generateInviteCode, calculateRosterSize } from "@/lib/utils";
+import {
+  generateInviteCode,
+  calculateRosterSize,
+  MAX_DRAFT_LEAGUE_TEAMS,
+  MAX_PREDICTIONS_LEAGUE_TEAMS,
+} from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -15,7 +20,7 @@ export async function POST(request: NextRequest) {
   // Only super admins can create leagues
   const { data: profile } = await supabase
     .from("profiles")
-    .select("is_super_admin")
+    .select("is_super_admin, username, display_name")
     .eq("id", user.id)
     .single();
 
@@ -27,10 +32,21 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { season_id, name, draft_type, num_teams, budget, scoring_config } = body;
+  const { season_id, name, num_teams, budget, scoring_config } = body;
+  const format: "draft" | "predictions" = body.format === "predictions" ? "predictions" : "draft";
+  // Predictions leagues have no draft; draft_type is kept only to satisfy the column
+  const draft_type = format === "predictions" ? "snake" : body.draft_type;
 
   if (!season_id || !name || !draft_type || !num_teams) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  const maxTeams = format === "predictions" ? MAX_PREDICTIONS_LEAGUE_TEAMS : MAX_DRAFT_LEAGUE_TEAMS;
+  if (!Number.isInteger(num_teams) || num_teams < 2 || num_teams > maxTeams) {
+    return NextResponse.json(
+      { error: `League size must be between 2 and ${maxTeams} teams` },
+      { status: 400 }
+    );
   }
 
   // Count active players in season to calculate roster size
@@ -65,9 +81,12 @@ export async function POST(request: NextRequest) {
       draft_type,
       num_teams,
       budget: budget || 100,
-      roster_size: rosterSize || null,
+      roster_size: format === "predictions" ? null : rosterSize || null,
       invite_code,
       scoring_config: scoring_config || {},
+      format,
+      // No draft to run — predictions leagues go live immediately
+      ...(format === "predictions" ? { draft_status: "completed" as const, status: "active" as const } : {}),
     })
     .select()
     .single();
@@ -76,13 +95,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Create all team slots via service client (bypasses RLS for both user_id values).
+  // Create team slots via service client (bypasses RLS for both user_id values).
   // Slot 1 belongs to the commissioner; the rest are unclaimed (user_id = null).
+  // Predictions leagues only create the commissioner's team — players create
+  // their own team (with their own name) when they join, up to num_teams.
   const db = createServiceClient();
-  const teamSlots = Array.from({ length: num_teams }, (_, i) => ({
+  const slotCount = format === "predictions" ? 1 : num_teams;
+  const commissionerTeamName =
+    format === "predictions"
+      ? `${profile.display_name || profile.username}'s Tribe`
+      : "Team 1";
+  const teamSlots = Array.from({ length: slotCount }, (_, i) => ({
     league_id: league.id,
     user_id: i === 0 ? user.id : null,
-    name: `Team ${i + 1}`,
+    name: i === 0 ? commissionerTeamName : `Team ${i + 1}`,
     budget_remaining: budget || 100,
   }));
   const { error: teamError } = await db.from("teams").insert(teamSlots);

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { calculateRosterSize } from "@/lib/utils";
+import { calculateRosterSize, MAX_PREDICTIONS_LEAGUE_TEAMS } from "@/lib/utils";
 import type { Season } from "@/types/database";
 
 const STEPS = [
@@ -68,8 +68,9 @@ export default function NewLeaguePage() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonId, setSeasonId] = useState("");
   const [name, setName] = useState("");
+  const [format, setFormat] = useState<"predictions" | "draft">("predictions");
   const [draftType, setDraftType] = useState<"snake" | "auction">("snake");
-  const [numTeams, setNumTeams] = useState(8);
+  const [numTeams, setNumTeams] = useState(20);
   const [budget, setBudget] = useState(100);
   const [playerCount, setPlayerCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -112,6 +113,7 @@ export default function NewLeaguePage() {
       body: JSON.stringify({
         season_id: seasonId,
         name,
+        format,
         draft_type: draftType,
         num_teams: numTeams,
         budget,
@@ -230,80 +232,157 @@ export default function NewLeaguePage() {
             </p>
 
             <div className="mb-5">
-              <label className="label">Draft Format</label>
+              <label className="label">League Format</label>
               <div className="grid grid-cols-2 gap-3">
-                {(["snake", "auction"] as const).map((type) => (
+                {(
+                  [
+                    {
+                      id: "predictions",
+                      title: "Predictions",
+                      desc: "No draft. Weekly vote picks, Survivor Pool & season predictions. Room for everyone.",
+                    },
+                    {
+                      id: "draft",
+                      title: "Draft",
+                      desc: "Classic fantasy — draft castaway rosters plus weekly predictions.",
+                    },
+                  ] as const
+                ).map((f) => (
                   <button
-                    key={type}
+                    key={f.id}
                     type="button"
-                    onClick={() => setDraftType(type)}
+                    onClick={() => {
+                      setFormat(f.id);
+                      setNumTeams(f.id === "predictions" ? 20 : 8);
+                    }}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
-                      draftType === type
+                      format === f.id
                         ? "border-accent-orange bg-accent-orange/10"
                         : "border-border hover:border-accent-orange/40"
                     }`}
                   >
-                    <p className="font-semibold text-text-primary capitalize">{type}</p>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      {type === "snake"
-                        ? "Take turns picking in order"
-                        : "Bid on players with a budget"}
-                    </p>
+                    <p className="font-semibold text-text-primary">{f.title}</p>
+                    <p className="text-xs text-text-muted mt-0.5">{f.desc}</p>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mb-5">
-              <label className="label">Number of Teams</label>
-              <div className="grid grid-cols-4 gap-2">
-                {[6, 8, 10, 12].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setNumTeams(n)}
-                    className={`py-3 rounded-lg border-2 text-center font-semibold transition-all ${
-                      numTeams === n
-                        ? "border-accent-orange bg-accent-orange/10 text-accent-orange"
-                        : "border-border text-text-muted hover:border-accent-orange/40"
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {draftType === "auction" && (
+            {format === "predictions" ? (
               <div className="mb-5">
-                <label className="label">Budget per Team ($)</label>
+                <label className="label">Max Players</label>
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {[10, 20, 30, 50].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNumTeams(n)}
+                      className={`py-3 rounded-lg border-2 text-center font-semibold transition-all ${
+                        numTeams === n
+                          ? "border-accent-orange bg-accent-orange/10 text-accent-orange"
+                          : "border-border text-text-muted hover:border-accent-orange/40"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="number"
                   className="input"
-                  value={budget}
-                  onChange={(e) => setBudget(Number(e.target.value))}
-                  min={50}
-                  max={500}
+                  value={numTeams}
+                  min={2}
+                  max={MAX_PREDICTIONS_LEAGUE_TEAMS}
+                  onChange={(e) =>
+                    setNumTeams(
+                      Math.max(2, Math.min(MAX_PREDICTIONS_LEAGUE_TEAMS, Math.floor(Number(e.target.value) || 2)))
+                    )
+                  }
                 />
+                <p className="text-xs text-text-muted mt-2">
+                  Players create their own team when they join with the invite code. Up to{" "}
+                  {MAX_PREDICTIONS_LEAGUE_TEAMS}.
+                </p>
               </div>
-            )}
+            ) : (
+              <>
+              <div className="mb-5">
+                <label className="label">Draft Format</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {(["snake", "auction"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setDraftType(type)}
+                      className={`p-4 rounded-lg border-2 text-left transition-all ${
+                        draftType === type
+                          ? "border-accent-orange bg-accent-orange/10"
+                          : "border-border hover:border-accent-orange/40"
+                      }`}
+                    >
+                      <p className="font-semibold text-text-primary capitalize">{type}</p>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {type === "snake"
+                          ? "Take turns picking in order"
+                          : "Bid on players with a budget"}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {playerCount > 0 && (
-              <div className="p-3 rounded-lg bg-bg-surface border border-border text-sm">
-                <div className="flex justify-between mb-1">
-                  <span className="text-text-muted">Cast size:</span>
-                  <span className="text-text-primary">{playerCount} castaways</span>
+              <div className="mb-5">
+                <label className="label">Number of Teams</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[6, 8, 10, 12].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNumTeams(n)}
+                      className={`py-3 rounded-lg border-2 text-center font-semibold transition-all ${
+                        numTeams === n
+                          ? "border-accent-orange bg-accent-orange/10 text-accent-orange"
+                          : "border-border text-text-muted hover:border-accent-orange/40"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-text-muted">Roster per team:</span>
-                  <span className="text-text-primary">{rosterSize} picks</span>
-                </div>
-                {remainder > 0 && (
-                  <p className="text-yellow-400 text-xs mt-2">
-                    ⚠️ {remainder} castaway(s) won&apos;t be drafted — cast doesn&apos;t divide evenly
-                  </p>
-                )}
               </div>
+
+              {draftType === "auction" && (
+                <div className="mb-5">
+                  <label className="label">Budget per Team ($)</label>
+                  <input
+                    type="number"
+                    className="input"
+                    value={budget}
+                    onChange={(e) => setBudget(Number(e.target.value))}
+                    min={50}
+                    max={500}
+                  />
+                </div>
+              )}
+
+              {playerCount > 0 && (
+                <div className="p-3 rounded-lg bg-bg-surface border border-border text-sm">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-text-muted">Cast size:</span>
+                    <span className="text-text-primary">{playerCount} castaways</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-muted">Roster per team:</span>
+                    <span className="text-text-primary">{rosterSize} picks</span>
+                  </div>
+                  {remainder > 0 && (
+                    <p className="text-yellow-400 text-xs mt-2">
+                      ⚠️ {remainder} castaway(s) won&apos;t be drafted — cast doesn&apos;t divide evenly
+                    </p>
+                  )}
+                </div>
+              )}
+              </>
             )}
 
             <div className="flex justify-between mt-6">
@@ -329,15 +408,20 @@ export default function NewLeaguePage() {
               <SummaryRow label="Season" value={selectedSeason?.name || "—"} />
               <SummaryRow label="League Name" value={name} />
               <SummaryRow
-                label="Draft Format"
+                label="Format"
                 value={
-                  draftType === "snake"
+                  format === "predictions"
+                    ? "Predictions (no draft)"
+                    : draftType === "snake"
                     ? "Snake Draft"
                     : `Auction Draft ($${budget}/team)`
                 }
               />
-              <SummaryRow label="Teams" value={`${numTeams} teams`} />
-              {playerCount > 0 && (
+              <SummaryRow
+                label={format === "predictions" ? "Max Players" : "Teams"}
+                value={`${numTeams} ${format === "predictions" ? "players" : "teams"}`}
+              />
+              {format === "draft" && playerCount > 0 && (
                 <SummaryRow
                   label="Roster Size"
                   value={`${rosterSize} picks per team`}

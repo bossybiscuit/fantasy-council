@@ -67,3 +67,8 @@ export function getSnakeDraftOrder(
   }
   return picks;
 }
+
+// League size limits. Draft leagues are bounded by cast size (everyone needs a roster);
+// predictions leagues have no rosters, so they can be much bigger.
+export const MAX_DRAFT_LEAGUE_TEAMS = 20;
+export const MAX_PREDICTIONS_LEAGUE_TEAMS = 100;

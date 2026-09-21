@@ -42,6 +42,7 @@ export default function MobileLeagueNav({
     { href: `${base}/predictions/season`, label: "Season Predictions", icon: "🌴" },
     { href: `${base}/predictions`, label: "Weekly Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
+    { href: `${base}/history`, label: "League History", icon: "📜" },
   ];
 
   if (teamId) {
@@ -49,11 +50,11 @@ export default function MobileLeagueNav({
   }
 
   if (isCommissioner) {
-    allLinks.push(
-      { href: `${base}/admin/teams`, label: "Manage Teams", icon: "👥" },
-      { href: `${base}/admin/players`, label: "Player Values", icon: "💲" },
-      { href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" }
-    );
+    allLinks.push({ href: `${base}/admin/teams`, label: "Manage Teams", icon: "👥" });
+    if (league.format !== "predictions") {
+      allLinks.push({ href: `${base}/admin/players`, label: "Player Values", icon: "💲" });
+    }
+    allLinks.push({ href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" });
   }
 
   // Bottom tabs: always-visible shortcuts (max 5)

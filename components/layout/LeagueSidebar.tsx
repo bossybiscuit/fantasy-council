@@ -23,6 +23,7 @@ export default function LeagueSidebar({
     { href: `${base}/predictions/season`, label: "Season Predictions", icon: "🌴" },
     { href: `${base}/predictions`, label: "Weekly Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
+    { href: `${base}/history`, label: "League History", icon: "📜" },
   ];
 
   if (teamId) {
@@ -30,7 +31,7 @@ export default function LeagueSidebar({
   }
 
   if (isCommissioner) {
-    if (league.draft_type === "auction") {
+    if (league.format !== "predictions" && league.draft_type === "auction") {
       links.push({ href: `${base}/admin/players`, label: "Player Values", icon: "💲" });
     }
     links.push(
@@ -50,7 +51,9 @@ export default function LeagueSidebar({
             {league.name}
           </p>
           <p className="text-xs text-text-muted mt-0.5">
-            {league.draft_type === "auction" ? "Auction" : "Snake"} Draft
+            {league.format === "predictions"
+              ? "Predictions League"
+              : `${league.draft_type === "auction" ? "Auction" : "Snake"} Draft`}
           </p>
         </div>
         <div className="torch-divider" />

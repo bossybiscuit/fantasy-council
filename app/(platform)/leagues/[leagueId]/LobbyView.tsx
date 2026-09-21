@@ -26,6 +26,7 @@ type LobbyViewProps = {
   isCommissioner: boolean;
   myTeamId: string | undefined;
   commissionerName?: string;
+  seasonName?: string;
 };
 
 function SeatAvatar({ name }: { name: string }) {
@@ -47,30 +48,61 @@ function SeatAvatar({ name }: { name: string }) {
   );
 }
 
-function InviteShare({
+export function InviteShare({
   league,
   commissionerName,
+  seasonName = "Survivor",
+  isPredictions = false,
 }: {
-  league: LobbyViewProps["league"];
+  league: Pick<LobbyViewProps["league"], "id" | "name" | "invite_code" | "draft_type">;
   commissionerName?: string;
+  seasonName?: string;
+  isPredictions?: boolean;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [activeTemplate, setActiveTemplate] = useState<"group" | "email" | "text">("group");
 
   const joinUrl = `${APP_URL}/leagues/join?code=${league.invite_code}`;
 
-  const templates = {
-    group: `🔥 Survivor 50 Fantasy — we're doing it.
+  const templates = isPredictions
+    ? {
+        group: `🔥 ${seasonName} Fantasy — we're doing it.
+Join my league: ${league.name}
+Code: ${league.invite_code} at ${joinUrl}
+No draft — just weekly vote-out picks, a Survivor Pool, and season-long predictions.
+Don't get voted out before you even sign up.`,
+
+        email: `Subject: You've been summoned — ${league.name}
+
+Hey —
+
+I'm running a ${seasonName} fantasy league and you're invited. There's no draft, so anyone can jump in:
+
+• Weekly vote predictions — call who's going home
+• Survivor Pool — pick someone to survive each week; streaks pay exponentially, but you can't reuse a castaway
+• Season-long predictions — winner, first boot, and more
+
+League: ${league.name}
+Invite Code: ${league.invite_code}
+Join at: ${joinUrl}
+
+See you at Tribal.
+— ${commissionerName || "The Commissioner"}`,
+
+        text: `${seasonName} fantasy — join my league! No draft, just weekly picks. Code: ${league.invite_code} at ${joinUrl}`,
+      }
+    : {
+        group: `🔥 ${seasonName} Fantasy — we're doing it.
 Join my league: ${league.name}
 Code: ${league.invite_code} at ${joinUrl}
 Draft is ${league.draft_type} — TBD
 Don't get voted out before you even sign up.`,
 
-    email: `Subject: You've been summoned — ${league.name}
+        email: `Subject: You've been summoned — ${league.name}
 
 Hey —
 
-I'm running a Survivor 50 fantasy league and you're invited. Season 50 is an all-returning-players season, so the cast is stacked and the draft is going to be competitive.
+I'm running a ${seasonName} fantasy league and you're invited.
 
 League: ${league.name}
 Draft: ${league.draft_type === "auction" ? "Auction" : "Snake"} — TBD
@@ -82,8 +114,8 @@ Create your account, enter the code, and claim your seat before draft day. Roste
 See you at Tribal.
 — ${commissionerName || "The Commissioner"}`,
 
-    text: `Survivor 50 fantasy — join my league! Code: ${league.invite_code} at ${joinUrl}. Draft TBD.`,
-  };
+        text: `${seasonName} fantasy — join my league! Code: ${league.invite_code} at ${joinUrl}. Draft TBD.`,
+      };
 
   async function copyText(text: string, key: string) {
     try {
@@ -187,12 +219,14 @@ See you at Tribal.
         >
           Manage Teams
         </Link>
-        <Link
-          href={`/leagues/${league.id}/draft`}
-          className="btn-primary"
-        >
-          Head to the Draft Room →
-        </Link>
+        {!isPredictions && (
+          <Link
+            href={`/leagues/${league.id}/draft`}
+            className="btn-primary"
+          >
+            Head to the Draft Room →
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -204,6 +238,7 @@ export default function LobbyView({
   isCommissioner,
   myTeamId,
   commissionerName,
+  seasonName,
 }: LobbyViewProps) {
   const claimedTeams = teams.filter((t) => t.user_id);
   const unclaimedTeams = teams.filter((t) => !t.user_id);
@@ -304,7 +339,7 @@ export default function LobbyView({
 
       {/* Commissioner: share section. Member: waiting message */}
       {isCommissioner ? (
-        <InviteShare league={league} commissionerName={commissionerName} />
+        <InviteShare league={league} commissionerName={commissionerName} seasonName={seasonName} />
       ) : (
         <div className="card text-center text-text-muted text-sm py-6">
           <p className="text-base font-medium text-text-primary mb-1">

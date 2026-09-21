@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import {
   getScoringValues,
   getCategoryPoints,
 } from "@/lib/scoring";
 import type { ScoringCategory } from "@/types/database";
+import { gradeSurvivorPicks } from "@/lib/survivor-pool";
 
 interface ScoringInput {
   league_id: string;
@@ -281,6 +282,14 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Survivor pool: mark who survived and recompute streaks (commissioner already verified)
+  await gradeSurvivorPicks(createServiceClient(), league, league.season_id, episode_id, [
+    ...body.voted_out_players,
+    ...(body.medevac_players || []),
+    ...(body.fifth_place_player ? [body.fifth_place_player] : []),
+    ...(body.fourth_place_player ? [body.fourth_place_player] : []),
+  ]);
+
   // Recalculate episode team scores
   await recalculateScores(supabase, league_id, episode_id, league.season_id);
 
@@ -337,6 +346,9 @@ export async function DELETE(request: NextRequest) {
     .update({ points_earned: 0 })
     .eq("league_id", league_id)
     .eq("episode_id", episode_id);
+
+  // Reset survivor pool results for this episode and recompute streaks
+  await gradeSurvivorPicks(createServiceClient(), league, league.season_id, episode_id, null);
 
   // Unmark episode as scored
   await supabase
@@ -452,8 +464,18 @@ async function recalculateScores(
         0
       );
 
+      // Survivor pool points
+      const { data: survivorPick } = await supabase
+        .from("survivor_picks")
+        .select("points_earned")
+        .eq("league_id", league_id)
+        .eq("episode_id", ep.id)
+        .eq("team_id", team.id)
+        .maybeSingle();
+      const survivorPoints = Number(survivorPick?.points_earned || 0);
+
       const predictionPoints = votePredPoints + titlePickPoints + finalePoints;
-      const total = challengePoints + milestonePoints + predictionPoints;
+      const total = challengePoints + milestonePoints + predictionPoints + survivorPoints;
       cumulative += total;
 
       await supabase
@@ -466,6 +488,7 @@ async function recalculateScores(
             challenge_points: challengePoints,
             milestone_points: milestonePoints,
             prediction_points: predictionPoints,
+            survivor_points: survivorPoints,
             total_points: total,
             cumulative_total: cumulative,
           },

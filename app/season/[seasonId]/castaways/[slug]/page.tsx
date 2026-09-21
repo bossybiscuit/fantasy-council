@@ -207,8 +207,18 @@ export default async function CastawayDetailPage({
               <PlacementBadge badge={player.placement_badge} />
             </div>
 
+            {(player.age || player.occupation) && (
+              <p className="text-sm text-text-primary mb-1">
+                {[player.age ? `Age ${player.age}` : null, player.occupation].filter(Boolean).join(" · ")}
+              </p>
+            )}
             {player.hometown && (
-              <p className="text-sm text-text-muted mb-1">📍 {player.hometown}</p>
+              <p className="text-sm text-text-muted mb-1">
+                📍 {player.hometown}
+                {player.residence && player.residence !== player.hometown && (
+                  <span> · Lives in {player.residence}</span>
+                )}
+              </p>
             )}
 
             {player.previous_seasons && player.previous_seasons.length > 0 && (

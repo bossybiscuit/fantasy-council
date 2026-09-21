@@ -108,6 +108,21 @@ Default point values (editable per league):
 
 **Vote Predictions**: Allocate exactly 10 points across active players before each episode. If your predicted player is voted out, you earn those points.
 
+**Survivor Pool**: Each week, pick one castaway you think will *survive* the episode. You can't pick the same castaway twice in a season. A wrong pick doesn't eliminate you — it resets your streak. Consecutive correct picks pay `min(cap, base × multiplier^(streak−1))` — by default 1, 2, 4, 8, 16, 16, … (configurable in League Settings).
+
+---
+
+## League Formats
+
+- **Predictions** (default, used from Season 51): no draft or rosters. Weekly vote predictions + title picks, the Survivor Pool, and season-long predictions. Up to 100 players; people create their own team when they join with the invite code.
+- **Draft**: classic rosters via snake or auction draft, plus weekly predictions (up to 20 teams).
+
+## Adding a New Season
+
+1. Run the new migration(s) in the Supabase SQL editor (e.g. `027_season51_survivor_pool.sql`)
+2. Put the cast in `stuff/seasonNN_cast.json` and photos in `public/cast/sNN/`
+3. `npm run seed:s51` (creates the season, castaways, and premiere episode — safe to re-run)
+
 ---
 
 ## Draft Types

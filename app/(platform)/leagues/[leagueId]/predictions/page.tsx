@@ -6,6 +6,14 @@ import EmptyState from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
 import PastPredictionsAccordion from "./PastPredictionsAccordion";
 import { LeagueWideTable } from "./LeagueWideTable";
+import SurvivorPoolPicker from "./SurvivorPoolPicker";
+import SurvivorPoolBoard from "./SurvivorPoolBoard";
+import {
+  computeTeamStreaks,
+  getSurvivorPoolSettings,
+  isSurvivorPoolEnabled,
+  type PoolPick,
+} from "@/lib/survivor-pool";
 
 export const dynamic = "force-dynamic";
 
@@ -167,6 +175,47 @@ export default async function PredictionsPage({
 
   const isScored = (nextEpisode as any)?.is_scored ?? false;
 
+  // ── Survivor Pool ──────────────────────────────────────────────────────────
+  const poolEnabled = isSurvivorPoolEnabled(league);
+  const poolSettings = getSurvivorPoolSettings(league.scoring_config);
+  const { data: seasonEpisodes } = poolEnabled
+    ? await db
+        .from("episodes")
+        .select("id, episode_number, is_scored")
+        .eq("season_id", season.id)
+        .order("episode_number", { ascending: true })
+    : { data: [] };
+  const { data: poolPicksRaw } = poolEnabled
+    ? await db
+        .from("survivor_picks")
+        .select("episode_id, team_id, player_id, survived, players(name)")
+        .eq("league_id", leagueId)
+    : { data: [] };
+  const poolPicks = (poolPicksRaw || []).map((p: any) => ({
+    episode_id: p.episode_id,
+    team_id: p.team_id,
+    player_id: p.player_id,
+    survived: p.survived,
+    player_name: p.players?.name || "Unknown",
+  }));
+  const epNumberById = new Map((seasonEpisodes || []).map((e) => [e.id, e.episode_number]));
+  const myPoolPicks = new Map<string, PoolPick>();
+  const usedPlayers: Record<string, number> = {};
+  for (const p of poolPicks) {
+    if (p.team_id !== myTeam.id) continue;
+    myPoolPicks.set(p.episode_id, p);
+    if (p.episode_id !== nextEpisode?.id) usedPlayers[p.player_id] = epNumberById.get(p.episode_id) ?? 0;
+  }
+  const { currentStreak: myPoolStreak } = computeTeamStreaks(
+    (seasonEpisodes || []).map((e) => e.id),
+    new Set((seasonEpisodes || []).filter((e) => e.is_scored).map((e) => e.id)),
+    myPoolPicks,
+    poolSettings
+  );
+  const poolPickTeamIds = new Set(
+    poolPicks.filter((p) => p.episode_id === nextEpisode?.id).map((p) => p.team_id)
+  );
+
   // Which teams have submitted for the current episode
   const isFinaleEpisode = !!(nextEpisode as any)?.is_finale;
   const submittedTeamIds = isFinaleEpisode
@@ -193,7 +242,11 @@ export default async function PredictionsPage({
     <div>
       <PageHeader
         title="Weekly Predictions"
-        subtitle="Predict who gets voted out each week"
+        subtitle={
+          poolEnabled
+            ? "Predict who gets voted out — and who survives — each week"
+            : "Predict who gets voted out each week"
+        }
       />
 
       {/* Current episode info */}
@@ -259,6 +312,18 @@ export default async function PredictionsPage({
             />
           )}
 
+          {poolEnabled && players && players.length > 0 && (
+            <SurvivorPoolPicker
+              leagueId={leagueId}
+              episodeId={nextEpisode.id}
+              players={players}
+              usedPlayers={usedPlayers}
+              existingPickPlayerId={myPoolPicks.get(nextEpisode.id)?.player_id ?? null}
+              currentStreak={myPoolStreak}
+              settings={poolSettings}
+            />
+          )}
+
           {/* Submission status board */}
           <div className="card mt-6">
             <h2 className="section-title mb-4">Who&rsquo;s cast their vote?</h2>
@@ -272,6 +337,11 @@ export default async function PredictionsPage({
                   >
                     <span className="text-sm text-text-primary font-medium">
                       {team.name}
+                      {poolEnabled && poolPickTeamIds.has(team.id) && (
+                        <span className="ml-2 text-xs text-accent-gold" title="Survivor Pool pick in">
+                          🛟
+                        </span>
+                      )}
                     </span>
                     {submitted ? (
                       <span className="text-xs text-green-400 font-medium flex items-center gap-1.5">
@@ -324,6 +394,19 @@ export default async function PredictionsPage({
             isFinale={isFinaleEpisode}
           />
         </div>
+      )}
+
+      {/* ── SURVIVOR POOL STANDINGS ── */}
+      {poolEnabled && (
+        <SurvivorPoolBoard
+          teams={allTeams || []}
+          episodes={seasonEpisodes || []}
+          picks={poolPicks}
+          settings={poolSettings}
+          myTeamId={myTeam.id}
+          currentEpisodeId={nextEpisode?.id ?? null}
+          revealCurrent={isPastDeadline || isScored}
+        />
       )}
 
       {/* ── PAST PREDICTIONS ── */}

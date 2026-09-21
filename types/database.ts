@@ -70,6 +70,9 @@ export type Database = {
           best_placement: string | null;
           placement_badge: string | null;
           vote_out_episode: number | null;
+          age: number | null;
+          occupation: string | null;
+          residence: string | null;
           created_at: string;
         };
         Insert: {
@@ -88,6 +91,9 @@ export type Database = {
           best_placement?: string | null;
           placement_badge?: string | null;
           vote_out_episode?: number | null;
+          age?: number | null;
+          occupation?: string | null;
+          residence?: string | null;
           created_at?: string;
         };
         Update: {
@@ -104,6 +110,9 @@ export type Database = {
           best_placement?: string | null;
           placement_badge?: string | null;
           vote_out_episode?: number | null;
+          age?: number | null;
+          occupation?: string | null;
+          residence?: string | null;
         };
         Relationships: [
           {
@@ -129,6 +138,8 @@ export type Database = {
           draft_status: "pending" | "active" | "completed";
           status: "setup" | "drafting" | "active" | "completed";
           scoring_config: Json;
+          format: LeagueFormat;
+          parent_league_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -144,6 +155,8 @@ export type Database = {
           draft_status?: "pending" | "active" | "completed";
           status?: "setup" | "drafting" | "active" | "completed";
           scoring_config?: Json;
+          format?: LeagueFormat;
+          parent_league_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -156,6 +169,8 @@ export type Database = {
           draft_status?: "pending" | "active" | "completed";
           status?: "setup" | "drafting" | "active" | "completed";
           scoring_config?: Json;
+          format?: LeagueFormat;
+          parent_league_id?: string | null;
         };
         Relationships: [
           {
@@ -596,6 +611,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      survivor_picks: {
+        Row: {
+          id: string;
+          league_id: string;
+          episode_id: string;
+          team_id: string;
+          player_id: string;
+          survived: boolean | null;
+          streak: number;
+          points_earned: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          league_id: string;
+          episode_id: string;
+          team_id: string;
+          player_id: string;
+          survived?: boolean | null;
+          streak?: number;
+          points_earned?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          player_id?: string;
+          survived?: boolean | null;
+          streak?: number;
+          points_earned?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "survivor_picks_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       episode_team_scores: {
         Row: {
           id: string;
@@ -605,6 +662,7 @@ export type Database = {
           challenge_points: number;
           milestone_points: number;
           prediction_points: number;
+          survivor_points: number;
           total_points: number;
           cumulative_total: number;
           rank: number | null;
@@ -618,6 +676,7 @@ export type Database = {
           challenge_points?: number;
           milestone_points?: number;
           prediction_points?: number;
+          survivor_points?: number;
           total_points?: number;
           cumulative_total?: number;
           rank?: number | null;
@@ -627,6 +686,7 @@ export type Database = {
           challenge_points?: number;
           milestone_points?: number;
           prediction_points?: number;
+          survivor_points?: number;
           total_points?: number;
           cumulative_total?: number;
           rank?: number | null;
@@ -671,6 +731,8 @@ export type Database = {
   };
 };
 
+export type LeagueFormat = "draft" | "predictions";
+
 export type ScoringCategory =
   | "tribe_reward"
   | "tribe_reward_second"
@@ -710,4 +772,5 @@ export type EpisodeTeamScore =
   Database["public"]["Tables"]["episode_team_scores"]["Row"];
 export type TitlePick = Database["public"]["Tables"]["title_picks"]["Row"];
 export type LeaguePlayerValue = Database["public"]["Tables"]["league_player_values"]["Row"];
+export type SurvivorPick = Database["public"]["Tables"]["survivor_picks"]["Row"];
 export type SeasonPrediction = Database["public"]["Tables"]["season_predictions"]["Row"];

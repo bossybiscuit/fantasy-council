@@ -24,6 +24,7 @@ interface StandingsRow {
   totalPoints: number;
   weeklyPredPoints: number;
   seasonPredTotal: number;
+  survivorPoints?: number;
   rank: number;
   picks: PlayerPick[];
 }
@@ -33,6 +34,8 @@ interface StandingsTableProps {
   leagueId: string;
   myTeamId?: string;
   showBudget?: boolean;
+  /** False for predictions-only leagues (no draft, no rosters) */
+  showRosters?: boolean;
 }
 
 export default function StandingsTable({
@@ -40,6 +43,7 @@ export default function StandingsTable({
   leagueId,
   myTeamId,
   showBudget = false,
+  showRosters = true,
 }: StandingsTableProps) {
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
   const [hoveredTeamId, setHoveredTeamId] = useState<string | null>(null);
@@ -124,7 +128,7 @@ export default function StandingsTable({
                 </div>
 
                 {/* Chevron */}
-                {hasPicks && (
+                {(hasPicks || !showRosters) && (
                   <button
                     onClick={() => toggleExpand(row.team.id)}
                     className="text-text-muted hover:text-accent-orange transition-colors p-1 shrink-0"
@@ -149,6 +153,7 @@ export default function StandingsTable({
                   <PredictionChips
                     weeklyPredPoints={row.weeklyPredPoints}
                     seasonPredTotal={row.seasonPredTotal}
+                    survivorPoints={row.survivorPoints}
                     compact
                   />
                 </div>
@@ -336,14 +341,15 @@ export default function StandingsTable({
                             picks={row.picks}
                             leagueId={leagueId}
                           />
-                        ) : (
+                        ) : showRosters ? (
                           <span className="text-text-muted text-xs italic">
                             No players drafted yet
                           </span>
-                        )}
+                        ) : null}
                         <PredictionChips
                           weeklyPredPoints={row.weeklyPredPoints}
                           seasonPredTotal={row.seasonPredTotal}
+                          survivorPoints={row.survivorPoints}
                         />
                       </div>
                     </td>
@@ -510,13 +516,15 @@ function RosterChips({
 function PredictionChips({
   weeklyPredPoints,
   seasonPredTotal,
+  survivorPoints = 0,
   compact = false,
 }: {
   weeklyPredPoints: number;
   seasonPredTotal: number;
+  survivorPoints?: number;
   compact?: boolean;
 }) {
-  if (weeklyPredPoints === 0 && seasonPredTotal === 0) return null;
+  if (weeklyPredPoints === 0 && seasonPredTotal === 0 && survivorPoints === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
       {weeklyPredPoints > 0 && (
@@ -541,6 +549,19 @@ function PredictionChips({
           <span className="text-text-muted">Season Predictions</span>
           <span className="text-accent-gold font-semibold">
             {seasonPredTotal}
+            <span className="text-text-muted font-normal">pts</span>
+          </span>
+        </div>
+      )}
+      {survivorPoints > 0 && (
+        <div
+          className={`flex items-center gap-1.5 rounded-full border border-border bg-bg-surface text-xs ${
+            compact ? "px-2 py-1" : "px-2.5 py-1.5"
+          }`}
+        >
+          <span className="text-text-muted">🛟 Survivor Pool</span>
+          <span className="text-green-400 font-semibold">
+            {survivorPoints}
             <span className="text-text-muted font-normal">pts</span>
           </span>
         </div>

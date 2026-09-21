@@ -4,7 +4,14 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/ui/PageHeader";
+import NewSeasonCard from "./NewSeasonCard";
 import { DEFAULT_SCORING } from "@/lib/scoring";
+import {
+  SURVIVOR_POOL_DEFAULTS,
+  getSurvivorPoolSettings,
+  isSurvivorPoolEnabled,
+  survivorPointsForStreak,
+} from "@/lib/survivor-pool";
 
 type TabId = "challenges" | "milestones" | "optional";
 
@@ -203,7 +210,7 @@ export default function LeagueSettingsPage({
 
   // Get value from config, falling back to DEFAULT_SCORING, then a hardcoded fallback
   function val(key: string, fallback: number): number {
-    return config[key] ?? (DEFAULT_SCORING as any)[key] ?? fallback;
+    return config[key] ?? (DEFAULT_SCORING as any)[key] ?? (SURVIVOR_POOL_DEFAULTS as any)[key] ?? fallback;
   }
 
   function set(key: string, v: number) {
@@ -228,6 +235,8 @@ export default function LeagueSettingsPage({
     if (config.enable_confessionals && val("CONFESSIONAL_POINT", 1) < 0) errors.add("CONFESSIONAL_POINT");
     if (config.enable_idols && val("IDOL_PLAY_POINT", 3) < 0) errors.add("IDOL_PLAY_POINT");
     if (config.enable_advantages && val("ADVANTAGE_POINT", 2) < 0) errors.add("ADVANTAGE_POINT");
+    if (val("SURVIVOR_POOL_BASE", 1) <= 0) errors.add("SURVIVOR_POOL_BASE");
+    if (val("SURVIVOR_POOL_MULTIPLIER", 2) < 1) errors.add("SURVIVOR_POOL_MULTIPLIER");
     setValidationErrors(errors);
     return errors.size === 0;
   }
@@ -295,6 +304,7 @@ export default function LeagueSettingsPage({
       )}
 
       {/* ── League Configuration ──────────────────────────────────────────── */}
+      {league.format !== "predictions" && (
       <div className="card mb-6">
         <h3 className="section-title mb-4">League Configuration</h3>
         <div className="flex items-center justify-between">
@@ -311,6 +321,58 @@ export default function LeagueSettingsPage({
             max={30}
           />
         </div>
+      </div>
+      )}
+
+      {/* ── Survivor Pool ──────────────────────────────────────────────────── */}
+      <div className="card mb-6">
+        <h3 className="section-title mb-4">Survivor Pool</h3>
+        <ToggleRow
+          icon="🛟"
+          label="Enable Survivor Pool"
+          description="Each week, players pick one castaway to survive the episode. No repeats all season. A wrong pick resets their streak — consecutive correct picks earn exponentially more."
+          enabled={isSurvivorPoolEnabled({ format: league.format, scoring_config: config })}
+          onToggle={(v) => setConfig((prev: any) => ({ ...prev, SURVIVOR_POOL_ENABLED: v }))}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-text-muted">Points for first correct pick</span>
+              <Stepper
+                value={val("SURVIVOR_POOL_BASE", 1)}
+                onChange={(v) => set("SURVIVOR_POOL_BASE", v)}
+                min={1}
+                hasError={validationErrors.has("SURVIVOR_POOL_BASE")}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-text-muted">Multiplier per streak week</span>
+              <Stepper
+                value={val("SURVIVOR_POOL_MULTIPLIER", 2)}
+                onChange={(v) => set("SURVIVOR_POOL_MULTIPLIER", v)}
+                min={1}
+                max={10}
+                hasError={validationErrors.has("SURVIVOR_POOL_MULTIPLIER")}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-text-muted">Max points per week (0 = no cap)</span>
+              <Stepper
+                value={val("SURVIVOR_POOL_CAP", 16)}
+                onChange={(v) => set("SURVIVOR_POOL_CAP", v)}
+                max={9999}
+              />
+            </div>
+            <p className="text-xs text-text-muted">
+              Streak payout:{" "}
+              <span className="text-accent-gold font-medium">
+                {[1, 2, 3, 4, 5, 6, 7, 8]
+                  .map((n) => survivorPointsForStreak(n, getSurvivorPoolSettings(config)))
+                  .join(" → ")}
+              </span>
+              . Changes apply the next time an episode is scored.
+            </p>
+          </div>
+        </ToggleRow>
       </div>
 
       {/* Tabs */}
@@ -531,6 +593,9 @@ export default function LeagueSettingsPage({
           </button>
         </div>
       </div>
+
+      {/* ── New Season ─────────────────────────────────────────────────────── */}
+      <NewSeasonCard league={league} />
 
       {/* ── Danger Zone ────────────────────────────────────────────────────── */}
       <div className="mt-10 card border-red-700/40">

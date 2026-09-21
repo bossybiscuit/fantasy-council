@@ -6,7 +6,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import StandingsTable from "@/components/ui/StandingsTable";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
-import LobbyView from "./LobbyView";
+import LobbyView, { InviteShare } from "./LobbyView";
 import Link from "next/link";
 
 export default async function LeagueHomePage({
@@ -84,6 +84,24 @@ export default async function LeagueHomePage({
   const commissionerName =
     commissionerProfile?.display_name || commissionerProfile?.username || undefined;
 
+  // Newer seasons of this league (started via "Start a New Season")
+  const { data: nextSeasons } = await db
+    .from("leagues")
+    .select("id, name, seasons(name)")
+    .eq("parent_league_id", leagueId);
+  const continuationBanner =
+    nextSeasons && nextSeasons.length > 0 ? (
+      <div className="card mb-6 border-accent-orange/30 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-text-primary">
+          🔥 This league has moved on to{" "}
+          <strong>{(nextSeasons[0].seasons as any)?.name || "a new season"}</strong>.
+        </p>
+        <Link href={`/leagues/${nextSeasons[0].id}`} className="btn-primary text-sm">
+          Go to {nextSeasons[0].name} →
+        </Link>
+      </div>
+    ) : null;
+
   // ── Pre-draft lobby ──────────────────────────────────────────────────
   if (league.draft_status === "pending") {
     return (
@@ -98,6 +116,7 @@ export default async function LeagueHomePage({
           isCommissioner={isCommissioner}
           myTeamId={myTeam?.id}
           commissionerName={commissionerName}
+          seasonName={season?.name}
         />
       </div>
     );
@@ -183,14 +202,19 @@ export default async function LeagueHomePage({
     // Weekly prediction totals per team (vote preds + title picks, all episodes)
     const { data: allEpisodeScores } = await db
       .from("episode_team_scores")
-      .select("team_id, prediction_points")
+      .select("team_id, prediction_points, survivor_points")
       .eq("league_id", leagueId);
 
     const weeklyPredPointsMap = new Map<string, number>();
+    const survivorPointsMap = new Map<string, number>();
     for (const row of allEpisodeScores || []) {
       weeklyPredPointsMap.set(
         row.team_id,
         (weeklyPredPointsMap.get(row.team_id) || 0) + (row.prediction_points || 0)
+      );
+      survivorPointsMap.set(
+        row.team_id,
+        (survivorPointsMap.get(row.team_id) || 0) + Number(row.survivor_points || 0)
       );
     }
 
@@ -244,6 +268,7 @@ export default async function LeagueHomePage({
           totalPoints: (currentScore?.cumulative_total || 0) + seasonPredTotal,
           weeklyPredPoints,
           seasonPredTotal,
+          survivorPoints: survivorPointsMap.get(team.id) || 0,
           rank: 0, // assigned after sort
           picks,
         };
@@ -269,6 +294,36 @@ export default async function LeagueHomePage({
         }
       />
 
+      {continuationBanner}
+
+      {/* Predictions leagues skip the draft lobby — keep the invite handy until scoring starts */}
+      {league.format === "predictions" && !latestEpisode && isCommissioner && (
+        <div className="mb-6">
+          <InviteShare
+            league={league}
+            commissionerName={commissionerName}
+            seasonName={season?.name}
+            isPredictions
+          />
+        </div>
+      )}
+      {league.format === "predictions" && (latestEpisode || !isCommissioner) && (
+        <div className="card mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-text-muted uppercase tracking-wider">Invite friends</p>
+            <p className="text-sm text-text-muted">
+              {teams.length} / {league.num_teams} spots filled · share code{" "}
+              <span className="font-mono font-bold text-accent-orange tracking-widest">
+                {league.invite_code}
+              </span>
+            </p>
+          </div>
+          <Link href={`/leagues/${league.id}/predictions`} className="btn-primary text-sm">
+            Make This Week&rsquo;s Picks →
+          </Link>
+        </div>
+      )}
+
       {/* Standings */}
       <div className="card mb-6">
         <h2 className="section-title mb-4">
@@ -284,14 +339,17 @@ export default async function LeagueHomePage({
             rows={standingsRows}
             leagueId={leagueId}
             myTeamId={myTeam?.id}
-            showBudget={league.draft_type === "auction"}
+            showBudget={league.format !== "predictions" && league.draft_type === "auction"}
+            showRosters={league.format !== "predictions"}
           />
         ) : (
           <EmptyState
             icon="🏆"
             title="No scores yet"
             description={
-              league.draft_status !== "completed"
+              league.format === "predictions"
+                ? "Standings appear once the first episode is scored. Get your weekly picks in!"
+                : league.draft_status !== "completed"
                 ? "Complete the draft, then the commissioner will score each episode."
                 : "Waiting for the commissioner to score the first episode."
             }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getScoringValues, getCategoryPoints } from "@/lib/scoring";
 import { recalculateScores } from "@/lib/recalculate-scores";
+import { gradeSurvivorPicks } from "@/lib/survivor-pool";
 import type { ScoringCategory } from "@/types/database";
 
 interface AdminScoringInput {
@@ -81,6 +82,14 @@ export async function POST(request: NextRequest) {
       .eq("is_active", true);
     mergePlayers = (activePlayers || []).map((p) => p.id);
   }
+
+  // Everyone who left the game this episode — survivor pool picks on them fail
+  const eliminatedThisEpisode = [
+    ...body.voted_out_players,
+    ...(body.medevac_players || []),
+    ...(body.fifth_place_player ? [body.fifth_place_player] : []),
+    ...(body.fourth_place_player ? [body.fourth_place_player] : []),
+  ];
 
   for (const league of leagues) {
     const config = getScoringValues(league.scoring_config);
@@ -285,6 +294,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Survivor pool: mark who survived and recompute streaks
+    await gradeSurvivorPicks(db, league, season_id, episode_id, eliminatedThisEpisode);
+
     // Recalculate episode team scores for this league
     await recalculateScores(db, league.id, episode_id, season_id);
   }
@@ -367,7 +379,7 @@ export async function DELETE(request: NextRequest) {
   // Get all leagues for this season
   const { data: leagues } = await db
     .from("leagues")
-    .select("id, season_id")
+    .select("id, season_id, scoring_config")
     .eq("season_id", season_id);
 
   for (const league of leagues || []) {
@@ -394,6 +406,8 @@ export async function DELETE(request: NextRequest) {
       .update({ points_earned: 0 })
       .eq("league_id", league.id)
       .eq("episode_id", episode_id);
+
+    await gradeSurvivorPicks(db, league, season_id, episode_id, null);
 
     await recalculateScores(db, league.id, episode_id, season_id);
   }

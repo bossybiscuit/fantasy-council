@@ -39,8 +39,8 @@ export async function recalculateScores(supabase: any, league_id: string, episod
 
   const allEpisodeIds = episodes.map((e) => e.id);
 
-  // Batch-fetch all scoring events, predictions, title_picks, and finale_predictions for this league across all episodes
-  const [{ data: allEvents }, { data: allPreds }, { data: allTitlePicks }, { data: allFinalePicks }] = await Promise.all([
+  // Batch-fetch all scoring events, predictions, title_picks, finale_predictions, and survivor_picks for this league across all episodes
+  const [{ data: allEvents }, { data: allPreds }, { data: allTitlePicks }, { data: allFinalePicks }, { data: allSurvivorPicks }] = await Promise.all([
     supabase
       .from("scoring_events")
       .select("episode_id, team_id, points, category")
@@ -58,6 +58,11 @@ export async function recalculateScores(supabase: any, league_id: string, episod
       .in("episode_id", allEpisodeIds),
     supabase
       .from("finale_predictions")
+      .select("episode_id, team_id, points_earned")
+      .eq("league_id", league_id)
+      .in("episode_id", allEpisodeIds),
+    supabase
+      .from("survivor_picks")
       .select("episode_id, team_id, points_earned")
       .eq("league_id", league_id)
       .in("episode_id", allEpisodeIds),
@@ -96,6 +101,12 @@ export async function recalculateScores(supabase: any, league_id: string, episod
     finaleMap.set(key, (finaleMap.get(key) || 0) + (fp.points_earned || 0));
   }
 
+  const survivorMap = new Map<string, number>();
+  for (const sp of allSurvivorPicks || []) {
+    const key = `${sp.episode_id}:${sp.team_id}`;
+    survivorMap.set(key, (survivorMap.get(key) || 0) + Number(sp.points_earned || 0));
+  }
+
   // Build all upsert rows in memory
   const upsertRows: object[] = [];
   for (const team of teams) {
@@ -105,7 +116,8 @@ export async function recalculateScores(supabase: any, league_id: string, episod
       const challengePoints = challengeMap.get(key) || 0;
       const milestonePoints = milestoneMap.get(key) || 0;
       const predictionPoints = (predMap.get(key) || 0) + (titleMap.get(key) || 0) + (finaleMap.get(key) || 0);
-      const total = challengePoints + milestonePoints + predictionPoints;
+      const survivorPoints = survivorMap.get(key) || 0;
+      const total = challengePoints + milestonePoints + predictionPoints + survivorPoints;
       cumulative += total;
 
       upsertRows.push({
@@ -115,6 +127,7 @@ export async function recalculateScores(supabase: any, league_id: string, episod
         challenge_points: challengePoints,
         milestone_points: milestonePoints,
         prediction_points: predictionPoints,
+        survivor_points: survivorPoints,
         total_points: total,
         cumulative_total: cumulative,
       });
