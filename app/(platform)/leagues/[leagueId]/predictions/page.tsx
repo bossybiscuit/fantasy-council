@@ -326,34 +326,45 @@ export default async function PredictionsPage({
           {/* Submission status board */}
           <div className="card mt-6">
             <h2 className="section-title mb-4">Who&rsquo;s cast their vote?</h2>
-            <div className="divide-y divide-border">
-              {(allTeams || []).map((team) => {
-                const submitted = submittedTeamIds.has(team.id);
-                return (
-                  <div
-                    key={team.id}
-                    className="flex items-center justify-between py-3 px-1"
-                  >
-                    <span className="text-sm text-text-primary font-medium">
-                      {team.name}
-                      {poolEnabled && poolPickTeamIds.has(team.id) && (
-                        <span className="ml-2 text-xs text-accent-gold" title="Survivor Pool pick in">
-                          🛟
-                        </span>
-                      )}
-                    </span>
-                    {submitted ? (
-                      <span className="text-xs text-green-400 font-medium flex items-center gap-1.5">
-                        ✓ Submitted
-                      </span>
-                    ) : (
-                      <span className="text-xs text-amber-400 flex items-center gap-1.5">
-                        ⚠ Not submitted yet
-                      </span>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-2 text-text-muted font-medium">Team</th>
+                    <th className="text-center py-2 px-2 text-text-muted font-medium w-28">
+                      Votes
+                    </th>
+                    {poolEnabled && (
+                      <th className="text-center py-2 px-2 text-text-muted font-medium w-28">
+                        Survivor Pool
+                      </th>
                     )}
-                  </div>
-                );
-              })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(allTeams || []).map((team) => (
+                    <tr key={team.id} className="border-b border-border last:border-0">
+                      <td className="py-2.5 px-2 text-text-primary font-medium">{team.name}</td>
+                      <td className="py-2.5 px-2 text-center">
+                        {submittedTeamIds.has(team.id) ? (
+                          <span className="text-green-400" title="Submitted">✓</span>
+                        ) : (
+                          <span className="text-text-muted" title="Not submitted yet">—</span>
+                        )}
+                      </td>
+                      {poolEnabled && (
+                        <td className="py-2.5 px-2 text-center">
+                          {poolPickTeamIds.has(team.id) ? (
+                            <span className="text-green-400" title="Survivor Pool pick submitted">✓</span>
+                          ) : (
+                            <span className="text-text-muted" title="No pick yet">—</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </>

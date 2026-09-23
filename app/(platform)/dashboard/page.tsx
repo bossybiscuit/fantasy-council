@@ -32,6 +32,19 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
+  // Show the newest season's leagues up front; older seasons collapse into "Past Seasons"
+  const allTeams = teams || [];
+  const newestSeason = Math.max(
+    0,
+    ...allTeams.map((t) => ((t.leagues as any)?.seasons as any)?.season_number ?? 0)
+  );
+  const currentTeams = allTeams.filter(
+    (t) => (((t.leagues as any)?.seasons as any)?.season_number ?? 0) === newestSeason
+  );
+  const pastTeams = allTeams.filter(
+    (t) => (((t.leagues as any)?.seasons as any)?.season_number ?? 0) < newestSeason
+  );
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <PageHeader
@@ -51,48 +64,11 @@ export default async function DashboardPage() {
         }
       />
 
-      {teams && teams.length > 0 ? (
+      {currentTeams.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {teams.map((team) => {
-            const league = team.leagues as any;
-            const season = league?.seasons as any;
-            return (
-              <Link
-                key={team.id}
-                href={`/leagues/${league.id}`}
-                className="card hover:border-accent-orange/30 hover:shadow-ember transition-all block"
-              >
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-text-primary truncate">
-                      {league.name}
-                    </h3>
-                    <p className="text-xs text-text-muted mt-0.5 truncate">
-                      {season?.name}
-                    </p>
-                  </div>
-                  <StatusBadge status={league.status} />
-                </div>
-
-                <div className="torch-divider my-3" />
-
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-text-muted shrink-0">Your Tribe</span>
-                    <span className="text-text-primary font-medium truncate text-right">
-                      {team.name}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Teams</span>
-                    <span className="text-text-primary">
-                      {league.num_teams}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+          {currentTeams.map((team) => (
+            <LeagueCard key={team.id} team={team} />
+          ))}
         </div>
       ) : (
         <EmptyState
@@ -101,6 +77,21 @@ export default async function DashboardPage() {
           description="Ask your commissioner for an invite code to enter the game."
           action={{ label: "Find Your Tribe", href: "/leagues/join" }}
         />
+      )}
+
+      {/* Past seasons — collapsed so the current season stays front and center */}
+      {pastTeams.length > 0 && (
+        <details className="mt-8 group">
+          <summary className="cursor-pointer text-sm text-text-muted hover:text-text-primary transition-colors select-none">
+            <span className="inline-block transition-transform group-open:rotate-90">▶</span>{" "}
+            Past Seasons ({pastTeams.length})
+          </summary>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4 opacity-75">
+            {pastTeams.map((team) => (
+              <LeagueCard key={team.id} team={team} />
+            ))}
+          </div>
+        </details>
       )}
 
       {/* Quick Join */}
@@ -112,6 +103,39 @@ export default async function DashboardPage() {
         <JoinForm />
       </div>
     </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function LeagueCard({ team }: { team: any }) {
+  const league = team.leagues as any;
+  const season = league?.seasons as any;
+  return (
+    <Link
+      href={`/leagues/${league.id}`}
+      className="card hover:border-accent-orange/30 hover:shadow-ember transition-all block"
+    >
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-text-primary truncate">{league.name}</h3>
+          <p className="text-xs text-text-muted mt-0.5 truncate">{season?.name}</p>
+        </div>
+        <StatusBadge status={league.status} />
+      </div>
+
+      <div className="torch-divider my-3" />
+
+      <div className="space-y-1.5 text-sm">
+        <div className="flex justify-between gap-2">
+          <span className="text-text-muted shrink-0">Your Tribe</span>
+          <span className="text-text-primary font-medium truncate text-right">{team.name}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-text-muted">Teams</span>
+          <span className="text-text-primary">{league.num_teams}</span>
+        </div>
+      </div>
+    </Link>
   );
 }
 
