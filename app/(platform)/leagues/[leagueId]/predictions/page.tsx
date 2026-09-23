@@ -7,7 +7,6 @@ import { formatDate } from "@/lib/utils";
 import PastPredictionsAccordion from "./PastPredictionsAccordion";
 import { LeagueWideTable } from "./LeagueWideTable";
 import SurvivorPoolPicker from "./SurvivorPoolPicker";
-import SurvivorPoolBoard from "./SurvivorPoolBoard";
 import {
   computeTeamStreaks,
   getSurvivorPoolSettings,
@@ -394,19 +393,6 @@ export default async function PredictionsPage({
             isFinale={isFinaleEpisode}
           />
         </div>
-      )}
-
-      {/* ── SURVIVOR POOL STANDINGS ── */}
-      {poolEnabled && (
-        <SurvivorPoolBoard
-          teams={allTeams || []}
-          episodes={seasonEpisodes || []}
-          picks={poolPicks}
-          settings={poolSettings}
-          myTeamId={myTeam.id}
-          currentEpisodeId={nextEpisode?.id ?? null}
-          revealCurrent={isPastDeadline || isScored}
-        />
       )}
 
       {/* ── PAST PREDICTIONS ── */}

@@ -7,6 +7,7 @@ import StandingsTable from "@/components/ui/StandingsTable";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import LobbyView, { InviteShare } from "./LobbyView";
+import SurvivorPoolBoard from "./predictions/SurvivorPoolBoard";
 import Link from "next/link";
 import {
   computeTeamStreaks,
@@ -172,6 +173,61 @@ export default async function LeagueHomePage({
     playerPointsMap.set(key, (playerPointsMap.get(key) || 0) + (ev.points || 0));
   }
 
+  // ── Survivor Pool (streaks in standings + the pool board below) ────────
+  const poolEnabled = isSurvivorPoolEnabled(league);
+  const poolSettings = getSurvivorPoolSettings(league.scoring_config);
+  const streakByTeam = new Map<string, number>();
+  let poolEpisodes: { id: string; episode_number: number; is_scored: boolean }[] = [];
+  let poolPicks: (PoolPick & { player_name: string })[] = [];
+  let poolCurrentEpisode: { id: string; prediction_deadline: string | null } | null = null;
+
+  if (poolEnabled) {
+    const [{ data: seasonEps }, { data: rawPicks }] = await Promise.all([
+      db
+        .from("episodes")
+        .select("id, episode_number, is_scored, prediction_deadline")
+        .eq("season_id", season?.id)
+        .order("episode_number", { ascending: true }),
+      db
+        .from("survivor_picks")
+        .select("episode_id, team_id, player_id, survived, players(name)")
+        .eq("league_id", leagueId),
+    ]);
+
+    poolEpisodes = (seasonEps || []).map((e) => ({
+      id: e.id,
+      episode_number: e.episode_number,
+      is_scored: e.is_scored,
+    }));
+    poolPicks = ((rawPicks as any[]) || []).map((p) => ({
+      episode_id: p.episode_id,
+      team_id: p.team_id,
+      player_id: p.player_id,
+      survived: p.survived,
+      player_name: p.players?.name || "Unknown",
+    }));
+
+    const upcoming = (seasonEps || []).find((e) => !e.is_scored);
+    poolCurrentEpisode = upcoming
+      ? { id: upcoming.id, prediction_deadline: upcoming.prediction_deadline }
+      : null;
+
+    const epIds = poolEpisodes.map((e) => e.id);
+    const graded = new Set(poolEpisodes.filter((e) => e.is_scored).map((e) => e.id));
+    for (const team of teams) {
+      const picks = new Map<string, PoolPick>();
+      for (const p of poolPicks) if (p.team_id === team.id) picks.set(p.episode_id, p);
+      streakByTeam.set(team.id, computeTeamStreaks(epIds, graded, picks, poolSettings).currentStreak);
+    }
+  }
+
+  // Current episode picks stay hidden until its deadline passes
+  const poolRevealCurrent = poolCurrentEpisode
+    ? poolCurrentEpisode.prediction_deadline
+      ? new Date() > new Date(poolCurrentEpisode.prediction_deadline)
+      : false
+    : true;
+
   let standingsRows: any[] = [];
 
   if (latestEpisode && teams) {
@@ -222,31 +278,6 @@ export default async function LeagueHomePage({
         row.team_id,
         (survivorPointsMap.get(row.team_id) || 0) + Number(row.survivor_points || 0)
       );
-    }
-
-    // Survivor Pool streaks (shown next to each team's points)
-    const poolEnabled = isSurvivorPoolEnabled(league);
-    const streakByTeam = new Map<string, number>();
-    if (poolEnabled) {
-      const [{ data: seasonEps }, { data: poolPicks }] = await Promise.all([
-        db
-          .from("episodes")
-          .select("id, is_scored")
-          .eq("season_id", season?.id)
-          .order("episode_number", { ascending: true }),
-        db
-          .from("survivor_picks")
-          .select("episode_id, team_id, player_id, survived")
-          .eq("league_id", leagueId),
-      ]);
-      const epIds = (seasonEps || []).map((e) => e.id);
-      const graded = new Set((seasonEps || []).filter((e) => e.is_scored).map((e) => e.id));
-      const settings = getSurvivorPoolSettings(league.scoring_config);
-      for (const team of teams) {
-        const picks = new Map<string, PoolPick>();
-        for (const p of poolPicks || []) if (p.team_id === team.id) picks.set(p.episode_id, p);
-        streakByTeam.set(team.id, computeTeamStreaks(epIds, graded, picks, settings).currentStreak);
-      }
     }
 
     standingsRows = teams
@@ -389,8 +420,21 @@ export default async function LeagueHomePage({
         )}
       </div>
 
+      {/* Survivor Pool */}
+      {poolEnabled && teams.length > 0 && (
+        <SurvivorPoolBoard
+          teams={teams.map((t) => ({ id: t.id, name: t.name }))}
+          episodes={poolEpisodes}
+          picks={poolPicks}
+          settings={poolSettings}
+          myTeamId={myTeam?.id}
+          currentEpisodeId={poolCurrentEpisode?.id ?? null}
+          revealCurrent={poolRevealCurrent}
+        />
+      )}
+
       {/* Teams */}
-      <div>
+      <div className="mt-6">
         <h2 className="section-title mb-3">Tribes</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {teams?.map((team) => (

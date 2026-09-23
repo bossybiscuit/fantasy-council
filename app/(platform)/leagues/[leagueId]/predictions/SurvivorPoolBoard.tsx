@@ -12,7 +12,7 @@ interface SurvivorPoolBoardProps {
   episodes: { id: string; episode_number: number; is_scored: boolean }[];
   picks: BoardPick[];
   settings: SurvivorPoolSettings;
-  myTeamId: string;
+  myTeamId?: string;
   /** Current (unscored) episode — its picks stay hidden until the deadline passes */
   currentEpisodeId: string | null;
   revealCurrent: boolean;
