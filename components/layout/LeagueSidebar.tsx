@@ -24,6 +24,7 @@ export default function LeagueSidebar({
     { href: `${base}/predictions`, label: "Weekly Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
     { href: `${base}/history`, label: "League History", icon: "📜" },
+    { href: `/season/${league.season_id}/castaways`, label: "Meet the Cast", icon: "🏝️" },
   ];
 
   if (teamId) {

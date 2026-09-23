@@ -43,6 +43,7 @@ export default function MobileLeagueNav({
     { href: `${base}/predictions`, label: "Weekly Predictions", icon: "🔮" },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
     { href: `${base}/history`, label: "League History", icon: "📜" },
+    { href: `/season/${league.season_id}/castaways`, label: "Meet the Cast", icon: "🏝️" },
   ];
 
   if (teamId) {
@@ -57,14 +58,13 @@ export default function MobileLeagueNav({
     allLinks.push({ href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" });
   }
 
-  // Bottom tabs: always-visible shortcuts (max 5)
+  // Bottom tabs: always-visible shortcuts
   const bottomTabs = [
     { href: base, label: "Standings", icon: "🏆" },
     { href: `${base}/predictions`, label: "Picks", icon: "🔮" },
+    { href: `/season/${league.season_id}/castaways`, label: "Cast", icon: "🏝️" },
     { href: `${base}/recap`, label: "Recap", icon: "📺" },
-    teamId
-      ? { href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" }
-      : { href: base, label: "League", icon: "🔥" },
+    ...(teamId ? [{ href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" }] : []),
     isCommissioner
       ? { href: `${base}/admin/settings`, label: "Admin", icon: "⚙️" }
       : { href: `${base}/predictions/season`, label: "Season", icon: "🌴" },
@@ -175,12 +175,12 @@ export default function MobileLeagueNav({
             <Link
               key={tab.href + tab.label}
               href={tab.href}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${
+              className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${
                 active ? "text-accent-orange" : "text-text-muted hover:text-text-primary"
               }`}
             >
               <span className="text-lg leading-none">{tab.icon}</span>
-              <span className="leading-none">{tab.label}</span>
+              <span className="leading-none truncate max-w-full px-0.5">{tab.label}</span>
             </Link>
           );
         })}
