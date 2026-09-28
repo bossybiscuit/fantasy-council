@@ -67,6 +67,7 @@ export default async function RecapPage({
     { data: teamScores },
     { data: titlePicks },
     { data: episodePredictions },
+    { data: survivorPicks },
   ] = await Promise.all([
     db
       .from("scoring_events")
@@ -92,7 +93,16 @@ export default async function RecapPage({
       .eq("league_id", leagueId)
       .eq("episode_id", selectedEpisode.id)
       .order("points_earned", { ascending: false }),
+    db
+      .from("survivor_picks")
+      .select("*, teams(name), players(name)")
+      .eq("league_id", leagueId)
+      .eq("episode_id", selectedEpisode.id)
+      .order("points_earned", { ascending: false }),
   ]);
+
+  const poolPicks = (survivorPicks as any[]) || [];
+  const poolSurvivedCount = poolPicks.filter((p) => p.survived).length;
 
   // Group scoring events by category
   const eventsByCategory = new Map<string, typeof scoringEvents>();
@@ -411,6 +421,38 @@ export default async function RecapPage({
             </div>
           )}
 
+          {/* Survivor Pool */}
+          {poolPicks.length > 0 && (
+            <div className="card">
+              <h3 className="section-title mb-1">🛟 Survivor Pool</h3>
+              <p className="text-xs text-text-muted mb-3">
+                {poolSurvivedCount} of {poolPicks.length} survived
+              </p>
+              <div className="space-y-1.5">
+                {poolPicks.map((pick) => (
+                  <div key={pick.id} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="min-w-0">
+                      <span className="text-text-primary">{pick.teams?.name}</span>
+                      <span className="text-text-muted ml-2">
+                        → {pick.players?.name || "Unknown"}
+                      </span>
+                      {pick.survived && pick.streak > 0 && (
+                        <span className="text-xs text-accent-orange ml-2">🔥{pick.streak}</span>
+                      )}
+                    </div>
+                    <span
+                      className={`shrink-0 font-semibold ${
+                        pick.survived ? "text-green-400" : "text-text-muted"
+                      }`}
+                    >
+                      {pick.survived ? `+${pick.points_earned}` : "✗"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* This Week's Scores */}
           <div className="card">
             <h3 className="section-title mb-4">This Week&apos;s Scores</h3>
@@ -443,13 +485,17 @@ export default async function RecapPage({
                       </span>
                       {(score.challenge_points > 0 ||
                         score.prediction_points > 0 ||
-                        score.milestone_points > 0) && (
+                        score.milestone_points > 0 ||
+                        Number(score.survivor_points || 0) > 0) && (
                         <div className="text-xs text-text-muted mt-0.5 space-x-1">
                           {score.challenge_points > 0 && (
                             <span>{score.challenge_points} challenge</span>
                           )}
                           {score.prediction_points > 0 && (
                             <span>· {score.prediction_points} prediction</span>
+                          )}
+                          {Number(score.survivor_points || 0) > 0 && (
+                            <span>· {score.survivor_points} pool</span>
                           )}
                           {score.milestone_points > 0 && (
                             <span>· {score.milestone_points} milestone</span>
