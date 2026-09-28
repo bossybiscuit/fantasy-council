@@ -44,13 +44,6 @@ export const SEASON_CATEGORIES: Category[] = [
     points: 5,
   },
   {
-    key: "shot_in_the_dark",
-    label: "Shot in the Dark",
-    description: "Will the Shot in the Dark exist this season?",
-    options: ["Yes", "No"],
-    points: 5,
-  },
-  {
     key: "idols_played",
     label: "Idols Played",
     description: "How many idols will be played in total?",

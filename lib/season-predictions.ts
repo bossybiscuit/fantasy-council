@@ -27,6 +27,13 @@ export function scoreTopThree(answer: string | null | undefined, finalThree: str
   return { correct, points, isCorrect: correct > 0 };
 }
 
+/** True only when this category's answer is fully filled in */
+export function isSeasonAnswerComplete(category: string, answer: string | null | undefined): boolean {
+  if (!answer) return false;
+  if (category === TOP_THREE_KEY) return parseTopThree(answer).length === 3;
+  return answer.trim().length > 0;
+}
+
 /** Human-readable answer for any category */
 export function formatSeasonAnswer(category: string, answer: string | null | undefined): string | null {
   if (!answer) return null;

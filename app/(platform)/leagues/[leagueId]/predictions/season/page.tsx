@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import SeasonPredictionsForm, { SEASON_CATEGORIES } from "./SeasonPredictionsForm";
 import { hasSeasonPredictions } from "@/lib/league-format";
+import { isSeasonAnswerComplete } from "@/lib/season-predictions";
 
 export default async function SeasonPredictionsPage({
   params,
@@ -66,12 +67,15 @@ export default async function SeasonPredictionsPage({
   const db = createServiceClient();
   const [{ data: allTeams }, { data: allSeasonPreds }] = await Promise.all([
     db.from("teams").select("id, name").eq("league_id", leagueId).order("name"),
-    db.from("season_predictions").select("team_id, answer").eq("league_id", leagueId),
+    db.from("season_predictions").select("team_id, category, answer").eq("league_id", leagueId),
   ]);
 
+  // Only count questions that are still being asked, and only when fully answered
+  const activeKeys = new Set(SEASON_CATEGORIES.map((c) => c.key));
   const answeredByTeam = new Map<string, number>();
   for (const pred of allSeasonPreds || []) {
-    if (!pred.answer) continue;
+    if (!activeKeys.has(pred.category)) continue;
+    if (!isSeasonAnswerComplete(pred.category, pred.answer)) continue;
     answeredByTeam.set(pred.team_id, (answeredByTeam.get(pred.team_id) || 0) + 1);
   }
   const totalQuestions = SEASON_CATEGORIES.length;
@@ -143,7 +147,7 @@ export default async function SeasonPredictionsPage({
             <tbody>
               {(allTeams || []).map((team) => {
                 const answered = answeredByTeam.get(team.id) || 0;
-                const complete = answered >= totalQuestions;
+                const complete = answered === totalQuestions;
                 return (
                   <tr key={team.id} className="border-b border-border last:border-0">
                     <td className="py-2.5 px-2 text-text-primary font-medium">
