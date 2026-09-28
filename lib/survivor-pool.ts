@@ -34,7 +34,7 @@ export function isSurvivorPoolEnabled(league: { format?: string | null; scoring_
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const flag = ((league.scoring_config as Record<string, any>) || {}).SURVIVOR_POOL_ENABLED;
   if (typeof flag === "boolean") return flag;
-  return league.format === "predictions";
+  return league.format === "predictions" || league.format === "survivor_pool";
 }
 
 export function survivorPointsForStreak(streak: number, s: SurvivorPoolSettings): number {

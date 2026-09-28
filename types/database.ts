@@ -731,7 +731,7 @@ export type Database = {
   };
 };
 
-export type LeagueFormat = "draft" | "predictions";
+export type LeagueFormat = "draft" | "predictions" | "survivor_pool";
 
 export type ScoringCategory =
   | "tribe_reward"

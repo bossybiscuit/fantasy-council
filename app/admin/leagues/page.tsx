@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
+import LeagueFormatSelect from "./LeagueFormatSelect";
+import { hasDraft } from "@/lib/league-format";
 
 export default async function AdminLeaguesPage() {
   const supabase = await createClient();
@@ -27,6 +29,11 @@ export default async function AdminLeaguesPage() {
       <PageHeader
         title="All Leagues"
         subtitle="Platform-wide league overview"
+        action={
+          <Link href="/admin/leagues/new" className="btn-primary">
+            🔥 Create a League
+          </Link>
+        }
       />
 
       <div className="card">
@@ -37,7 +44,7 @@ export default async function AdminLeaguesPage() {
                 <th className="text-left py-3 px-4 text-text-muted font-medium">League</th>
                 <th className="text-left py-3 px-4 text-text-muted font-medium">Season</th>
                 <th className="text-center py-3 px-4 text-text-muted font-medium">Teams</th>
-                <th className="text-left py-3 px-4 text-text-muted font-medium">Draft</th>
+                <th className="text-left py-3 px-4 text-text-muted font-medium">Format</th>
                 <th className="text-left py-3 px-4 text-text-muted font-medium">Status</th>
                 <th className="text-right py-3 px-4 text-text-muted font-medium">Code</th>
                 <th className="text-right py-3 px-4 text-text-muted font-medium">Actions</th>
@@ -56,8 +63,11 @@ export default async function AdminLeaguesPage() {
                   <td className="py-3 px-4 text-center text-text-primary">
                     {(league.teams as any[])?.length || 0}/{league.num_teams}
                   </td>
-                  <td className="py-3 px-4 text-text-muted capitalize">
-                    {league.draft_type}
+                  <td className="py-3 px-4">
+                    <LeagueFormatSelect leagueId={league.id} format={league.format} />
+                    {hasDraft(league.format) && (
+                      <p className="text-xs text-text-muted capitalize mt-1">{league.draft_type} draft</p>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <span className={`capitalize font-medium ${statusColors[league.status] || "text-text-muted"}`}>

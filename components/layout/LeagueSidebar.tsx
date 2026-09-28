@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { League } from "@/types/database";
+import { formatLabel, hasDraft, hasSeasonPredictions } from "@/lib/league-format";
 
 interface LeagueSidebarProps {
   league: League;
@@ -20,8 +21,14 @@ export default function LeagueSidebar({
 
   const links = [
     { href: base, label: "Standings", icon: "🏆" },
-    { href: `${base}/predictions/season`, label: "Season Predictions", icon: "🌴" },
-    { href: `${base}/predictions`, label: "Weekly Predictions", icon: "🔮" },
+    ...(hasSeasonPredictions(league.format)
+      ? [{ href: `${base}/predictions/season`, label: "Season Predictions", icon: "🌴" }]
+      : []),
+    {
+      href: `${base}/predictions`,
+      label: league.format === "survivor_pool" ? "Survivor Pool" : "Weekly Predictions",
+      icon: league.format === "survivor_pool" ? "🛟" : "🔮",
+    },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
     { href: `${base}/history`, label: "League History", icon: "📜" },
     { href: `/season/${league.season_id}/castaways`, label: "Meet the Cast", icon: "🏝️" },
@@ -32,7 +39,7 @@ export default function LeagueSidebar({
   }
 
   if (isCommissioner) {
-    if (league.format !== "predictions" && league.draft_type === "auction") {
+    if (hasDraft(league.format) && league.draft_type === "auction") {
       links.push({ href: `${base}/admin/players`, label: "Player Values", icon: "💲" });
     }
     links.push(
@@ -52,9 +59,9 @@ export default function LeagueSidebar({
             {league.name}
           </p>
           <p className="text-xs text-text-muted mt-0.5">
-            {league.format === "predictions"
-              ? "Predictions League"
-              : `${league.draft_type === "auction" ? "Auction" : "Snake"} Draft`}
+            {hasDraft(league.format)
+              ? `${league.draft_type === "auction" ? "Auction" : "Snake"} Draft`
+              : `${formatLabel(league.format)} League`}
           </p>
         </div>
         <div className="torch-divider" />

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
-import SeasonPredictionsForm from "./SeasonPredictionsForm";
+import SeasonPredictionsForm, { SEASON_CATEGORIES } from "./SeasonPredictionsForm";
+import { hasSeasonPredictions } from "@/lib/league-format";
 
 export default async function SeasonPredictionsPage({
   params,
@@ -23,6 +24,8 @@ export default async function SeasonPredictionsPage({
     .single();
 
   if (!league) redirect("/dashboard");
+  // Survivor-pool-only leagues don't run season predictions
+  if (!hasSeasonPredictions(league.format)) redirect(`/leagues/${leagueId}`);
 
   const { data: myTeam } = await supabase
     .from("teams")
@@ -58,6 +61,20 @@ export default async function SeasonPredictionsPage({
     .select("id, name, tribe")
     .eq("season_id", season.id)
     .order("name");
+
+  // Who's got their season predictions in? (service client so RLS doesn't hide teammates)
+  const db = createServiceClient();
+  const [{ data: allTeams }, { data: allSeasonPreds }] = await Promise.all([
+    db.from("teams").select("id, name").eq("league_id", leagueId).order("name"),
+    db.from("season_predictions").select("team_id, answer").eq("league_id", leagueId),
+  ]);
+
+  const answeredByTeam = new Map<string, number>();
+  for (const pred of allSeasonPreds || []) {
+    if (!pred.answer) continue;
+    answeredByTeam.set(pred.team_id, (answeredByTeam.get(pred.team_id) || 0) + 1);
+  }
+  const totalQuestions = SEASON_CATEGORIES.length;
 
   // Check if commissioner
   const isCommissioner = league.commissioner_id === user.id;
@@ -110,6 +127,48 @@ export default async function SeasonPredictionsPage({
         isCommissioner={isCommissioner}
         players={(players || []).map((p) => ({ id: p.id, name: p.name, tribe: p.tribe }))}
       />
+
+      {/* Who's submitted */}
+      <div className="card mt-6">
+        <h2 className="section-title mb-4">Who&rsquo;s locked in their predictions?</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 px-2 text-text-muted font-medium">Team</th>
+                <th className="text-center py-2 px-2 text-text-muted font-medium w-28">Answered</th>
+                <th className="text-center py-2 px-2 text-text-muted font-medium w-20">Done</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(allTeams || []).map((team) => {
+                const answered = answeredByTeam.get(team.id) || 0;
+                const complete = answered >= totalQuestions;
+                return (
+                  <tr key={team.id} className="border-b border-border last:border-0">
+                    <td className="py-2.5 px-2 text-text-primary font-medium">
+                      {team.name}
+                      {team.id === myTeam.id && (
+                        <span className="text-xs text-accent-orange ml-1.5">you</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-2 text-center tabular-nums text-text-muted">
+                      {answered}/{totalQuestions}
+                    </td>
+                    <td className="py-2.5 px-2 text-center">
+                      {complete ? (
+                        <span className="text-green-400" title="All predictions in">✓</span>
+                      ) : (
+                        <span className="text-text-muted" title="Still to finish">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

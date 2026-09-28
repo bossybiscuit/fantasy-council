@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import PredictionsForm from "./PredictionsForm";
@@ -13,6 +14,7 @@ import {
   isSurvivorPoolEnabled,
   type PoolPick,
 } from "@/lib/survivor-pool";
+import { hasWeeklyPredictions } from "@/lib/league-format";
 
 export const dynamic = "force-dynamic";
 
@@ -176,6 +178,7 @@ export default async function PredictionsPage({
 
   // ── Survivor Pool ──────────────────────────────────────────────────────────
   const poolEnabled = isSurvivorPoolEnabled(league);
+  const weeklyEnabled = hasWeeklyPredictions(league.format);
   const poolSettings = getSurvivorPoolSettings(league.scoring_config);
   const { data: seasonEpisodes } = poolEnabled
     ? await db
@@ -240,9 +243,11 @@ export default async function PredictionsPage({
   return (
     <div>
       <PageHeader
-        title="Weekly Predictions"
+        title={weeklyEnabled ? "Weekly Predictions" : "Survivor Pool"}
         subtitle={
-          poolEnabled
+          !weeklyEnabled
+            ? "Pick one castaway to survive each week"
+            : poolEnabled
             ? "Predict who gets voted out — and who survives — each week"
             : "Predict who gets voted out each week"
         }
@@ -294,7 +299,7 @@ export default async function PredictionsPage({
       {/* ── STATE A: Before deadline — prediction form + submission status ── */}
       {nextEpisode && !isPastDeadline && !isScored && (
         <>
-          {players && players.length > 0 && (
+          {weeklyEnabled && players && players.length > 0 && (
             <PredictionsForm
               leagueId={leagueId}
               episodeId={nextEpisode.id}
@@ -325,15 +330,19 @@ export default async function PredictionsPage({
 
           {/* Submission status board */}
           <div className="card mt-6">
-            <h2 className="section-title mb-4">Who&rsquo;s cast their vote?</h2>
+            <h2 className="section-title mb-4">
+              {weeklyEnabled ? "Who\u2019s cast their vote?" : "Who\u2019s made their pick?"}
+            </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left py-2 px-2 text-text-muted font-medium">Team</th>
-                    <th className="text-center py-2 px-2 text-text-muted font-medium w-28">
-                      Votes
-                    </th>
+                    {weeklyEnabled && (
+                      <th className="text-center py-2 px-2 text-text-muted font-medium w-28">
+                        Votes
+                      </th>
+                    )}
                     {poolEnabled && (
                       <th className="text-center py-2 px-2 text-text-muted font-medium w-28">
                         Survivor Pool
@@ -345,13 +354,15 @@ export default async function PredictionsPage({
                   {(allTeams || []).map((team) => (
                     <tr key={team.id} className="border-b border-border last:border-0">
                       <td className="py-2.5 px-2 text-text-primary font-medium">{team.name}</td>
-                      <td className="py-2.5 px-2 text-center">
-                        {submittedTeamIds.has(team.id) ? (
-                          <span className="text-green-400" title="Submitted">✓</span>
-                        ) : (
-                          <span className="text-text-muted" title="Not submitted yet">—</span>
-                        )}
-                      </td>
+                      {weeklyEnabled && (
+                        <td className="py-2.5 px-2 text-center">
+                          {submittedTeamIds.has(team.id) ? (
+                            <span className="text-green-400" title="Submitted">✓</span>
+                          ) : (
+                            <span className="text-text-muted" title="Not submitted yet">—</span>
+                          )}
+                        </td>
+                      )}
                       {poolEnabled && (
                         <td className="py-2.5 px-2 text-center">
                           {poolPickTeamIds.has(team.id) ? (
@@ -370,8 +381,21 @@ export default async function PredictionsPage({
         </>
       )}
 
+      {/* ── Pool-only: nothing to reveal here once picks lock ── */}
+      {!weeklyEnabled && nextEpisode && (isPastDeadline || isScored) && (
+        <div className="card">
+          <p className="text-sm text-text-muted">
+            🔒 Picks are locked for this episode. Streaks and everyone&rsquo;s picks are on the{" "}
+            <Link href={`/leagues/${leagueId}`} className="text-accent-orange hover:underline">
+              standings page
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+
       {/* ── STATE B: After deadline, not scored — reveal all picks (no results) ── */}
-      {nextEpisode && isPastDeadline && !isScored && (
+      {weeklyEnabled && nextEpisode && isPastDeadline && !isScored && (
         <div className="card">
           <h2 className="section-title mb-1">League Predictions</h2>
           <p className="text-xs text-text-muted mb-4">
@@ -389,7 +413,7 @@ export default async function PredictionsPage({
       )}
 
       {/* ── STATE C: Episode scored — show results ── */}
-      {nextEpisode && isScored && (
+      {weeklyEnabled && nextEpisode && isScored && (
         <div className="card">
           <h2 className="section-title mb-1">Episode Results</h2>
           <p className="text-xs text-text-muted mb-4">
@@ -407,7 +431,7 @@ export default async function PredictionsPage({
       )}
 
       {/* ── PAST PREDICTIONS ── */}
-      {pastEpisodes && pastEpisodes.length > 0 && (
+      {weeklyEnabled && pastEpisodes && pastEpisodes.length > 0 && (
         <PastPredictionsAccordion
           episodes={pastEpisodes as any[]}
           teams={allTeams || []}

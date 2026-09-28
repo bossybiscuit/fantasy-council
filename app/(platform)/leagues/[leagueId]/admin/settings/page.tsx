@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/ui/PageHeader";
 import NewSeasonCard from "./NewSeasonCard";
+import { hasDraft } from "@/lib/league-format";
 import { DEFAULT_SCORING } from "@/lib/scoring";
 import {
   SURVIVOR_POOL_DEFAULTS,
@@ -304,7 +305,7 @@ export default function LeagueSettingsPage({
       )}
 
       {/* ── League Configuration ──────────────────────────────────────────── */}
-      {league.format !== "predictions" && (
+      {hasDraft(league.format) && (
       <div className="card mb-6">
         <h3 className="section-title mb-4">League Configuration</h3>
         <div className="flex items-center justify-between">

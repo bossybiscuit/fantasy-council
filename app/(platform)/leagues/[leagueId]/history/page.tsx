@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
 import { buildAllTime, getLeagueHistory } from "@/lib/league-history";
+import { formatLabel } from "@/lib/league-format";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,7 @@ export default async function LeagueHistoryPage({
                     {isCurrent && <span className="text-xs text-accent-orange ml-2">viewing</span>}
                   </p>
                   <p className="text-xs text-text-muted">
-                    {season.leagueName} · {season.format === "predictions" ? "Predictions" : "Draft"} ·{" "}
+                    {season.leagueName} · {formatLabel(season.format)} ·{" "}
                     {season.standings.length} players
                   </p>
                 </div>

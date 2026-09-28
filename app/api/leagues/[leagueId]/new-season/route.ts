@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { hasDraft, parseFormat } from "@/lib/league-format";
 import {
   generateInviteCode,
   calculateRosterSize,
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const body = await req.json();
   const season_id: string | undefined = body.season_id;
   const name: string = (body.name || oldLeague.name).trim();
-  const format: "draft" | "predictions" = body.format === "draft" ? "draft" : "predictions";
+  const format = parseFormat(body.format);
 
   if (!season_id) return NextResponse.json({ error: "Pick a season" }, { status: 400 });
   if (season_id === oldLeague.season_id) {
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     .order("created_at");
   const members = oldTeams || [];
 
-  const maxTeams = format === "predictions" ? MAX_PREDICTIONS_LEAGUE_TEAMS : MAX_DRAFT_LEAGUE_TEAMS;
+  const maxTeams = hasDraft(format) ? MAX_DRAFT_LEAGUE_TEAMS : MAX_PREDICTIONS_LEAGUE_TEAMS;
   const requested = Number.isInteger(body.num_teams) ? body.num_teams : oldLeague.num_teams;
   const num_teams = Math.min(maxTeams, Math.max(requested, members.length, 2));
   if (members.length > maxTeams) {
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   let roster_size: number | null = null;
-  if (format === "draft") {
+  if (hasDraft(format)) {
     const { count } = await db
       .from("players")
       .select("*", { count: "exact", head: true })
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       season_id,
       name,
       commissioner_id: oldLeague.commissioner_id,
-      draft_type: format === "predictions" ? "snake" : oldLeague.draft_type,
+      draft_type: hasDraft(format) ? oldLeague.draft_type : "snake",
       num_teams,
       budget: oldLeague.budget,
       roster_size,
@@ -112,9 +113,9 @@ export async function POST(req: NextRequest, { params }: Params) {
       scoring_config: oldLeague.scoring_config || {},
       format,
       parent_league_id: leagueId,
-      ...(format === "predictions"
-        ? { draft_status: "completed" as const, status: "active" as const }
-        : {}),
+      ...(hasDraft(format)
+        ? {}
+        : { draft_status: "completed" as const, status: "active" as const }),
     })
     .select()
     .single();
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       name: t.name,
       budget_remaining: oldLeague.budget,
     }));
-  if (format === "draft") {
+  if (hasDraft(format)) {
     for (let i = teamRows.length; i < num_teams; i++) {
       teamRows.push({ league_id: newLeague.id, user_id: null, name: `Team ${i + 1}`, budget_remaining: oldLeague.budget });
     }

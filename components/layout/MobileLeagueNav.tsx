@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { League } from "@/types/database";
+import { hasDraft, hasSeasonPredictions } from "@/lib/league-format";
 
 interface MobileLeagueNavProps {
   league: League;
@@ -39,8 +40,14 @@ export default function MobileLeagueNav({
 
   const allLinks = [
     { href: base, label: "Standings", icon: "🏆" },
-    { href: `${base}/predictions/season`, label: "Season Predictions", icon: "🌴" },
-    { href: `${base}/predictions`, label: "Weekly Predictions", icon: "🔮" },
+    ...(hasSeasonPredictions(league.format)
+      ? [{ href: `${base}/predictions/season`, label: "Season Predictions", icon: "🌴" }]
+      : []),
+    {
+      href: `${base}/predictions`,
+      label: league.format === "survivor_pool" ? "Survivor Pool" : "Weekly Predictions",
+      icon: league.format === "survivor_pool" ? "🛟" : "🔮",
+    },
     { href: `${base}/recap`, label: "Weekly Recap", icon: "📺" },
     { href: `${base}/history`, label: "League History", icon: "📜" },
     { href: `/season/${league.season_id}/castaways`, label: "Meet the Cast", icon: "🏝️" },
@@ -52,7 +59,7 @@ export default function MobileLeagueNav({
 
   if (isCommissioner) {
     allLinks.push({ href: `${base}/admin/teams`, label: "Manage Teams", icon: "👥" });
-    if (league.format !== "predictions") {
+    if (hasDraft(league.format)) {
       allLinks.push({ href: `${base}/admin/players`, label: "Player Values", icon: "💲" });
     }
     allLinks.push({ href: `${base}/admin/settings`, label: "League Settings", icon: "⚙️" });
@@ -61,13 +68,19 @@ export default function MobileLeagueNav({
   // Bottom tabs: always-visible shortcuts
   const bottomTabs = [
     { href: base, label: "Standings", icon: "🏆" },
-    { href: `${base}/predictions`, label: "Picks", icon: "🔮" },
+    {
+      href: `${base}/predictions`,
+      label: league.format === "survivor_pool" ? "Pool" : "Picks",
+      icon: league.format === "survivor_pool" ? "🛟" : "🔮",
+    },
     { href: `/season/${league.season_id}/castaways`, label: "Cast", icon: "🏝️" },
     { href: `${base}/recap`, label: "Recap", icon: "📺" },
     ...(teamId ? [{ href: `${base}/team/${teamId}`, label: "My Team", icon: "🔥" }] : []),
-    isCommissioner
-      ? { href: `${base}/admin/settings`, label: "Admin", icon: "⚙️" }
-      : { href: `${base}/predictions/season`, label: "Season", icon: "🌴" },
+    ...(isCommissioner
+      ? [{ href: `${base}/admin/settings`, label: "Admin", icon: "⚙️" }]
+      : hasSeasonPredictions(league.format)
+      ? [{ href: `${base}/predictions/season`, label: "Season", icon: "🌴" }]
+      : []),
   ];
 
   function isActive(href: string) {

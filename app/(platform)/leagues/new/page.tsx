@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { calculateRosterSize, MAX_PREDICTIONS_LEAGUE_TEAMS } from "@/lib/utils";
+import { LEAGUE_FORMATS, hasDraft } from "@/lib/league-format";
+import type { LeagueFormat } from "@/types/database";
 import type { Season } from "@/types/database";
 
 const STEPS = [
@@ -68,7 +70,7 @@ export default function NewLeaguePage() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [seasonId, setSeasonId] = useState("");
   const [name, setName] = useState("");
-  const [format, setFormat] = useState<"predictions" | "draft">("predictions");
+  const [format, setFormat] = useState<LeagueFormat>("predictions");
   const [draftType, setDraftType] = useState<"snake" | "auction">("snake");
   const [numTeams, setNumTeams] = useState(20);
   const [budget, setBudget] = useState(100);
@@ -233,27 +235,14 @@ export default function NewLeaguePage() {
 
             <div className="mb-5">
               <label className="label">League Format</label>
-              <div className="grid grid-cols-2 gap-3">
-                {(
-                  [
-                    {
-                      id: "predictions",
-                      title: "Predictions",
-                      desc: "No draft. Weekly vote picks, Survivor Pool & season predictions. Room for everyone.",
-                    },
-                    {
-                      id: "draft",
-                      title: "Draft",
-                      desc: "Classic fantasy — draft castaway rosters plus weekly predictions.",
-                    },
-                  ] as const
-                ).map((f) => (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {LEAGUE_FORMATS.map((f) => (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => {
                       setFormat(f.id);
-                      setNumTeams(f.id === "predictions" ? 20 : 8);
+                      setNumTeams(hasDraft(f.id) ? 8 : 20);
                     }}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
                       format === f.id
@@ -268,7 +257,7 @@ export default function NewLeaguePage() {
               </div>
             </div>
 
-            {format === "predictions" ? (
+            {!hasDraft(format) ? (
               <div className="mb-5">
                 <label className="label">Max Players</label>
                 <div className="grid grid-cols-4 gap-2 mb-2">
@@ -412,16 +401,18 @@ export default function NewLeaguePage() {
                 value={
                   format === "predictions"
                     ? "Predictions (no draft)"
+                    : format === "survivor_pool"
+                    ? "Survivor Pool only"
                     : draftType === "snake"
                     ? "Snake Draft"
                     : `Auction Draft ($${budget}/team)`
                 }
               />
               <SummaryRow
-                label={format === "predictions" ? "Max Players" : "Teams"}
-                value={`${numTeams} ${format === "predictions" ? "players" : "teams"}`}
+                label={hasDraft(format) ? "Teams" : "Max Players"}
+                value={`${numTeams} ${hasDraft(format) ? "teams" : "players"}`}
               />
-              {format === "draft" && playerCount > 0 && (
+              {hasDraft(format) && playerCount > 0 && (
                 <SummaryRow
                   label="Roster Size"
                   value={`${rosterSize} picks per team`}

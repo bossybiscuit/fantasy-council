@@ -53,11 +53,13 @@ export function InviteShare({
   commissionerName,
   seasonName = "Survivor",
   isPredictions = false,
+  isPoolOnly = false,
 }: {
   league: Pick<LobbyViewProps["league"], "id" | "name" | "invite_code" | "draft_type">;
   commissionerName?: string;
   seasonName?: string;
   isPredictions?: boolean;
+  isPoolOnly?: boolean;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [activeTemplate, setActiveTemplate] = useState<"group" | "email" | "text">("group");
@@ -69,7 +71,7 @@ export function InviteShare({
         group: `🔥 ${seasonName} Fantasy — we're doing it.
 Join my league: ${league.name}
 Code: ${league.invite_code} at ${joinUrl}
-No draft — just weekly vote-out picks, a Survivor Pool, and season-long predictions.
+${isPoolOnly ? "No draft — one Survivor Pool pick a week." : "No draft — just weekly vote-out picks, a Survivor Pool, and season-long predictions."}
 Don't get voted out before you even sign up.`,
 
         email: `Subject: You've been summoned — ${league.name}
@@ -78,9 +80,13 @@ Hey —
 
 I'm running a ${seasonName} fantasy league and you're invited. There's no draft, so anyone can jump in:
 
-• Weekly vote predictions — call who's going home
+${
+          isPoolOnly
+            ? "It's a Survivor Pool: each week you pick one castaway you think will survive. You can't reuse anyone all season, and each correct pick in a row is worth one more point than the last."
+            : `• Weekly vote predictions — call who's going home
 • Survivor Pool — pick someone to survive each week; each correct pick in a row is worth one more point, but you can't reuse a castaway
-• Season-long predictions — winner, first boot, and more
+• Season-long predictions — winner, first boot, and more`
+        }
 
 League: ${league.name}
 Invite Code: ${league.invite_code}
@@ -89,7 +95,7 @@ Join at: ${joinUrl}
 See you at Tribal.
 — ${commissionerName || "The Commissioner"}`,
 
-        text: `${seasonName} fantasy — join my league! No draft, just weekly picks. Code: ${league.invite_code} at ${joinUrl}`,
+        text: `${seasonName} fantasy — join my ${isPoolOnly ? "Survivor Pool" : "league"}! Code: ${league.invite_code} at ${joinUrl}`,
       }
     : {
         group: `🔥 ${seasonName} Fantasy — we're doing it.

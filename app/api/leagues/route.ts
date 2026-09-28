@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { hasDraft, parseFormat } from "@/lib/league-format";
 import {
   generateInviteCode,
   calculateRosterSize,
@@ -33,15 +34,15 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const { season_id, name, num_teams, budget, scoring_config } = body;
-  const format: "draft" | "predictions" = body.format === "predictions" ? "predictions" : "draft";
-  // Predictions leagues have no draft; draft_type is kept only to satisfy the column
-  const draft_type = format === "predictions" ? "snake" : body.draft_type;
+  const format = parseFormat(body.format);
+  // Only draft leagues use draft_type; it's kept on the row to satisfy the column
+  const draft_type = hasDraft(format) ? body.draft_type : "snake";
 
   if (!season_id || !name || !draft_type || !num_teams) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const maxTeams = format === "predictions" ? MAX_PREDICTIONS_LEAGUE_TEAMS : MAX_DRAFT_LEAGUE_TEAMS;
+  const maxTeams = hasDraft(format) ? MAX_DRAFT_LEAGUE_TEAMS : MAX_PREDICTIONS_LEAGUE_TEAMS;
   if (!Number.isInteger(num_teams) || num_teams < 2 || num_teams > maxTeams) {
     return NextResponse.json(
       { error: `League size must be between 2 and ${maxTeams} teams` },
@@ -81,12 +82,12 @@ export async function POST(request: NextRequest) {
       draft_type,
       num_teams,
       budget: budget || 100,
-      roster_size: format === "predictions" ? null : rosterSize || null,
+      roster_size: hasDraft(format) ? rosterSize || null : null,
       invite_code,
       scoring_config: scoring_config || {},
       format,
       // No draft to run — predictions leagues go live immediately
-      ...(format === "predictions" ? { draft_status: "completed" as const, status: "active" as const } : {}),
+      ...(hasDraft(format) ? {} : { draft_status: "completed" as const, status: "active" as const }),
     })
     .select()
     .single();
@@ -100,11 +101,10 @@ export async function POST(request: NextRequest) {
   // Predictions leagues only create the commissioner's team — players create
   // their own team (with their own name) when they join, up to num_teams.
   const db = createServiceClient();
-  const slotCount = format === "predictions" ? 1 : num_teams;
-  const commissionerTeamName =
-    format === "predictions"
-      ? `${profile.display_name || profile.username}'s Tribe`
-      : "Team 1";
+  const slotCount = hasDraft(format) ? num_teams : 1;
+  const commissionerTeamName = hasDraft(format)
+    ? "Team 1"
+    : `${profile.display_name || profile.username}'s Tribe`;
   const teamSlots = Array.from({ length: slotCount }, (_, i) => ({
     league_id: league.id,
     user_id: i === 0 ? user.id : null,

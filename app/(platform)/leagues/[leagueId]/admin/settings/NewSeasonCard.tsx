@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { League, Season } from "@/types/database";
+import type { League, LeagueFormat, Season } from "@/types/database";
+import { LEAGUE_FORMATS } from "@/lib/league-format";
 
 type Continuation = { id: string; name: string; season_id: string };
 
@@ -17,7 +18,7 @@ export default function NewSeasonCard({ league }: { league: League }) {
   const [memberCount, setMemberCount] = useState(0);
   const [seasonId, setSeasonId] = useState("");
   const [name, setName] = useState(league.name);
-  const [format, setFormat] = useState<"predictions" | "draft">("predictions");
+  const [format, setFormat] = useState<LeagueFormat>("predictions");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -122,13 +123,8 @@ export default function NewSeasonCard({ league }: { league: League }) {
           </div>
           <div>
             <label className="label">Format</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  { id: "predictions", title: "Predictions", desc: "No draft — room for everyone" },
-                  { id: "draft", title: "Draft", desc: "Rosters via snake/auction draft" },
-                ] as const
-              ).map((f) => (
+            <div className="grid gap-2 sm:grid-cols-3">
+              {LEAGUE_FORMATS.map((f) => (
                 <button
                   key={f.id}
                   type="button"

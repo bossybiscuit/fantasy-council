@@ -8,6 +8,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import LobbyView, { InviteShare } from "./LobbyView";
 import SurvivorPoolBoard from "./predictions/SurvivorPoolBoard";
+import { hasDraft } from "@/lib/league-format";
 import Link from "next/link";
 import {
   computeTeamStreaks,
@@ -360,17 +361,18 @@ export default async function LeagueHomePage({
       {continuationBanner}
 
       {/* Predictions leagues skip the draft lobby — keep the invite handy until scoring starts */}
-      {league.format === "predictions" && !latestEpisode && isCommissioner && (
+      {!hasDraft(league.format) && !latestEpisode && isCommissioner && (
         <div className="mb-6">
           <InviteShare
             league={league}
             commissionerName={commissionerName}
             seasonName={season?.name}
             isPredictions
+            isPoolOnly={league.format === "survivor_pool"}
           />
         </div>
       )}
-      {league.format === "predictions" && (latestEpisode || !isCommissioner) && (
+      {!hasDraft(league.format) && (latestEpisode || !isCommissioner) && (
         <div className="card mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs text-text-muted uppercase tracking-wider">Invite friends</p>
@@ -402,15 +404,15 @@ export default async function LeagueHomePage({
             rows={standingsRows}
             leagueId={leagueId}
             myTeamId={myTeam?.id}
-            showBudget={league.format !== "predictions" && league.draft_type === "auction"}
-            showRosters={league.format !== "predictions"}
+            showBudget={hasDraft(league.format) && league.draft_type === "auction"}
+            showRosters={hasDraft(league.format)}
           />
         ) : (
           <EmptyState
             icon="🏆"
             title="No scores yet"
             description={
-              league.format === "predictions"
+              !hasDraft(league.format)
                 ? "Standings appear once the first episode is scored. Get your weekly picks in!"
                 : league.draft_status !== "completed"
                 ? "Complete the draft, then the commissioner will score each episode."
