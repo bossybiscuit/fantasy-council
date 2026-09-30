@@ -167,7 +167,7 @@ export default async function CastawaysPage({
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <PageHeader
         title={`${season.name} — Cast`}
         subtitle={`${enriched.length} castaways · Season ${season.season_number}`}

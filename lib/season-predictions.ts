@@ -27,6 +27,21 @@ export function scoreTopThree(answer: string | null | undefined, finalThree: str
   return { correct, points, isCorrect: correct > 0 };
 }
 
+/**
+ * Season predictions normally lock once Episode 1 is scored. A commissioner can
+ * override that either way from League Settings.
+ */
+export function isSeasonPredictionsLocked(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  scoring_config: any,
+  episodeOneScored: boolean
+): boolean {
+  const c = scoring_config || {};
+  if (c.SEASON_PREDICTIONS_LOCK === "open") return false;
+  if (c.SEASON_PREDICTIONS_LOCK === "closed") return true;
+  return episodeOneScored;
+}
+
 /** True only when this category's answer is fully filled in */
 export function isSeasonAnswerComplete(category: string, answer: string | null | undefined): boolean {
   if (!answer) return false;

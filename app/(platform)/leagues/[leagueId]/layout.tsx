@@ -53,7 +53,7 @@ export default async function LeagueLayout({
   return (
     <>
       <MobileLeagueNav league={league} isCommissioner={isCommissioner} teamId={team?.id} />
-      <div className="max-w-7xl mx-auto px-4 pt-[72px] pb-20 md:pt-6 md:pb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-[72px] pb-20 md:pt-6 md:pb-6">
         <div className="flex gap-6">
           <LeagueSidebar league={league} isCommissioner={isCommissioner} teamId={team?.id} />
           <div className="flex-1 min-w-0">{children}</div>

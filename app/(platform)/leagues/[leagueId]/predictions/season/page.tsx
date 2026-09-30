@@ -4,7 +4,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import SeasonPredictionsForm from "./SeasonPredictionsForm";
 import { SEASON_CATEGORIES } from "@/lib/season-categories";
 import { hasSeasonPredictions } from "@/lib/league-format";
-import { isSeasonAnswerComplete } from "@/lib/season-predictions";
+import { isSeasonAnswerComplete, isSeasonPredictionsLocked } from "@/lib/season-predictions";
 
 export default async function SeasonPredictionsPage({
   params,
@@ -48,7 +48,7 @@ export default async function SeasonPredictionsPage({
     .eq("episode_number", 1)
     .maybeSingle();
 
-  const isLocked = ep1?.is_scored === true;
+  const isLocked = isSeasonPredictionsLocked(league.scoring_config, ep1?.is_scored === true);
 
   // Fetch my predictions
   const { data: myPredictions } = await supabase

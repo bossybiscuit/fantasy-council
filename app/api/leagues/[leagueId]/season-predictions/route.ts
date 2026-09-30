@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { TOP_THREE_KEY, gradeTopThree } from "@/lib/season-predictions";
+import {
+  TOP_THREE_KEY,
+  gradeTopThree,
+  isSeasonPredictionsLocked,
+} from "@/lib/season-predictions";
 import {
   WINNER_PICK_CATEGORY,
   isWinnerPickClosed,
@@ -82,8 +86,11 @@ export async function POST(
       .eq("episode_number", 1)
       .maybeSingle();
 
-    if (ep1?.is_scored) {
-      return NextResponse.json({ error: "Season predictions are locked after Episode 1 airs" }, { status: 409 });
+    if (isSeasonPredictionsLocked(league.scoring_config, ep1?.is_scored === true)) {
+      return NextResponse.json(
+        { error: "Season predictions are locked" },
+        { status: 409 }
+      );
     }
   }
 

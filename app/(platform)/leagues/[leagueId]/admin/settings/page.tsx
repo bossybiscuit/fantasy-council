@@ -330,6 +330,45 @@ export default function LeagueSettingsPage({
       </div>
       )}
 
+      {/* ── Season Predictions lock ────────────────────────────────────────── */}
+      <div className="card mb-6">
+        <h3 className="section-title mb-1">Season Predictions</h3>
+        <p className="text-text-muted text-sm mb-4">
+          By default these lock once Episode 1 is scored. Override it here if you want to keep
+          them open (or close them early). Remember to save.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { id: "auto", label: "Lock after Episode 1" },
+              { id: "open", label: "Keep open" },
+              { id: "closed", label: "Locked now" },
+            ] as const
+          ).map((opt) => {
+            const current = config.SEASON_PREDICTIONS_LOCK ?? "auto";
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() =>
+                  setConfig((prev: any) => ({
+                    ...prev,
+                    SEASON_PREDICTIONS_LOCK: opt.id === "auto" ? undefined : opt.id,
+                  }))
+                }
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                  current === opt.id
+                    ? "bg-accent-orange/10 border-accent-orange/40 text-accent-orange"
+                    : "border-border text-text-muted hover:border-accent-orange/40"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ── Sole Survivor Pick ─────────────────────────────────────────────── */}
       <div className="card mb-6">
         <h3 className="section-title mb-4">Sole Survivor Pick</h3>
