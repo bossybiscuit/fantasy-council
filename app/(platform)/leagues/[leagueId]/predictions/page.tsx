@@ -15,6 +15,13 @@ import {
   type PoolPick,
 } from "@/lib/survivor-pool";
 import { hasWeeklyPredictions } from "@/lib/league-format";
+import WinnerPickCard from "./WinnerPickCard";
+import {
+  WINNER_PICK_CATEGORY,
+  isWinnerPickClosed,
+  isWinnerPickEnabled,
+  winnerPickPoints,
+} from "@/lib/winner-pick";
 
 export const dynamic = "force-dynamic";
 
@@ -179,6 +186,28 @@ export default async function PredictionsPage({
   // ── Survivor Pool ──────────────────────────────────────────────────────────
   const poolEnabled = isSurvivorPoolEnabled(league);
   const weeklyEnabled = hasWeeklyPredictions(league.format);
+
+  // Sole Survivor pick (Survivor Pool leagues) — open until the commissioner closes it
+  const winnerPickEnabled = isWinnerPickEnabled(league);
+  const winnerPickClosed = isWinnerPickClosed(league.scoring_config);
+  const { data: winnerPickRows } = winnerPickEnabled
+    ? await db
+        .from("season_predictions")
+        .select("team_id, answer")
+        .eq("league_id", leagueId)
+        .eq("category", WINNER_PICK_CATEGORY)
+    : { data: [] };
+  const winnerByTeam = new Map(
+    (winnerPickRows || []).map((r) => [r.team_id, r.answer])
+  );
+  // Every castaway, so a pick made after someone's elimination still reads correctly
+  const { data: allSeasonPlayers } = winnerPickEnabled
+    ? await db
+        .from("players")
+        .select("id, name, tribe, is_active")
+        .eq("season_id", season.id)
+        .order("name")
+    : { data: [] };
   const poolSettings = getSurvivorPoolSettings(league.scoring_config);
   const { data: seasonEpisodes } = poolEnabled
     ? await db
@@ -296,6 +325,22 @@ export default async function PredictionsPage({
         />
       )}
 
+      {/* Sole Survivor pick — open until the commissioner closes voting */}
+      {winnerPickEnabled && (
+        <WinnerPickCard
+          leagueId={leagueId}
+          players={allSeasonPlayers || []}
+          myPick={winnerByTeam.get(myTeam.id) ?? null}
+          points={winnerPickPoints(league.scoring_config)}
+          closed={winnerPickClosed}
+          allPicks={(allTeams || []).map((t) => ({
+            teamName: t.name,
+            answer: winnerByTeam.get(t.id) ?? null,
+            isMe: t.id === myTeam.id,
+          }))}
+        />
+      )}
+
       {/* ── STATE A: Before deadline — prediction form + submission status ── */}
       {nextEpisode && !isPastDeadline && !isScored && (
         <>
@@ -348,6 +393,11 @@ export default async function PredictionsPage({
                         Survivor Pool
                       </th>
                     )}
+                    {winnerPickEnabled && (
+                      <th className="text-center py-2 px-2 text-text-muted font-medium w-24">
+                        Winner
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -369,6 +419,15 @@ export default async function PredictionsPage({
                             <span className="text-green-400" title="Survivor Pool pick submitted">✓</span>
                           ) : (
                             <span className="text-text-muted" title="No pick yet">—</span>
+                          )}
+                        </td>
+                      )}
+                      {winnerPickEnabled && (
+                        <td className="py-2.5 px-2 text-center">
+                          {winnerByTeam.get(team.id) ? (
+                            <span className="text-green-400" title="Sole Survivor pick in">✓</span>
+                          ) : (
+                            <span className="text-text-muted" title="No winner pick yet">—</span>
                           )}
                         </td>
                       )}

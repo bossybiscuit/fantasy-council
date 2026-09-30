@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/ui/PageHeader";
 import NewSeasonCard from "./NewSeasonCard";
 import { hasDraft } from "@/lib/league-format";
+import {
+  DEFAULT_WINNER_PICK_POINTS,
+  isWinnerPickClosed,
+  isWinnerPickEnabled,
+} from "@/lib/winner-pick";
 import { DEFAULT_SCORING } from "@/lib/scoring";
 import {
   SURVIVOR_POOL_DEFAULTS,
@@ -324,6 +329,53 @@ export default function LeagueSettingsPage({
         </div>
       </div>
       )}
+
+      {/* ── Sole Survivor Pick ─────────────────────────────────────────────── */}
+      <div className="card mb-6">
+        <h3 className="section-title mb-4">Sole Survivor Pick</h3>
+        <ToggleRow
+          icon="👑"
+          label="Enable Sole Survivor Pick"
+          description="Everyone picks who wins the season. It stays open until you close voting — not tied to the Episode 1 lock — and is graded automatically when the winner is scored."
+          enabled={isWinnerPickEnabled({ format: league.format, scoring_config: config })}
+          onToggle={(v) => setConfig((prev: any) => ({ ...prev, WINNER_PICK_ENABLED: v }))}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-text-muted">Points for the correct winner</span>
+              <Stepper
+                value={val("WINNER_PICK_POINTS", DEFAULT_WINNER_PICK_POINTS)}
+                onChange={(v) => set("WINNER_PICK_POINTS", v)}
+                max={100}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-text-primary">
+                  Voting is {isWinnerPickClosed(config) ? "closed" : "open"}
+                </p>
+                <p className="text-xs text-text-muted">
+                  {isWinnerPickClosed(config)
+                    ? "Everyone's picks are visible and locked."
+                    : "Members can still change their pick. Remember to save after closing."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setConfig((prev: any) => ({
+                    ...prev,
+                    WINNER_PICK_CLOSED: !isWinnerPickClosed(prev),
+                  }))
+                }
+                className="btn-secondary text-xs shrink-0"
+              >
+                {isWinnerPickClosed(config) ? "Reopen voting" : "Close voting"}
+              </button>
+            </div>
+          </div>
+        </ToggleRow>
+      </div>
 
       {/* ── Survivor Pool ──────────────────────────────────────────────────── */}
       <div className="card mb-6">

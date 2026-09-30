@@ -4,6 +4,7 @@ import { getScoringValues, getCategoryPoints } from "@/lib/scoring";
 import { recalculateScores } from "@/lib/recalculate-scores";
 import { gradeSurvivorPicks } from "@/lib/survivor-pool";
 import { gradeTopThree } from "@/lib/season-predictions";
+import { winnerPickPoints } from "@/lib/winner-pick";
 import type { ScoringCategory } from "@/types/database";
 
 interface AdminScoringInput {
@@ -311,21 +312,22 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (winnerData?.name) {
-      const leagueIds = leagues.map((l) => l.id);
-      await Promise.all([
-        db
-          .from("season_predictions")
-          .update({ is_correct: true, points_earned: 10 })
-          .in("league_id", leagueIds)
-          .eq("category", "winner")
-          .eq("answer", winnerData.name),
-        db
-          .from("season_predictions")
-          .update({ is_correct: false, points_earned: 0 })
-          .in("league_id", leagueIds)
-          .eq("category", "winner")
-          .neq("answer", winnerData.name),
-      ]);
+      await Promise.all(
+        leagues.flatMap((l) => [
+          db
+            .from("season_predictions")
+            .update({ is_correct: true, points_earned: winnerPickPoints(l.scoring_config) })
+            .eq("league_id", l.id)
+            .eq("category", "winner")
+            .eq("answer", winnerData.name),
+          db
+            .from("season_predictions")
+            .update({ is_correct: false, points_earned: 0 })
+            .eq("league_id", l.id)
+            .eq("category", "winner")
+            .neq("answer", winnerData.name),
+        ])
+      );
     }
   }
 
