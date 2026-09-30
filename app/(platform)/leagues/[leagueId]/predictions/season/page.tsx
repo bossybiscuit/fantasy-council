@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/ui/PageHeader";
-import SeasonPredictionsForm, { SEASON_CATEGORIES } from "./SeasonPredictionsForm";
+import SeasonPredictionsForm from "./SeasonPredictionsForm";
+import { SEASON_CATEGORIES } from "@/lib/season-categories";
 import { hasSeasonPredictions } from "@/lib/league-format";
 import { isSeasonAnswerComplete } from "@/lib/season-predictions";
 
