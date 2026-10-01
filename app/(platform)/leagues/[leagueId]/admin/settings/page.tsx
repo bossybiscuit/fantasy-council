@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/ui/PageHeader";
 import NewSeasonCard from "./NewSeasonCard";
-import { hasDraft } from "@/lib/league-format";
+import { hasDraft, hasTitlePick, hasWeeklyPredictions } from "@/lib/league-format";
 import {
   DEFAULT_WINNER_PICK_POINTS,
   isWinnerPickClosed,
@@ -415,6 +415,28 @@ export default function LeagueSettingsPage({
           </div>
         </ToggleRow>
       </div>
+
+      {/* ── Episode Title Pick (pool-only leagues run it on its own) ───────── */}
+      {!hasWeeklyPredictions(league.format) && (
+        <div className="card mb-6">
+          <h3 className="section-title mb-4">Episode Title Pick</h3>
+          <ToggleRow
+            icon="🎬"
+            label="Enable Episode Title Pick"
+            description="Each week, players also pick who says the episode title."
+            enabled={hasTitlePick({ format: league.format, scoring_config: config })}
+            onToggle={(v) => setConfig((prev: any) => ({ ...prev, TITLE_PICK_ENABLED: v }))}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-text-muted">Points for the correct speaker</span>
+              <Stepper
+                value={val("EPISODE_TITLE_SPEAKER", DEFAULT_SCORING.EPISODE_TITLE_SPEAKER)}
+                onChange={(v) => set("EPISODE_TITLE_SPEAKER", v)}
+              />
+            </div>
+          </ToggleRow>
+        </div>
+      )}
 
       {/* ── Survivor Pool ──────────────────────────────────────────────────── */}
       <div className="card mb-6">

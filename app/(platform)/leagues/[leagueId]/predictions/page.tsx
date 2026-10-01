@@ -14,7 +14,9 @@ import {
   isSurvivorPoolEnabled,
   type PoolPick,
 } from "@/lib/survivor-pool";
-import { hasWeeklyPredictions } from "@/lib/league-format";
+import { hasTitlePick, hasWeeklyPredictions } from "@/lib/league-format";
+import TitlePickCard from "./TitlePickCard";
+import { getScoringValues } from "@/lib/scoring";
 import WinnerPickCard from "./WinnerPickCard";
 import {
   WINNER_PICK_CATEGORY,
@@ -186,6 +188,9 @@ export default async function PredictionsPage({
   // ── Survivor Pool ──────────────────────────────────────────────────────────
   const poolEnabled = isSurvivorPoolEnabled(league);
   const weeklyEnabled = hasWeeklyPredictions(league.format);
+  // Pool-only leagues can still run the title pick on its own
+  const standaloneTitlePick = !weeklyEnabled && hasTitlePick(league);
+  const titlePickPoints = getScoringValues(league.scoring_config).EPISODE_TITLE_SPEAKER;
 
   // Sole Survivor pick (Survivor Pool leagues) — open until the commissioner closes it
   const winnerPickEnabled = isWinnerPickEnabled(league);
@@ -361,6 +366,20 @@ export default async function PredictionsPage({
             />
           )}
 
+          {standaloneTitlePick && players && players.length > 0 && (
+            <TitlePickCard
+              leagueId={leagueId}
+              episodeId={nextEpisode.id}
+              players={players}
+              existingPickPlayerId={
+                existingTitlePick?.is_host_pick
+                  ? "jeff_probst"
+                  : (existingTitlePick?.player_id ?? null)
+              }
+              points={titlePickPoints}
+            />
+          )}
+
           {poolEnabled && players && players.length > 0 && (
             <SurvivorPoolPicker
               leagueId={leagueId}
@@ -393,6 +412,11 @@ export default async function PredictionsPage({
                         Survivor Pool
                       </th>
                     )}
+                    {standaloneTitlePick && (
+                      <th className="text-center py-2 px-2 text-text-muted font-medium w-24">
+                        Title
+                      </th>
+                    )}
                     {winnerPickEnabled && (
                       <th className="text-center py-2 px-2 text-text-muted font-medium w-24">
                         Winner
@@ -422,6 +446,15 @@ export default async function PredictionsPage({
                           )}
                         </td>
                       )}
+                      {standaloneTitlePick && (
+                        <td className="py-2.5 px-2 text-center">
+                          {titlePickByTeam.has(team.id) ? (
+                            <span className="text-green-400" title="Title pick in">✓</span>
+                          ) : (
+                            <span className="text-text-muted" title="No title pick yet">—</span>
+                          )}
+                        </td>
+                      )}
                       {winnerPickEnabled && (
                         <td className="py-2.5 px-2 text-center">
                           {winnerByTeam.get(team.id) ? (
@@ -444,12 +477,36 @@ export default async function PredictionsPage({
       {!weeklyEnabled && nextEpisode && (isPastDeadline || isScored) && (
         <div className="card">
           <p className="text-sm text-text-muted">
-            🔒 Picks are locked for this episode. Streaks and everyone&rsquo;s picks are on the{" "}
+            🔒 Picks are locked for this episode. Streaks and everyone&rsquo;s pool picks are on the{" "}
             <Link href={`/leagues/${leagueId}`} className="text-accent-orange hover:underline">
               standings page
             </Link>
             .
           </p>
+
+          {standaloneTitlePick && (allTeams || []).length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-xs text-text-muted mb-2">🎬 Episode title picks</p>
+              <div className="divide-y divide-border">
+                {(allTeams || []).map((team) => {
+                  const tp = titlePickByTeam.get(team.id);
+                  const pickName = tp
+                    ? tp.is_host_pick
+                      ? "Jeff Probst (Host)"
+                      : (tp.players as any)?.name || "—"
+                    : null;
+                  return (
+                    <div key={team.id} className="flex items-center justify-between py-2 text-sm">
+                      <span className="text-text-primary">{team.name}</span>
+                      <span className={pickName ? "text-text-muted" : "text-text-muted italic"}>
+                        {pickName || "No pick"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

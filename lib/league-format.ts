@@ -42,6 +42,16 @@ export function hasSeasonPredictions(format: string | null | undefined): boolean
   return format !== "survivor_pool";
 }
 
+/** The weekly episode-title pick. On by default in every format; can be switched off. */
+export function hasTitlePick(league: {
+  format?: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  scoring_config?: any;
+}): boolean {
+  const flag = (league.scoring_config || {}).TITLE_PICK_ENABLED;
+  return typeof flag === "boolean" ? flag : true;
+}
+
 export function formatLabel(format: string | null | undefined): string {
   if (format === "survivor_pool") return "Survivor Pool";
   if (format === "predictions") return "Predictions";
